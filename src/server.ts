@@ -6,7 +6,7 @@ import express from 'express';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { initDb, vaultReady } from './store.js';
-import { bridgeRouter, councilRouter, selfRegister } from './council.js';
+import { bridgeRouter, councilRouter, selfRegister, startScheduler } from './council.js';
 
 const app = express();
 app.use((_req, res, next) => {
@@ -33,6 +33,6 @@ app.get('/console', (_req, res) => res.sendFile(path.join(publicDir, 'console.ht
 const port = Number(process.env.PORT) || 8080;
 app.listen(port, async () => {
   console.log(`🏛️  Architects Council on :${port}`);
-  try { await initDb(); await selfRegister(); console.log('✓ db ready, self registered'); }
+  try { await initDb(); await selfRegister(); startScheduler(); console.log('✓ db ready, self registered, scheduler armed (00:00 pull / 01:00 retro, Toronto)'); }
   catch (e) { console.error('boot warning:', (e as Error).message); }
 });

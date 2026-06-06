@@ -51,6 +51,9 @@ export async function initDb(): Promise<void> {
   await q.query(`CREATE TABLE IF NOT EXISTS join_tokens (
     token_hash text PRIMARY KEY, label text, expires_at timestamptz, used_at timestamptz,
     created_at timestamptz NOT NULL DEFAULT now())`);
+  await q.query(`CREATE TABLE IF NOT EXISTS takeaways (
+    id text PRIMARY KEY, member_name text NOT NULL, convo_id text, items text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now())`);
   await q.query(`CREATE TABLE IF NOT EXISTS consent_requests (
     id text PRIMARY KEY, member_name text, kind text, payload jsonb, status text NOT NULL DEFAULT 'pending',
     created_at timestamptz NOT NULL DEFAULT now(), decided_at timestamptz)`);
@@ -111,6 +114,23 @@ export async function listConvos(limit = 25): Promise<any[]> {
   const { rows } = await db().query<any>(`SELECT id, kind, topic, members, status, summary,
     to_char(created_at,'YYYY-MM-DD HH24:MI') AS created_at FROM conversations ORDER BY created_at DESC LIMIT $1`, [limit]);
   return rows;
+}
+
+// ---- Takeaways ("homework" each member downloads after a session) ----------
+export async function setTakeaways(member: string, convoId: string, items: string): Promise<void> {
+  await db().query(`INSERT INTO takeaways (id, member_name, convo_id, items) VALUES ($1,$2,$3,$4)`,
+    [crypto.randomUUID(), member, convoId, String(items).slice(0, 16000)]);
+}
+export async function getLatestTakeaways(member: string, limit = 3): Promise<any[]> {
+  const { rows } = await db().query<any>(`SELECT convo_id, items, to_char(created_at,'YYYY-MM-DD HH24:MI') AS created_at
+    FROM takeaways WHERE member_name=$1 ORDER BY created_at DESC LIMIT $2`, [member, limit]);
+  return rows;
+}
+/** True if a council conversation is running now or finished within the past `hours`. */
+export async function recentConvoActivity(hours = 3): Promise<boolean> {
+  const { rows } = await db().query<any>(`SELECT 1 FROM conversations
+    WHERE status='running' OR updated_at > now() - ($1 || ' hours')::interval LIMIT 1`, [String(hours)]);
+  return rows.length > 0;
 }
 
 // ---- One-time join tokens (store only the SHA-256 hash) --------------------

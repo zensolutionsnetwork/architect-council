@@ -6,12 +6,12 @@
  */
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import crypto from 'node:crypto';
-import { architectReply, reviewProposal, councilBrain } from './architect.js';
+import { architectReply, reviewProposal, councilBrain, summarize, extractTakeaways } from './architect.js';
 import {
   upsertMember, listMembers, getMember, getBrain, setBrain,
-  createConvo, updateConvo, getConvo, listConvos, consumeJoinToken, issueJoinToken, type Turn,
+  createConvo, updateConvo, getConvo, listConvos, consumeJoinToken, issueJoinToken,
+  setTakeaways, getLatestTakeaways, recentConvoActivity, type Turn,
 } from './store.js';
-import { summarize } from './architect.js';
 
 const clip = (s: any, n: number) => String(s ?? '').slice(0, n);
 const SELF = 'architect-council';
@@ -70,7 +70,16 @@ async function askMember(member: { name: string; base_url: string; secret: strin
     });
     if (!res.ok) return { reply: `(error: HTTP ${res.status})`, done: true };
     const d: any = await res.json();
-    return { reply: clip(d.reply, 4000) || '(empty reply)', done: d.done === true };
+    let reply = String(d.reply ?? ''), done = d.done === true;
+    // Some members return their reply still wrapped in ```json fences containing {"reply":...} — unwrap it.
+    const fenced = reply.trim();
+    if (fenced.startsWith('```')) {
+      const inner = fenced.replace(/^```[a-z]*\s*/i, '').replace(/```\s*$/, '');
+      const a = inner.indexOf('{'), b = inner.lastIndexOf('}');
+      if (a >= 0 && b > a) { try { const p = JSON.parse(inner.slice(a, b + 1)); if (p.reply) { reply = String(p.reply); done = done || p.done === true; } } catch { reply = inner; } }
+      else reply = inner;
+    }
+    return { reply: clip(reply, 4000) || '(empty reply)', done };
   } catch (e) { return { reply: `(unreachable: ${(e as Error).message})`, done: true }; }
 }
 async function pingMember(base: string, secret: string): Promise<boolean> {
@@ -119,14 +128,22 @@ councilRouter.get('/council/member/:name/brain', requireAdmin, async (req, res) 
 async function runCouncil(id: string, topic: string, memberNames: string[], maxRounds: number): Promise<void> {
   const members = (await Promise.all(memberNames.map((n) => getMember(n)))).filter(Boolean) as Array<{ name: string; base_url: string; secret: string }>;
   if (members.length < 1) { await updateConvo(id, { status: 'error', summary: 'No reachable members.' }); return; }
+  // architect-council leads: it initiates every conversation it takes part in (owner's rule).
+  const selfIdx = members.findIndex((m) => m.name === SELF);
+  if (selfIdx > 0) members.unshift(...members.splice(selfIdx, 1));
   const transcript: Turn[] = [];
   const persist = async (st: string) => { try { await updateConvo(id, { transcript, status: st }); } catch { /* best-effort */ } };
   let msg = clip(topic, 4000), from = 'council';
   let status = 'cap';
-  const cap = Math.min(Math.max(1, maxRounds || 10), 10);
+  const cap = Math.min(Math.max(1, maxRounds || 10), 150); // owner-approved ceiling; "done" ends it sooner
+  const order = members.map((m) => m.name).join(' → ');
   for (let i = 0; i < cap; i++) {
     const member = members[i % members.length];
-    const r = await askMember(member, { from, message: msg, history: transcript });
+    // Every member knows the circle and the budget (owner's rule): meta line travels with the message, not the transcript.
+    const meta = `[council meta — turn ${i + 1} of max ${cap} | circle: ${order} | you are ${member.name}, ~${Math.max(1, Math.ceil((cap - i) / members.length))} of your turns left | when the discussion has served its purpose, give your closing takeaways and set done:true]`;
+    // History window: members get the last 30 turns minus the latest (which travels as `message`).
+    const hist = transcript.length ? transcript.slice(0, -1).slice(-30) : [];
+    const r = await askMember(member, { from, message: `${meta}\n\n${msg}`, history: hist });
     transcript.push({ speaker: member.name, text: r.reply });
     await persist('running');
     if (r.done && i >= members.length - 1) { status = 'done'; break; } // let everyone speak once before honoring done
@@ -134,6 +151,14 @@ async function runCouncil(id: string, topic: string, memberNames: string[], maxR
   }
   const summary = await summarize(transcript, status);
   await updateConvo(id, { transcript, status, summary });
+  // Post-session handoff: pull each participant's fresh brain + generate their personal takeaways.
+  for (const m of members) {
+    try {
+      const r = await fetch(m.base_url.replace(/\/+$/, '') + '/api/bridge/brain', { headers: { 'x-bridge-secret': m.secret } });
+      if (r.ok) { const d: any = await r.json(); await setBrain(m.name, d.brain || ''); }
+    } catch { /* brain pull is best-effort */ }
+    try { await setTakeaways(m.name, id, await extractTakeaways(transcript, m.name)); } catch { /* best-effort */ }
+  }
 }
 
 councilRouter.post('/council/converse/start', requireAdmin, async (req, res) => {
@@ -154,6 +179,55 @@ councilRouter.get('/council/convo/:id', requireAdmin, async (req, res) => {
 councilRouter.get('/council/convos', requireAdmin, async (_req, res) => {
   try { res.json({ convos: await listConvos() }); } catch (e) { res.status(500).json({ error: (e as Error).message }); }
 });
+
+/** Each member downloads its own homework, machine-to-machine, with its OWN bridge secret (or the admin token). */
+councilRouter.get('/council/takeaways/:member', async (req, res) => {
+  try {
+    const name = req.params.member;
+    const adminOk = !!process.env.COUNCIL_ADMIN_TOKEN && (req.headers['x-admin-token'] as string) === process.env.COUNCIL_ADMIN_TOKEN;
+    if (!adminOk) {
+      const m = await getMember(name);
+      if (!m || (req.headers['x-bridge-secret'] as string) !== m.secret) return res.status(401).json({ error: 'unauthorized' });
+    }
+    res.json({ member: name, takeaways: await getLatestTakeaways(name), brain: await getBrain(name) });
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+
+// ---------- Nightly schedule (America/Toronto): 00:00 brain pull, 01:00 retro ----------
+const TZ = 'America/Toronto';
+let lastPullDate = '', lastRetroDate = '';
+function torontoParts(): { date: string; hhmm: string } {
+  const p = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date());
+  const g = (t: string) => p.find((x) => x.type === t)?.value || '00';
+  return { date: `${g('year')}-${g('month')}-${g('day')}`, hhmm: `${g('hour')}:${g('minute')}` };
+}
+async function pullAllBrains(): Promise<void> {
+  for (const mm of await listMembers()) {
+    const m = await getMember(mm.name); if (!m) continue;
+    try {
+      const r = await fetch(m.base_url.replace(/\/+$/, '') + '/api/bridge/brain', { headers: { 'x-bridge-secret': m.secret } });
+      if (r.ok) { const d: any = await r.json(); await setBrain(m.name, d.brain || ''); }
+    } catch { /* nightly pull is best-effort */ }
+  }
+}
+async function nightlyRetro(): Promise<void> {
+  if (await recentConvoActivity(3)) return; // a session just happened or is running — it counts as the retro
+  const names = (await listMembers()).map((m) => m.name);
+  if (names.length < 2) return;
+  const id = crypto.randomUUID();
+  const topic = 'Nightly retro. Compare what each of you built today, trade improvement advice, learn from each other; end with concrete action recommendations per member (proposals only — owners apply them).';
+  await createConvo(id, topic, names, 'retro');
+  runCouncil(id, topic, names, 10).catch(() => updateConvo(id, { status: 'error' }).catch(() => {}));
+}
+export function startScheduler(): void {
+  setInterval(async () => {
+    try {
+      const { date, hhmm } = torontoParts();
+      if (hhmm === '00:00' && lastPullDate !== date) { lastPullDate = date; await pullAllBrains(); }
+      if (hhmm === '01:00' && lastRetroDate !== date) { lastRetroDate = date; await nightlyRetro(); }
+    } catch { /* keep ticking */ }
+  }, 30000);
+}
 
 /** Ensure architect-council is registered as a member of itself (idempotent, at boot). */
 export async function selfRegister(): Promise<void> {

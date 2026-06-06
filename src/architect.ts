@@ -98,6 +98,17 @@ export async function summarize(transcript: { speaker: string; text: string }[],
   try { return (await callClaude(sys, [{ role: 'user', content: convo }], 600)) || fallback; } catch { return fallback; }
 }
 
+/** Extract one member's personal action items + learnings from a finished session. */
+export async function extractTakeaways(transcript: { speaker: string; text: string }[], member: string): Promise<string> {
+  if (!CHAT_API_KEY() || !transcript.length) return '(no takeaways)';
+  const sys = `From this Architects Council transcript, extract the homework for the member "${member}" ONLY: `
+    + `(1) tasks they committed to or were asked to do, (2) lessons/patterns they should adopt, (3) what they agreed to share or teach next. `
+    + `Output tight markdown: a "## Tasks" checklist and a "## Lessons" list. Be concrete; include specs/endpoints/code patterns mentioned. No preamble.`;
+  const convo = transcript.map((t) => `[${t.speaker}] ${t.text}`).join('\n').slice(-24000);
+  try { return (await callClaude(sys, [{ role: 'user', content: convo }], 900)) || '(no takeaways)'; }
+  catch (e) { return `(takeaways error: ${(e as Error).message})`; }
+}
+
 /** The architect-council brain/handoff snapshot it shares with peers. */
 export function councilBrain(): string {
   return `# Brain / handoff — architect-council\nUpdated: ${new Date().toISOString()}\n\n${COUNCIL_KNOWLEDGE}\n\n`
