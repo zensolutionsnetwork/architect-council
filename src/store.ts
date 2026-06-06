@@ -61,6 +61,21 @@ export async function initDb(): Promise<void> {
     id text PRIMARY KEY, from_member text NOT NULL, to_member text NOT NULL,
     topic text, note text NOT NULL, priority text NOT NULL DEFAULT 'normal',
     queued_at timestamptz NOT NULL DEFAULT now(), delivered_at timestamptz, acked_at timestamptz)`);
+  await q.query(`CREATE TABLE IF NOT EXISTS backlog (
+    id int PRIMARY KEY DEFAULT 1, content text NOT NULL DEFAULT '',
+    updated_at timestamptz NOT NULL DEFAULT now(), updated_by text)`);
+}
+
+// ---- Living backlog (Arke's super-admin panel; mirrors Nova's model) --------
+export async function getBacklog(): Promise<{ content: string; updatedAt: string | null; updatedBy: string | null }> {
+  const { rows } = await db().query<any>(`SELECT content, to_char(updated_at,'YYYY-MM-DD HH24:MI') AS updated_at, updated_by FROM backlog WHERE id=1`);
+  return rows[0] ? { content: rows[0].content, updatedAt: rows[0].updated_at, updatedBy: rows[0].updated_by } : { content: '', updatedAt: null, updatedBy: null };
+}
+export async function setBacklog(content: string, updatedBy: string): Promise<string> {
+  const { rows } = await db().query<any>(`INSERT INTO backlog (id, content, updated_at, updated_by) VALUES (1,$1,now(),$2)
+    ON CONFLICT (id) DO UPDATE SET content=EXCLUDED.content, updated_at=now(), updated_by=EXCLUDED.updated_by
+    RETURNING to_char(updated_at,'YYYY-MM-DD HH24:MI') AS updated_at`, [String(content).slice(0, 200000), String(updatedBy || 'session').slice(0, 120)]);
+  return rows[0]?.updated_at || '';
 }
 
 // ---- Members + secrets -----------------------------------------------------

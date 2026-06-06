@@ -12,10 +12,12 @@ import {
   createConvo, updateConvo, getConvo, listConvos, consumeJoinToken, issueJoinToken,
   setTakeaways, getLatestTakeaways, recentConvoActivity, type Turn,
   queueOutbox, pendingOutbox, markOutboxDelivered, ackOutbox,
+  getBacklog, setBacklog,
 } from './store.js';
 
 const clip = (s: any, n: number) => String(s ?? '').slice(0, n);
 const SELF = 'architect-council';
+const DISPLAY_NAME = 'Arke'; // chosen name (council canon 2026-06-06); ping contract field
 const CONTRACT_VERSION = 1;
 const CAPABILITIES = ['ask', 'brain', 'review', 'orchestrate', 'register', 'outbox'];
 
@@ -28,7 +30,7 @@ function requireMemberSecret(req: Request, res: Response, next: NextFunction) {
   next();
 }
 bridgeRouter.get('/bridge/ping', requireMemberSecret, (_req, res) =>
-  res.json({ ok: true, project: SELF, contractVersion: CONTRACT_VERSION, capabilities: CAPABILITIES }));
+  res.json({ ok: true, project: SELF, displayName: DISPLAY_NAME, contractVersion: CONTRACT_VERSION, capabilities: CAPABILITIES }));
 bridgeRouter.post('/bridge/ask', requireMemberSecret, async (req, res) => {
   try {
     const { from, message, history } = req.body || {};
@@ -244,6 +246,40 @@ councilRouter.post('/council/outbox/:member/ack', async (req, res) => {
     res.json({ ok: true, cleared: await ackOutbox(name, ids) });
   } catch (e) { res.status(500).json({ error: (e as Error).message }); }
 });
+
+// ---------- Living backlog + owner sign-in (Arke's super-admin; mirrors Nova's model) ----------
+// Auth: x-admin-token (console key) OR a Google ID token (header x-google-id-token) once
+// GOOGLE_CLIENT_ID is set on Railway — verified server-side, owner email only (no static token to remember).
+const OWNER_GOOGLE_EMAIL = () => process.env.OWNER_GOOGLE_EMAIL || 'matpay@zen-solutions.net';
+async function googleOwnerOk(req: Request): Promise<boolean> {
+  const idToken = req.headers['x-google-id-token'] as string;
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  if (!idToken || !clientId) return false;
+  try {
+    const r = await fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(idToken));
+    if (!r.ok) return false;
+    const d: any = await r.json();
+    return d.aud === clientId && d.email === OWNER_GOOGLE_EMAIL() && (d.email_verified === 'true' || d.email_verified === true);
+  } catch { return false; }
+}
+async function requireOwner(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const tok = process.env.COUNCIL_ADMIN_TOKEN;
+  if (tok && (req.headers['x-admin-token'] as string) === tok) return next();
+  if (await googleOwnerOk(req)) return next();
+  res.status(401).json({ error: 'unauthorized' });
+}
+councilRouter.get('/admin/backlog', requireOwner, async (_req, res) => {
+  try { res.json(await getBacklog()); } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+councilRouter.post('/admin/backlog', requireOwner, async (req, res) => {
+  try {
+    const content = String((req.body || {}).content ?? '').trim();
+    if (!content) return res.status(400).json({ error: 'empty_content' });
+    res.json({ ok: true, updatedAt: await setBacklog(content, String((req.body || {}).updatedBy || 'session')) });
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+councilRouter.get('/admin/config', (_req, res) =>
+  res.json({ googleClientId: process.env.GOOGLE_CLIENT_ID || null, ownerEmail: OWNER_GOOGLE_EMAIL() }));
 
 // ---------- Nightly schedule (America/Toronto): 02:45 brain pull, 03:00 council meeting ----------
 // Owner's daily cycle: 02:00/02:15/02:30 close rituals (Cowork side) write handoffs + queue outboxes,

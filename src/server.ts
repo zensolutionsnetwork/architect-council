@@ -29,6 +29,7 @@ app.use('/api', councilRouter);
 // Pages.
 app.get('/', (_req, res) => res.sendFile(path.join(publicDir, 'index.html')));
 app.get('/console', (_req, res) => res.sendFile(path.join(publicDir, 'console.html')));
+app.get('/admin', (_req, res) => res.sendFile(path.join(publicDir, 'admin.html')));
 
 const port = Number(process.env.PORT) || 8080;
 app.listen(port, async () => {
