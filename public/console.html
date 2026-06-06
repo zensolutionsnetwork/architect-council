@@ -40,7 +40,10 @@
   a.link{color:var(--accent2);cursor:pointer;text-decoration:none}
 </style></head>
 <body><div class="wrap">
-  <h1>🏛️ Council Console</h1>
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap">
+    <h1>🏛️ Council Console</h1>
+    <span id="hdrActs" style="display:none"><a class="link" href="/admin">📋 Admin panel</a> &nbsp;·&nbsp; <a class="link" onclick="signOut()">Sign out</a></span>
+  </div>
   <p class="sub">Private — the owner's window on the family's exchanges. Arke (architect-council) · Nova (zen-ai) · Logos (biblevoice).</p>
 
   <div id="gate" class="card gate">
@@ -97,9 +100,10 @@ function nm(p){ return NAMES[p]?(NAMES[p]+' ('+p+')'):p; }
 /* ---- gate: nothing renders until the key/Google identity is VERIFIED ---- */
 async function tryEnter(){
   try{ await api('/members'); document.getElementById('gate').style.display='none';
-    document.getElementById('app').style.display='block'; loadMembers().then(loadConvos); return true; }
+    document.getElementById('app').style.display='block'; document.getElementById('hdrActs').style.display='inline'; loadMembers().then(loadConvos); return true; }
   catch(e){ document.getElementById('gateMsg').textContent='Access refused.'; KEY=''; GHDR=null; return false; }
 }
+function signOut(){ localStorage.removeItem('council_admin_key'); KEY=''; GHDR=null; location.reload(); }
 function saveKey(){ var v=document.getElementById('key').value.trim(); if(!v)return; KEY=v;
   tryEnter().then(function(ok){ if(ok && document.getElementById('remember').checked) localStorage.setItem('council_admin_key',v); });
 }
