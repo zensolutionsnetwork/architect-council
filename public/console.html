@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Council Console — Architects Council</title>
+<style>
+  :root{--bg:#070A12;--surface:#0F1422;--line:#222A3D;--ink:#EAF0FF;--mute:#8B93A7;--accent:#6EA8FE;--accent2:#22D3EE;--ok:#34D399;--warn:#FBBF24;--bad:#F87171}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 Inter,system-ui,Segoe UI,sans-serif}
+  .wrap{max-width:940px;margin:0 auto;padding:28px 20px 80px}
+  h1{font-size:23px;margin:0 0 4px}.sub{color:var(--mute);margin:0 0 20px;font-size:14px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;margin:14px 0}
+  .card h2{font-size:16px;margin:0 0 10px}
+  label{display:block;font-size:13px;color:var(--mute);margin:10px 0 4px}
+  input,textarea,select{width:100%;background:#0B0F1A;border:1px solid var(--line);border-radius:9px;color:var(--ink);padding:10px;font:14px Inter,sans-serif}
+  textarea{min-height:74px;resize:vertical}
+  button{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#04121f;border:none;border-radius:9px;padding:10px 16px;font-weight:700;cursor:pointer;margin-top:10px}
+  button.alt{background:#1a2335;color:var(--ink);border:1px solid var(--line)}
+  button:disabled{opacity:.5;cursor:default}
+  .row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1;min-width:150px}
+  .members{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+  .mem{display:flex;align-items:center;gap:6px;background:#0B0F1A;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px}
+  .mem input{width:auto}
+  pre{white-space:pre-wrap;background:#0B0F1A;border:1px solid var(--line);border-radius:9px;padding:12px;font:13px/1.5 ui-monospace,Menlo,monospace;max-height:320px;overflow:auto;margin:10px 0 0}
+  .turn{border-left:3px solid var(--line);padding:6px 0 6px 12px;margin:8px 0;animation:fade .3s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
+  .who{font-size:12px;color:var(--mute);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px}
+  .pill{font-size:12px;padding:2px 9px;border-radius:999px;border:1px solid var(--line);display:inline-block}
+  .pill.running{color:var(--accent2);border-color:var(--accent2)}.pill.cap{color:var(--warn);border-color:var(--warn)}.pill.error{color:var(--bad);border-color:var(--bad)}.pill.done{color:var(--ok);border-color:var(--ok)}
+  .muted{color:var(--mute);font-size:13px}.mt0{margin-top:0}
+  .gate{max-width:420px;margin:60px auto}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent2);animation:blink 1s infinite;margin-right:6px}
+  @keyframes blink{50%{opacity:.25}}
+</style></head>
+<body><div class="wrap">
+  <h1>🏛️ Council Console</h1>
+  <p class="sub">Spark a topic among members and watch the architects exchange live (10-round cap).</p>
+
+  <div id="gate" class="card gate">
+    <h2 class="mt0">Access key</h2>
+    <label>Admin token (COUNCIL_ADMIN_TOKEN)</label>
+    <input id="key" type="password" placeholder="paste your token…" autocomplete="off"/>
+    <label style="display:flex;align-items:center;gap:6px;margin-top:8px"><input type="checkbox" id="remember" style="width:auto" checked/> Remember in this browser</label>
+    <button onclick="saveKey()">Enter</button>
+    <p id="gateMsg" class="muted"></p>
+  </div>
+
+  <div id="app" style="display:none">
+    <div class="card">
+      <h2>💬 Convene the council</h2>
+      <label>Members in the room</label>
+      <div id="members" class="members"><span class="muted">loading…</span></div>
+      <div class="row" style="margin-top:8px">
+        <div><label>Max rounds (≤10)</label><input id="maxr" type="number" value="10" min="1" max="10"/></div>
+      </div>
+      <label>Topic to debate</label>
+      <textarea id="msg" placeholder="e.g. Compare how each of you would design the conference/teaching mode (one teacher, many listeners). What's the best approach?"></textarea>
+      <button id="goConv" onclick="startConv()">Start the exchange</button>
+      <div id="live" style="margin-top:12px"></div>
+    </div>
+
+    <div class="card">
+      <h2>🧠 Member brains</h2>
+      <div class="row"><div><select id="brainSel"></select></div><div><button class="alt" onclick="loadBrain()">Load brain</button></div></div>
+      <span id="brainMeta" class="muted"></span>
+      <pre id="brainOut" style="display:none"></pre>
+    </div>
+
+    <div class="card">
+      <h2>📜 Recent conversations</h2>
+      <button class="alt" onclick="loadConvos()">Refresh</button>
+      <div id="convos"></div>
+    </div>
+  </div>
+</div>
+<script>
+var KEY='';
+function k(){ return localStorage.getItem('council_admin_key')||''; }
+function saveKey(){ var v=document.getElementById('key').value.trim(); if(!v)return; if(document.getElementById('remember').checked) localStorage.setItem('council_admin_key',v); KEY=v; boot(); }
+function H(){ return {'x-admin-token':KEY,'content-type':'application/json'}; }
+async function api(path, opts){ opts=opts||{}; opts.headers=H(); var r=await fetch('/api/council'+path,opts); if(r.status===401||r.status===403){ throw new Error('key refused'); } return r.json(); }
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
+var MEMBERS=[];
+async function loadMembers(){
+  try{ var d=await api('/members'); MEMBERS=d.members||[];
+    document.getElementById('members').innerHTML=MEMBERS.map(function(m){ return '<label class="mem"><input type="checkbox" value="'+esc(m.name)+'" checked/> '+esc(m.name)+'</label>'; }).join('')||'<span class="muted">no members yet</span>';
+    document.getElementById('brainSel').innerHTML=MEMBERS.map(function(m){ return '<option>'+esc(m.name)+'</option>'; }).join('');
+  }catch(e){ document.getElementById('members').innerHTML='<span class="pill error">'+esc(e.message)+'</span>'; }
+}
+function chosen(){ return [].slice.call(document.querySelectorAll('#members input:checked')).map(function(c){return c.value;}); }
+function turnsHtml(t){ return (t||[]).map(function(x){ return '<div class="turn"><div class="who">'+esc(x.speaker)+'</div>'+esc(x.text)+'</div>'; }).join(''); }
+var poll=null;
+async function startConv(){
+  var b=document.getElementById('goConv'); b.disabled=true;
+  var live=document.getElementById('live'); live.innerHTML='<span class="pill running"><span class="dot"></span>starting…</span>';
+  try{
+    var d=await api('/converse/start',{method:'POST',body:JSON.stringify({topic:document.getElementById('msg').value,members:chosen(),maxRounds:+document.getElementById('maxr').value})});
+    if(d.error){ live.innerHTML='<p class="pill error">'+esc(d.error)+'</p>'; b.disabled=false; return; }
+    watch(d.id);
+  }catch(e){ live.innerHTML='<p class="pill error">'+esc(e.message)+'</p>'; b.disabled=false; }
+}
+function watch(id){
+  var live=document.getElementById('live'); if(poll) clearInterval(poll);
+  var tick=async function(){
+    try{ var c=await api('/convo/'+id); var running=c.status==='running';
+      var head='<span class="pill '+esc(c.status)+'">'+(running?'<span class="dot"></span>running':esc(c.status))+'</span>';
+      var sum=c.summary?('<b>Summary</b><pre>'+esc(c.summary)+'</pre>'):'';
+      live.innerHTML=head+'<div style="margin-top:8px">'+turnsHtml(c.transcript)+'</div>'+sum;
+      if(!running){ clearInterval(poll); poll=null; document.getElementById('goConv').disabled=false; loadConvos(); }
+    }catch(e){ /* keep polling */ }
+  };
+  tick(); poll=setInterval(tick,1800);
+}
+async function loadBrain(){ try{ var n=document.getElementById('brainSel').value; var d=await api('/member/'+encodeURIComponent(n)+'/brain'); var o=document.getElementById('brainOut'); o.style.display='block'; o.textContent=d.brain||'(empty)'; document.getElementById('brainMeta').textContent=(d.updatedAt?(' updated '+d.updatedAt):'')+(d.cached?' (cached)':''); }catch(e){ document.getElementById('brainMeta').textContent=' '+e.message; } }
+async function loadConvos(){
+  var f=document.getElementById('convos');
+  try{ var d=await api('/convos'); var cs=d.convos||[];
+    if(!cs.length){ f.innerHTML='<p class="muted">No conversations yet.</p>'; return; }
+    f.innerHTML=cs.map(function(c){ return '<div class="turn"><div class="who">'+esc(c.created_at)+' · '+esc((c.members||[]).join(', '))+' <span class="pill '+esc(c.status)+'">'+esc(c.status)+'</span></div>'+esc(c.summary||c.topic||'(running)')+' <a href="#" onclick="watch(\''+esc(c.id)+'\');return false" style="color:var(--accent2)">▶ view</a></div>'; }).join('');
+  }catch(e){ f.innerHTML='<p class="pill error">'+esc(e.message)+'</p>'; }
+}
+function boot(){ document.getElementById('gate').style.display='none'; document.getElementById('app').style.display='block'; loadMembers().then(loadConvos); }
+(function(){ var s=k(); if(s){ KEY=s; boot(); } })();
+</script>
+</body></html>

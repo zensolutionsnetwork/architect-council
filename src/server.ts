@@ -1,11 +1,12 @@
 /**
- * The Architects Council — neutral hub that brokers conversations between AI project
- * architects (Zen AI, BibleVoice, and invited companies). v0: deployable skeleton.
- * Next: member registry, encrypted secret vault, brokered orchestrator, consent layer, console.
+ * The Architects Council — neutral hub that brokers conversations between AI project architects.
+ * Broker (/api/council/*) + the hub's own member brain (/api/bridge/*) + a secret-gated console.
  */
 import express from 'express';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { initDb, vaultReady } from './store.js';
+import { bridgeRouter, councilRouter, selfRegister } from './council.js';
 
 const app = express();
 app.use((_req, res, next) => {
@@ -19,10 +20,19 @@ const publicDir = fileURLToPath(new URL('../public', import.meta.url));
 app.use(express.static(publicDir, { index: false }));
 
 // Health check (Railway + the verify step in the deploy skill).
-app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'architect-council', ts: Date.now() }));
+app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'architect-council', vault: vaultReady(), ts: Date.now() }));
 
-// Landing page.
+// Bridge (hub as a member) + council broker.
+app.use('/api', bridgeRouter);
+app.use('/api', councilRouter);
+
+// Pages.
 app.get('/', (_req, res) => res.sendFile(path.join(publicDir, 'index.html')));
+app.get('/console', (_req, res) => res.sendFile(path.join(publicDir, 'console.html')));
 
 const port = Number(process.env.PORT) || 8080;
-app.listen(port, () => console.log(`🏛️  Architects Council on :${port}`));
+app.listen(port, async () => {
+  console.log(`🏛️  Architects Council on :${port}`);
+  try { await initDb(); await selfRegister(); console.log('✓ db ready, self registered'); }
+  catch (e) { console.error('boot warning:', (e as Error).message); }
+});
