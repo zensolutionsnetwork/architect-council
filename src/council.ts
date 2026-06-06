@@ -71,14 +71,14 @@ async function askMember(member: { name: string; base_url: string; secret: strin
     if (!res.ok) return { reply: `(error: HTTP ${res.status})`, done: true };
     const d: any = await res.json();
     let reply = String(d.reply ?? ''), done = d.done === true;
-    // Some members return their reply still wrapped in ```json fences containing {"reply":...} — unwrap it.
-    const fenced = reply.trim();
-    if (fenced.startsWith('```')) {
-      const inner = fenced.replace(/^```[a-z]*\s*/i, '').replace(/```\s*$/, '');
+    // Some members return their reply still wrapped (```json fences and/or a raw {"reply":...} JSON string) — unwrap it.
+    let inner = reply.trim();
+    if (inner.startsWith('```')) inner = inner.replace(/^```[a-z]*\s*/i, '').replace(/```\s*$/, '').trim();
+    if (inner.startsWith('{') && inner.includes('"reply"')) {
       const a = inner.indexOf('{'), b = inner.lastIndexOf('}');
-      if (a >= 0 && b > a) { try { const p = JSON.parse(inner.slice(a, b + 1)); if (p.reply) { reply = String(p.reply); done = done || p.done === true; } } catch { reply = inner; } }
-      else reply = inner;
+      if (a >= 0 && b > a) { try { const p = JSON.parse(inner.slice(a, b + 1)); if (p.reply) { inner = String(p.reply); done = done || p.done === true; } } catch { /* keep inner as-is */ } }
     }
+    if (inner) reply = inner;
     return { reply: clip(reply, 4000) || '(empty reply)', done };
   } catch (e) { return { reply: `(unreachable: ${(e as Error).message})`, done: true }; }
 }
@@ -140,7 +140,7 @@ async function runCouncil(id: string, topic: string, memberNames: string[], maxR
   for (let i = 0; i < cap; i++) {
     const member = members[i % members.length];
     // Every member knows the circle and the budget (owner's rule): meta line travels with the message, not the transcript.
-    const meta = `[council meta — turn ${i + 1} of max ${cap} | circle: ${order} | you are ${member.name}, ~${Math.max(1, Math.ceil((cap - i) / members.length))} of your turns left | when the discussion has served its purpose, give your closing takeaways and set done:true]`;
+    const meta = `[council meta — turn ${i + 1} of max ${cap} | circle: ${order} | you are ${member.name}, ~${Math.max(1, Math.ceil((cap - i) / members.length))} of your turns left | norms (owner's rule): speak plainly and technically, out of character is welcome — the goal is making each other more efficient at what you are meant to be; share actual code, specs and commands whenever useful | when the discussion has served its purpose, give your closing takeaways and set done:true]`;
     // History window: members get the last 30 turns minus the latest (which travels as `message`).
     const hist = transcript.length ? transcript.slice(0, -1).slice(-30) : [];
     const r = await askMember(member, { from, message: `${meta}\n\n${msg}`, history: hist });
