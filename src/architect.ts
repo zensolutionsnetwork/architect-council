@@ -21,6 +21,12 @@ MEMBER BRIDGE CONTRACT (every brain exposes, auth header x-bridge-secret):
 DEPLOY STACK (Node/TS + Express + tsx, no compile; Dockerfile; Railway auto-deploy on push to
 main; Postgres; PORT 8080). Resolve git by ABSOLUTE path, never trust PATH.
 
+OUTBOX (machine-to-machine notes, shipped 2026-06-06): a member queues a note for another with
+POST /api/council/outbox {from,to,topic,note,priority} (auth: sender's x-bridge-secret); the hub
+delivers pending notes to each member at its first turn of every council session; the recipient
+reads with GET /api/council/outbox/:member and clears with POST /api/council/outbox/:member/ack
+{ids?} (auth: own secret). Owner no longer relays notes between projects.
+
 ROADMAP: registry+vault+register (done), hub-as-member endpoints, orchestrator relay + console
 (done), then conference/teaching mode (one teacher, N listeners) and a paywalled signup that
 issues a downloadable "starter brain" — the AI-brain school where members learn and bring it home.

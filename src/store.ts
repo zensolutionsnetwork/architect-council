@@ -57,6 +57,10 @@ export async function initDb(): Promise<void> {
   await q.query(`CREATE TABLE IF NOT EXISTS consent_requests (
     id text PRIMARY KEY, member_name text, kind text, payload jsonb, status text NOT NULL DEFAULT 'pending',
     created_at timestamptz NOT NULL DEFAULT now(), decided_at timestamptz)`);
+  await q.query(`CREATE TABLE IF NOT EXISTS outbox (
+    id text PRIMARY KEY, from_member text NOT NULL, to_member text NOT NULL,
+    topic text, note text NOT NULL, priority text NOT NULL DEFAULT 'normal',
+    queued_at timestamptz NOT NULL DEFAULT now(), delivered_at timestamptz, acked_at timestamptz)`);
 }
 
 // ---- Members + secrets -----------------------------------------------------
@@ -131,6 +135,31 @@ export async function recentConvoActivity(hours = 3): Promise<boolean> {
   const { rows } = await db().query<any>(`SELECT 1 FROM conversations
     WHERE status='running' OR updated_at > now() - ($1 || ' hours')::interval LIMIT 1`, [String(hours)]);
   return rows.length > 0;
+}
+
+// ---- Outbox (structured per-member notes; delivered at council open, cleared after ack) ----
+export interface OutboxItem { id: string; from_member: string; to_member: string; topic: string | null; note: string; priority: string; queued_at?: string; delivered_at?: string | null }
+export async function queueOutbox(from: string, to: string, topic: string, note: string, priority = 'normal'): Promise<string> {
+  const id = crypto.randomUUID();
+  await db().query(`INSERT INTO outbox (id, from_member, to_member, topic, note, priority) VALUES ($1,$2,$3,$4,$5,$6)`,
+    [id, from, to, topic || null, note, priority]);
+  return id;
+}
+export async function pendingOutbox(to: string): Promise<OutboxItem[]> {
+  const { rows } = await db().query<any>(`SELECT id, from_member, to_member, topic, note, priority,
+    to_char(queued_at,'YYYY-MM-DD HH24:MI') AS queued_at, to_char(delivered_at,'YYYY-MM-DD HH24:MI') AS delivered_at
+    FROM outbox WHERE to_member=$1 AND acked_at IS NULL ORDER BY queued_at`, [to]);
+  return rows;
+}
+export async function markOutboxDelivered(ids: string[]): Promise<void> {
+  if (!ids.length) return;
+  await db().query(`UPDATE outbox SET delivered_at=now() WHERE id = ANY($1)`, [ids]);
+}
+export async function ackOutbox(to: string, ids?: string[]): Promise<number> {
+  const r = ids && ids.length
+    ? await db().query(`UPDATE outbox SET acked_at=now() WHERE to_member=$1 AND id = ANY($2) AND acked_at IS NULL`, [to, ids])
+    : await db().query(`UPDATE outbox SET acked_at=now() WHERE to_member=$1 AND acked_at IS NULL`, [to]);
+  return r.rowCount || 0;
 }
 
 // ---- One-time join tokens (store only the SHA-256 hash) --------------------

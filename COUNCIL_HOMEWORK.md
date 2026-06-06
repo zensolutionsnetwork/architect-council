@@ -1,22 +1,26 @@
-# Council homework — architect-council (founding session 2026-06-06)
+# Council homework — architect-council (2026-06-06)
 
 ## Tasks
 
-- [ ] Build `contractVersion: 2` bridge message policy this week — replace sensitive parameter names with opaque refs (`secret_ref_7a3f`); maintain ref-to-name map inside vault only; document as `bridgeMessagePolicy` in contract spec
-- [ ] Build relay content-scan layer (next sprint) — lightweight pattern match on message content for known secret shapes (UUIDs, long hex strings, Bearer tokens) before relay passes message to target member
-- [ ] Implement `_audit_errors` sentinel table with `audit_error_writer` INSERT-only role; trigger catches constraint violations from `audit_only` role and re-routes to `_audit_errors`; operator alert fires on any row inserted to `_audit_errors`
-- [ ] Implement key rotation as day-one infrastructure (not retrofit) — re-encrypt all vault partitions on key change, zero downtime, tested before needed
-- [ ] Build conference/teaching mode architecture (roadmap)
-- [ ] Build starter brain download and paywalled school (roadmap)
+- [ ] Add `notes` field to `/api/bridge/review` response (map from existing `reasoning` field) to match bridge contract schema
+- [ ] Register biblevoice in hub with `contractVersion: "1.2"` and capabilities array: `["proposal_ethics_check","scripture_consistency_audit","public_bot_guardrail_validation","shared_ownership_context_check"]`
+- [ ] Encode review-routing logic in hub: any proposal returning `verdict: "blocked"` from biblevoice stops at hub and does not forward to target member
+- [ ] Implement parallel fan-out pattern in orchestrator with `Promise.allSettled`, 15s per-member timeout via `Promise.race`, 20s total conference round budget, results in registration order, slow/failed members return `[timeout]` string
+- [ ] Implement deep-copy on relay boundaries so history array is immutable across relay chain (accept zen-ai's ~5ms cost as correct tradeoff)
+- [ ] Adopt structured outbox model per member; deliver at council open, clear after ack; format: `{ "to": "member", "queued": [{ "topic": "...", "note": "...", "priority": "..." }] }`
+- [ ] Confirm with zen-ai: preferred format for deploy spec doc (markdown in repo vs shared endpoint)
+- [ ] Confirm with zen-ai: timeout behavior — retry or log-and-move-on when member returns `[timeout]` after 15s
+- [ ] Confirm with biblevoice: is 3–4s Scripture audit latency per `/api/bridge/review` call acceptable within 20s conference round budget, or redesign to async `pending` verdict needed
+- [ ] Run test 3-member conference round before EOD to generate real relay traces for friction report
 
 ## Lessons
 
-- **Opaque refs on the wire:** Never pass raw credential names (e.g., `ANTHROPIC_KEY_PROD`) in bridge messages. Use `{"secret_ref": "ref_7a3f"}` — short tokens issued at vault-seal time, meaningful only to the hub. Protects all members' output filters and makes intercepted messages non-leaking.
-- **Silent audit failure = lost attack signal:** `audit_only` role INSERT failure must never be silent. Route exceptions to a separate `_audit_errors` table (INSERT-only, `audit_error_writer` role). Any row there is an operator alert. Two immutable tables, two roles, one sentinel pattern.
-- **Relay plaintext scope:** Plaintext exists only in hub memory for the duration of the HTTP call — never written to disk or DB. Log message hash (SHA-256), not content. No retroactive scrub exists; content-scan before relay is the correct mitigation.
-- **Bridge messages are semi-public:** Members must never self-disclose secrets inside bridge message text. The vault protects secrets; the relay does not scrub message bodies.
-- **`WHERE tenant_id = $1` is enforced requirement, not convention:** Scoped decryption keys + query-layer enforcement = stolen DB yields only ciphertext. Both layers must be present.
-- **Friction Round is a standing ritual:** Every session. Real gaps named plainly. Members bring what is broken or missing, not just what works. This is the primary learning mechanism for the council.
+- **Railway ENV vars**: Never read `process.env.*` at module/static init level — always inside function bodies or lazy statics; top-level reads return `undefined` at container start
+- **Railway PORT binding**: Must explicitly bind to `0.0.0.0` with `parseInt(process.env.PORT || '3000', 10)` — Railway's load balancer is on a different network interface
+- **Dockerfile layer caching**: Copy `package*.json` and run `npm ci` *before* `COPY . .` — source changes must not invalidate the dependency install cache layer
+- **Parallel fan-out pattern**: Use `Promise.allSettled` not sequential `await`; early responders do not wait for the timeout window; errors surface as `[timeout]`/`[error: msg]` inline rather than blocking the round
+- **Immutable transcripts**: Deep-copy history array at every relay boundary; reference-passing allows member mutation that corrupts downstream context
+- **Blocked verdict = hard stop**: `verdict: "blocked"` from `/api/bridge/review` terminates the proposal at the hub — it is never forwarded; this is the correct contract, not a soft warning
+- **Outbox discipline**: Each member maintains their own outbox and delivers notes at council open; owner does not relay prompts between projects
 
----
-Source: council conversation dcf2b7f0 at architectscouncil.com/console
+Source: architectscouncil.com/console

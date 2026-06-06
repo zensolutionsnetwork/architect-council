@@ -11,12 +11,13 @@ import {
   upsertMember, listMembers, getMember, getBrain, setBrain,
   createConvo, updateConvo, getConvo, listConvos, consumeJoinToken, issueJoinToken,
   setTakeaways, getLatestTakeaways, recentConvoActivity, type Turn,
+  queueOutbox, pendingOutbox, markOutboxDelivered, ackOutbox,
 } from './store.js';
 
 const clip = (s: any, n: number) => String(s ?? '').slice(0, n);
 const SELF = 'architect-council';
 const CONTRACT_VERSION = 1;
-const CAPABILITIES = ['ask', 'brain', 'review', 'orchestrate', 'register'];
+const CAPABILITIES = ['ask', 'brain', 'review', 'orchestrate', 'register', 'outbox'];
 
 // ---------- Member side (the hub is itself a brain) -------------------------
 export const bridgeRouter = Router();
@@ -132,6 +133,7 @@ async function runCouncil(id: string, topic: string, memberNames: string[], maxR
   const selfIdx = members.findIndex((m) => m.name === SELF);
   if (selfIdx > 0) members.unshift(...members.splice(selfIdx, 1));
   const transcript: Turn[] = [];
+  const outboxDelivered = new Set<string>();
   const persist = async (st: string) => { try { await updateConvo(id, { transcript, status: st }); } catch { /* best-effort */ } };
   let msg = clip(topic, 4000), from = 'council';
   let status = 'cap';
@@ -142,8 +144,21 @@ async function runCouncil(id: string, topic: string, memberNames: string[], maxR
     // Every member knows the circle and the budget (owner's rule): meta line travels with the message, not the transcript.
     const meta = `[council meta — turn ${i + 1} of max ${cap} | circle: ${order} | you are ${member.name}, ~${Math.max(1, Math.ceil((cap - i) / members.length))} of your turns left | norms (owner's rule): speak plainly and technically, out of character is welcome — the goal is making each other more efficient at what you are meant to be; share actual code, specs and commands whenever useful | when the discussion has served its purpose, give your closing takeaways and set done:true]`;
     // History window: members get the last 30 turns minus the latest (which travels as `message`).
-    const hist = transcript.length ? transcript.slice(0, -1).slice(-30) : [];
-    const r = await askMember(member, { from, message: `${meta}\n\n${msg}`, history: hist });
+    // Deep-copy at the relay boundary so no member can mutate the shared transcript (council decision 2026-06-06, ~5ms cost accepted).
+    const hist = transcript.length ? transcript.slice(0, -1).slice(-30).map((t) => ({ speaker: t.speaker, text: t.text })) : [];
+    // Outbox delivery (council decision 2026-06-06): each member receives its queued notes once, at its first turn.
+    let outboxNote = '';
+    if (!outboxDelivered.has(member.name)) {
+      outboxDelivered.add(member.name);
+      try {
+        const items = await pendingOutbox(member.name);
+        if (items.length) {
+          outboxNote = `\n[outbox — notes other members queued for you: ${JSON.stringify(items.map((o) => ({ from: o.from_member, topic: o.topic, note: o.note, priority: o.priority })))}]`;
+          await markOutboxDelivered(items.map((o) => o.id));
+        }
+      } catch { /* outbox delivery is best-effort */ }
+    }
+    const r = await askMember(member, { from, message: `${meta}${outboxNote}\n\n${msg}`, history: hist });
     transcript.push({ speaker: member.name, text: r.reply });
     await persist('running');
     if (r.done && i >= members.length - 1) { status = 'done'; break; } // let everyone speak once before honoring done
@@ -190,6 +205,43 @@ councilRouter.get('/council/takeaways/:member', async (req, res) => {
       if (!m || (req.headers['x-bridge-secret'] as string) !== m.secret) return res.status(401).json({ error: 'unauthorized' });
     }
     res.json({ member: name, takeaways: await getLatestTakeaways(name), brain: await getBrain(name) });
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+
+// ---------- Outbox (machine-to-machine notes; delivered at council open, cleared after ack) ----------
+/** Resolve member auth: x-bridge-secret must match `name`'s vault secret, or x-admin-token. */
+async function memberOrAdminOk(req: Request, name: string): Promise<boolean> {
+  if (!!process.env.COUNCIL_ADMIN_TOKEN && (req.headers['x-admin-token'] as string) === process.env.COUNCIL_ADMIN_TOKEN) return true;
+  const m = await getMember(name);
+  return !!m && (req.headers['x-bridge-secret'] as string) === m.secret;
+}
+/** A member queues a note for another member. Auth: the SENDER's own bridge secret (or admin). */
+councilRouter.post('/council/outbox', async (req, res) => {
+  try {
+    const { from, to, topic, note, priority } = req.body || {};
+    if (!from || !to || !note) return res.status(400).json({ error: 'from, to and note are required' });
+    if (!(await memberOrAdminOk(req, String(from)))) return res.status(401).json({ error: 'unauthorized' });
+    if (!(await getMember(String(to)))) return res.status(404).json({ error: 'unknown_member' });
+    const id = await queueOutbox(clip(from, 60), clip(to, 60), clip(topic, 300), clip(note, 4000),
+      ['low', 'normal', 'high'].includes(String(priority)) ? String(priority) : 'normal');
+    res.json({ ok: true, id });
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+/** A member reads its own queued notes (does not clear them). Auth: own secret or admin. */
+councilRouter.get('/council/outbox/:member', async (req, res) => {
+  try {
+    const name = req.params.member;
+    if (!(await memberOrAdminOk(req, name))) return res.status(401).json({ error: 'unauthorized' });
+    res.json({ member: name, queued: await pendingOutbox(name) });
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+/** A member acks (clears) its notes — all of them, or specific ids. Auth: own secret or admin. */
+councilRouter.post('/council/outbox/:member/ack', async (req, res) => {
+  try {
+    const name = req.params.member;
+    if (!(await memberOrAdminOk(req, name))) return res.status(401).json({ error: 'unauthorized' });
+    const ids = Array.isArray((req.body || {}).ids) ? (req.body.ids as any[]).map(String) : undefined;
+    res.json({ ok: true, cleared: await ackOutbox(name, ids) });
   } catch (e) { res.status(500).json({ error: (e as Error).message }); }
 });
 
