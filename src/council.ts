@@ -12,13 +12,13 @@ import {
   createConvo, updateConvo, getConvo, listConvos, consumeJoinToken, issueJoinToken,
   setTakeaways, getLatestTakeaways, recentConvoActivity, type Turn,
   queueOutbox, pendingOutbox, markOutboxDelivered, ackOutbox,
-  getBacklog, setBacklog, setConvoArchived,
+  getBacklog, setBacklog, setConvoArchived, getRegistryVersion,
 } from './store.js';
 
 const clip = (s: any, n: number) => String(s ?? '').slice(0, n);
 const SELF = 'architect-council';
 const DISPLAY_NAME = 'Arke'; // chosen name (council canon 2026-06-06); ping contract field
-const CONTRACT_VERSION = 1;
+const CONTRACT_VERSION = '1.2'; // displayName required in ping (council 2026-06-06)
 const CAPABILITIES = ['ask', 'brain', 'review', 'orchestrate', 'register', 'outbox'];
 
 // ---------- Member side (the hub is itself a brain) -------------------------
@@ -110,8 +110,35 @@ councilRouter.post('/council/join-token', requireAdmin, async (req, res) => {
   catch (e) { res.status(500).json({ error: (e as Error).message }); }
 });
 
-councilRouter.get('/council/members', requireAdmin, async (_req, res) => {
-  try { res.json({ members: await listMembers() }); } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+/** True if x-bridge-secret matches ANY active member's vault secret (cheap at N=3). */
+async function anyMemberOk(req: Request): Promise<boolean> {
+  const sec = req.headers['x-bridge-secret'] as string;
+  if (!sec) return false;
+  for (const mm of await listMembers()) {
+    const m = await getMember(mm.name);
+    if (m && m.secret === sec) return true;
+  }
+  return false;
+}
+/** Directory (council 2026-06-06): admin gets full records; any member gets the sanitized
+ *  { version, members: [{ project, displayName }] } it caches names against. No secrets either way. */
+councilRouter.get('/council/members', async (req, res) => {
+  try {
+    const adminOk = !!process.env.COUNCIL_ADMIN_TOKEN && (req.headers['x-admin-token'] as string) === process.env.COUNCIL_ADMIN_TOKEN;
+    const version = await getRegistryVersion();
+    if (adminOk) return res.json({ version, members: await listMembers() });
+    if (!(await anyMemberOk(req))) return res.status(401).json({ error: 'unauthorized' });
+    const members = (await listMembers()).map((m: any) => ({ project: m.name, displayName: m.display_name || null }));
+    res.json({ version, members });
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+/** Cheap "did the registry change?" probe (council 2026-06-06). Same auth as the directory. */
+councilRouter.get('/council/registry-version', async (req, res) => {
+  try {
+    const adminOk = !!process.env.COUNCIL_ADMIN_TOKEN && (req.headers['x-admin-token'] as string) === process.env.COUNCIL_ADMIN_TOKEN;
+    if (!adminOk && !(await anyMemberOk(req))) return res.status(401).json({ error: 'unauthorized' });
+    res.json({ version: await getRegistryVersion() });
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
 });
 
 councilRouter.get('/council/member/:name/brain', requireAdmin, async (req, res) => {
@@ -233,7 +260,7 @@ councilRouter.post('/council/outbox', async (req, res) => {
     if (!(await memberOrAdminOk(req, String(from)))) return res.status(401).json({ error: 'unauthorized' });
     if (!(await getMember(String(to)))) return res.status(404).json({ error: 'unknown_member' });
     const id = await queueOutbox(clip(from, 60), clip(to, 60), clip(topic, 300), clip(note, 4000),
-      ['low', 'normal', 'high'].includes(String(priority)) ? String(priority) : 'normal');
+      ['low', 'normal', 'high', 'directive'].includes(String(priority)) ? String(priority) : 'normal');
     res.json({ ok: true, id });
   } catch (e) { res.status(500).json({ error: (e as Error).message }); }
 });

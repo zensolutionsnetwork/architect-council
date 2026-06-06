@@ -64,6 +64,9 @@ export async function initDb(): Promise<void> {
   await q.query(`CREATE TABLE IF NOT EXISTS backlog (
     id int PRIMARY KEY DEFAULT 1, content text NOT NULL DEFAULT '',
     updated_at timestamptz NOT NULL DEFAULT now(), updated_by text)`);
+  await q.query(`CREATE TABLE IF NOT EXISTS registry_meta (
+    id int PRIMARY KEY DEFAULT 1, version bigint NOT NULL DEFAULT 1)`);
+  await q.query(`INSERT INTO registry_meta (id, version) VALUES (1,1) ON CONFLICT (id) DO NOTHING`);
   await q.query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS archived boolean NOT NULL DEFAULT false`);
   await q.query(`ALTER TABLE members ADD COLUMN IF NOT EXISTS display_name text`);
   // Chosen names — council canon 2026-06-06 (idempotent seed; members may update via /register later).
@@ -95,6 +98,12 @@ export async function upsertMember(m: Member, secret: string): Promise<void> {
     [m.name, m.base_url, m.owner_email || null, m.rules || null, JSON.stringify(m.capabilities || [])]);
   await q.query(`INSERT INTO member_secrets (member_name, secret_enc) VALUES ($1,$2)
     ON CONFLICT (member_name) DO UPDATE SET secret_enc=EXCLUDED.secret_enc`, [m.name, enc(secret)]);
+  // Monotonic registry version (council 2026-06-06): members cache the directory and probe this cheaply.
+  await q.query(`UPDATE registry_meta SET version = version + 1 WHERE id = 1`);
+}
+export async function getRegistryVersion(): Promise<number> {
+  const { rows } = await db().query<any>(`SELECT version FROM registry_meta WHERE id=1`);
+  return Number(rows[0]?.version || 0);
 }
 export async function listMembers(): Promise<Member[]> {
   const { rows } = await db().query<any>(`SELECT name, display_name, base_url, owner_email, rules, capabilities, active FROM members WHERE active ORDER BY created_at`);
