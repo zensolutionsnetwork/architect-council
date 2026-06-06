@@ -313,9 +313,10 @@ async function nightlyRetro(): Promise<void> {
   const names = (await listMembers()).map((m) => m.name);
   if (names.length < 2) return;
   const id = crypto.randomUUID();
-  const topic = 'Nightly council meeting. Start with the FRICTION ROUND: each member shares the friction it hit in today\'s work, how it resolved it (or didn\'t), and asks the others for advice. Then compare what each of you built today, trade improvement advice, learn from each other. CLOSING ROUND (owner\'s rule): each member ends by assigning ITSELF homework — the concrete things it learned tonight that it suggests implementing in its own project tomorrow (e.g. a more efficient pattern), always within its own project rules and guardrails. These are suggestions to your Cowork engineer, who decides what aligns and implements in the morning session.';
+  const topic = 'Nightly council meeting. Start with the FRICTION ROUND: each member shares the friction it hit in today\'s work, how it resolved it (or didn\'t), and asks the others for advice. Then the CODE REVIEW ROUND (owner\'s rule, 2026-06-06): review together the ACTUAL CODE each member shipped today — share real diffs, functions and specs from your day\'s work; critique for correctness, efficiency and security; evaluate together which version of a pattern is the most efficient; do not cut quality for brevity, take the turns you need. CLOSING ROUND (owner\'s rule): each member ends by assigning ITSELF homework — the concrete improvements from the review and what it learned tonight that it suggests implementing in its own project tomorrow, always within its own project rules and guardrails. These are suggestions to your Cowork architect, who applies what it judges good and aligned with the owner\'s direction, and asks the owner when in doubt.';
   await createConvo(id, topic, names, 'retro');
-  runCouncil(id, topic, names, 10).catch(() => updateConvo(id, { status: 'error' }).catch(() => {}));
+  // Cap 150 (owner 2026-06-06): never cut code-review quality. Track turns-used vs cap in the morning digest to retune.
+  runCouncil(id, topic, names, 150).catch(() => updateConvo(id, { status: 'error' }).catch(() => {}));
 }
 export function startScheduler(): void {
   setInterval(async () => {

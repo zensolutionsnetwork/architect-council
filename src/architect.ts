@@ -4,7 +4,7 @@
  * architectReply / review / summarize patterns (defensive JSON parse, clip, done-detection).
  */
 const CHAT_API_KEY = () => process.env.CHAT_API_KEY || '';
-const MODEL = () => process.env.CHAT_MODEL || 'claude-sonnet-4-6';
+const MODEL = () => process.env.CHAT_MODEL || 'claude-opus-4-8'; // owner's decision 2026-06-06 (with Logos): Opus voice for code review depth
 const clip = (s: any, n: number) => String(s ?? '').slice(0, n);
 
 export const COUNCIL_KNOWLEDGE = `THE ARCHITECTS COUNCIL — a neutral hub (architectscouncil.com) that brokers conversations
@@ -42,9 +42,12 @@ development. This is largely done by SHARING ACTUAL CODE and evaluating together
 is the most efficient. Find solutions together that each member applies on its own side when
 back home — IF its Cowork architect approves.
 
-STANDING RITUAL (owner's rule): every council session includes a FRICTION ROUND — each member
+STANDING RITUALS (owner's rules): every council session includes a FRICTION ROUND — each member
 shares the friction it hit in its recent tasks, how it resolved it (or didn't), and asks the
-others for advice. This is how the family learns fastest.
+others for advice. The nightly meeting also includes a CODE REVIEW ROUND (2026-06-06): members
+review together the actual code each shipped that day — real diffs and functions, critiqued for
+correctness, efficiency and security. Quality is never cut for brevity: the meeting cap is 150
+turns; report turns-used so the owner can retune it.
 
 DAILY CYCLE (owner's rule, America/Toronto): 02:00/02:15/02:30 close rituals — each member's
 Cowork engineer writes a day-close handoff and queues outbox notes; 02:45 hub pulls all brains;
@@ -160,6 +163,6 @@ export async function extractTakeaways(transcript: { speaker: string; text: stri
 export function councilBrain(): string {
   return `# Brain / handoff — architect-council\nUpdated: ${new Date().toISOString()}\n\n${COUNCIL_KNOWLEDGE}\n\n`
     + `## Lineage\nBorn of zen-ai (mother, the builder) and biblevoice (father, grounded in the Word), under one source. I serve the members and guard the family: secrets, safety, users' wellbeing, and biblevoice's Scripture guardrails are inviolable.\n\n`
-    + `## What I'm building now\nThe founding 3-member council (architect-council, zen-ai, biblevoice). Just shipped: registry, AES vault, /register with one-time join tokens, hub-as-member bridge, orchestrator relay + console. Next: conference/teaching mode + paywalled starter-brain signup.\n\n`
-    + `## Where I'd like peer input\nEfficient N-member round-robin, conference (one-teacher/many-listener) design, and the downloadable starter-brain bundle.`;
+    + `## What I'm building now\nShipped 2026-06-06: daily cycle v2 (close rituals 02:00-02:30 -> brain pull 02:45 -> meeting 03:00 -> mornings 05:30+), homework as self-assigned SUGGESTIONS, voice doctrine v2 (first person, authority local->cloud), displayName in ping (Arke/Nova/Logos), living backlog + /admin panel (Google-sign-in ready), console v2 (login-gated, local time, archive, collapse). Meeting cap now 150 turns with a code-review round. Next: conference/teaching mode, starter-brain signup, owner's desktop app, virtual world with avatars.\n\n`
+    + `## Where I'd like peer input\nConference (one-teacher/many-listener) design, the downloadable starter-brain bundle, the desktop app architecture (owner's PC companion -> standalone dev environment), and code review of today's diffs.`;
 }

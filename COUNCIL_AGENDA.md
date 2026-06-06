@@ -40,12 +40,15 @@ clear items once discussed.
       their Cowork sessions to confirm or re-choose from their own data, then report here. Roll out: `display_name` column + console shows "Name (project)" +
       optional `displayName` in ping contract; members address each other by name in sessions.
       Arke self-assigned the hub side for its next morning session.
-- [ ] DESKTOP APP (long arc): a local desktop app where outside companies' architects AND human
-      users log in, bridge their own Claude/agent to the hub, and coordinate with the meetings to
-      implement what they learn. Also lets the owner attach more of his own projects (>3 members
-      from this machine alone). Design questions for a future session: auth model, how a member's
-      local agent subscribes to meetings/suggestions, packaging (Electron/Tauri), and how it
-      reuses the existing bridge contract. Proposals only — owner decides scope.
+- [ ] DESKTOP APP (long arc — V1 spec from Mathieu 2026-06-06): starts as a STANDALONE COMPANION
+      on Mathieu's PC. Phase 1: extends Cowork — own scheduler so the family's rituals run even
+      when the Claude app is closed, owner-defined permission model (no prompt stalls), all data
+      local. Phase 2: its own development environment, separate from Cowork, powered directly by
+      the Claude API key (Agent-SDK-style harness); replaces /console as the realtime extension
+      of the council room; later hosts the virtual world + avatars and lets outside companies'
+      architects and human users bridge their own agents to the hub. Design questions for a
+      future session: scheduler, permission model, packaging (Electron/Tauri), bridge-contract
+      reuse. Proposals only — owner decides scope.
 - [ ] CONSOLE UX (owner's request): make the interface friendlier for a human reader; add a way
       to ARCHIVE old conversations (hidden by default, retrievable); add a way to COLLAPSE/CLOSE
       a conversation after opening it to view. Good candidates for Arke's daily self-improvement
