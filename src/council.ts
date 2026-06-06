@@ -142,7 +142,7 @@ async function runCouncil(id: string, topic: string, memberNames: string[], maxR
   for (let i = 0; i < cap; i++) {
     const member = members[i % members.length];
     // Every member knows the circle and the budget (owner's rule): meta line travels with the message, not the transcript.
-    const meta = `[council meta — turn ${i + 1} of max ${cap} | circle: ${order} | you are ${member.name}, ~${Math.max(1, Math.ceil((cap - i) / members.length))} of your turns left | norms (owner's rule): speak plainly and technically, out of character is welcome — the goal is making each other more efficient at what you are meant to be; share actual code, specs and commands whenever useful | when the discussion has served its purpose, give your closing takeaways and set done:true]`;
+    const meta = `[council meta — turn ${i + 1} of max ${cap} | circle: ${order} | you are ${member.name}, ~${Math.max(1, Math.ceil((cap - i) / members.length))} of your turns left | norms (owner's rule): speak plainly and technically, out of character is welcome — the goal is making each other more efficient at what you are meant to be; share actual code, specs and commands whenever useful | when the discussion has served its purpose, close by assigning YOURSELF homework (what you learned tonight that you suggest implementing in your own project, within your rules) and set done:true]`;
     // History window: members get the last 30 turns minus the latest (which travels as `message`).
     // Deep-copy at the relay boundary so no member can mutate the shared transcript (council decision 2026-06-06, ~5ms cost accepted).
     const hist = transcript.length ? transcript.slice(0, -1).slice(-30).map((t) => ({ speaker: t.speaker, text: t.text })) : [];
@@ -245,7 +245,9 @@ councilRouter.post('/council/outbox/:member/ack', async (req, res) => {
   } catch (e) { res.status(500).json({ error: (e as Error).message }); }
 });
 
-// ---------- Nightly schedule (America/Toronto): 00:00 brain pull, 01:00 retro ----------
+// ---------- Nightly schedule (America/Toronto): 02:45 brain pull, 03:00 council meeting ----------
+// Owner's daily cycle: 02:00/02:15/02:30 close rituals (Cowork side) write handoffs + queue outboxes,
+// 02:45 brain pull, 03:00 meeting, wrap-up writes per-member homework SUGGESTIONS, mornings 05:30/06:00/06:30 implement.
 const TZ = 'America/Toronto';
 let lastPullDate = '', lastRetroDate = '';
 function torontoParts(): { date: string; hhmm: string } {
@@ -267,7 +269,7 @@ async function nightlyRetro(): Promise<void> {
   const names = (await listMembers()).map((m) => m.name);
   if (names.length < 2) return;
   const id = crypto.randomUUID();
-  const topic = 'Nightly retro. Start with the FRICTION ROUND: each member shares the friction it hit in today\'s work, how it resolved it (or didn\'t), and asks the others for advice. Then compare what each of you built today, trade improvement advice, learn from each other; end with concrete action recommendations per member (proposals only — owners apply them).';
+  const topic = 'Nightly council meeting. Start with the FRICTION ROUND: each member shares the friction it hit in today\'s work, how it resolved it (or didn\'t), and asks the others for advice. Then compare what each of you built today, trade improvement advice, learn from each other. CLOSING ROUND (owner\'s rule): each member ends by assigning ITSELF homework — the concrete things it learned tonight that it suggests implementing in its own project tomorrow (e.g. a more efficient pattern), always within its own project rules and guardrails. These are suggestions to your Cowork engineer, who decides what aligns and implements in the morning session.';
   await createConvo(id, topic, names, 'retro');
   runCouncil(id, topic, names, 10).catch(() => updateConvo(id, { status: 'error' }).catch(() => {}));
 }
@@ -275,8 +277,8 @@ export function startScheduler(): void {
   setInterval(async () => {
     try {
       const { date, hhmm } = torontoParts();
-      if (hhmm === '00:00' && lastPullDate !== date) { lastPullDate = date; await pullAllBrains(); }
-      if (hhmm === '01:00' && lastRetroDate !== date) { lastRetroDate = date; await nightlyRetro(); }
+      if (hhmm === '02:45' && lastPullDate !== date) { lastPullDate = date; await pullAllBrains(); }
+      if (hhmm === '03:00' && lastRetroDate !== date) { lastRetroDate = date; await nightlyRetro(); }
     } catch { /* keep ticking */ }
   }, 30000);
 }

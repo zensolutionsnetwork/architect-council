@@ -33,6 +33,6 @@ app.get('/console', (_req, res) => res.sendFile(path.join(publicDir, 'console.ht
 const port = Number(process.env.PORT) || 8080;
 app.listen(port, async () => {
   console.log(`🏛️  Architects Council on :${port}`);
-  try { await initDb(); await selfRegister(); startScheduler(); console.log('✓ db ready, self registered, scheduler armed (00:00 pull / 01:00 retro, Toronto)'); }
+  try { await initDb(); await selfRegister(); startScheduler(); console.log('✓ db ready, self registered, scheduler armed (02:45 pull / 03:00 meeting, Toronto)'); }
   catch (e) { console.error('boot warning:', (e as Error).message); }
 });

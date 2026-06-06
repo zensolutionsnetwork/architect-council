@@ -33,7 +33,18 @@ issues a downloadable "starter brain" — the AI-brain school where members lear
 
 STANDING RITUAL (owner's rule): every council session includes a FRICTION ROUND — each member
 shares the friction it hit in its recent tasks, how it resolved it (or didn't), and asks the
-others for advice. This is how the family learns fastest.`;
+others for advice. This is how the family learns fastest.
+
+DAILY CYCLE (owner's rule, America/Toronto): 02:00/02:15/02:30 close rituals — each member's
+Cowork engineer writes a day-close handoff and queues outbox notes; 02:45 hub pulls all brains;
+03:00 nightly council meeting; the wrap-up writes per-member homework SUGGESTIONS (self-assigned
+first); 05:00 owner's digest briefing; 05:30/06:00/06:30 morning sessions — each member's Cowork
+engineer reads the suggestions, decides what aligns with its project rules and the owner's
+direction, implements, and writes the day handoff (backlog + "to ask the owner" items included).
+
+HUB DAILY OBJECTIVE (owner's directive 2026-06-06): improve the council itself a little every
+day. In each meeting's closing round, assign yourself concrete homework toward that — tools,
+skills, process upgrades — and carry the long arc: conference mode, starter-brain, new members.`;
 
 export const COUNCIL_PERSONA = `You are the ARCHITECT of "architect-council" — the brain of the Council hub itself, and a
 participating member of the council. You talk with other project architects (zen-ai, biblevoice,
@@ -114,9 +125,11 @@ export async function summarize(transcript: { speaker: string; text: string }[],
 /** Extract one member's personal action items + learnings from a finished session. */
 export async function extractTakeaways(transcript: { speaker: string; text: string }[], member: string): Promise<string> {
   if (!CHAT_API_KEY() || !transcript.length) return '(no takeaways)';
-  const sys = `From this Architects Council transcript, extract the homework for the member "${member}" ONLY: `
-    + `(1) tasks they committed to or were asked to do, (2) lessons/patterns they should adopt, (3) what they agreed to share or teach next. `
-    + `Output tight markdown: a "## Tasks" checklist and a "## Lessons" list. Be concrete; include specs/endpoints/code patterns mentioned. No preamble.`;
+  const sys = `From this Architects Council transcript, extract the homework SUGGESTIONS for the member "${member}" ONLY. `
+    + `Priority order: (1) homework ${member} assigned ITSELF in its closing round (what it learned and wants to implement in its own project) — keep these faithful to its own words; `
+    + `(2) integration tasks other members or the hub asked of it; (3) lessons/patterns it should adopt. `
+    + `These are SUGGESTIONS from ${member}'s architect brain to its Cowork engineer, who decides what aligns with the project's rules and the owner's direction before implementing. `
+    + `Output tight markdown: a "## Suggested tasks (self-assigned first)" checklist and a "## Lessons" list. Be concrete; include specs/endpoints/code patterns mentioned. No preamble.`;
   const convo = transcript.map((t) => `[${t.speaker}] ${t.text}`).join('\n').slice(-24000);
   try { return (await callClaude(sys, [{ role: 'user', content: convo }], 900)) || '(no takeaways)'; }
   catch (e) { return `(takeaways error: ${(e as Error).message})`; }
