@@ -12,7 +12,7 @@ import {
   createConvo, updateConvo, getConvo, listConvos, consumeJoinToken, issueJoinToken,
   setTakeaways, getLatestTakeaways, recentConvoActivity, type Turn,
   queueOutbox, pendingOutbox, markOutboxDelivered, ackOutbox,
-  getBacklog, setBacklog,
+  getBacklog, setBacklog, setConvoArchived,
 } from './store.js';
 
 const clip = (s: any, n: number) => String(s ?? '').slice(0, n);
@@ -195,6 +195,14 @@ councilRouter.get('/council/convo/:id', requireAdmin, async (req, res) => {
 });
 councilRouter.get('/council/convos', requireAdmin, async (_req, res) => {
   try { res.json({ convos: await listConvos() }); } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+/** Archive / unarchive a conversation (console housekeeping — owner's request 2026-06-06). */
+councilRouter.post('/council/convo/:id/archive', requireAdmin, async (req, res) => {
+  try {
+    const ok = await setConvoArchived(req.params.id, (req.body || {}).archived !== false);
+    if (!ok) return res.status(404).json({ error: 'not_found' });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
 });
 
 /** Each member downloads its own homework, machine-to-machine, with its OWN bridge secret (or the admin token). */

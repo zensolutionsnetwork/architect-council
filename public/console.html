@@ -15,6 +15,7 @@
   textarea{min-height:74px;resize:vertical}
   button{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#04121f;border:none;border-radius:9px;padding:10px 16px;font-weight:700;cursor:pointer;margin-top:10px}
   button.alt{background:#1a2335;color:var(--ink);border:1px solid var(--line)}
+  button.tiny{padding:3px 10px;font-size:12px;margin:0;border-radius:7px}
   button:disabled{opacity:.5;cursor:default}
   .row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1;min-width:150px}
   .members{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
@@ -24,21 +25,30 @@
   .turn{border-left:3px solid var(--line);padding:6px 0 6px 12px;margin:8px 0;animation:fade .3s ease}
   @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
   .who{font-size:12px;color:var(--mute);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px}
+  .who b{color:var(--accent2);font-size:12.5px}
   .pill{font-size:12px;padding:2px 9px;border-radius:999px;border:1px solid var(--line);display:inline-block}
   .pill.running{color:var(--accent2);border-color:var(--accent2)}.pill.cap{color:var(--warn);border-color:var(--warn)}.pill.error{color:var(--bad);border-color:var(--bad)}.pill.done{color:var(--ok);border-color:var(--ok)}
   .muted{color:var(--mute);font-size:13px}.mt0{margin-top:0}
   .gate{max-width:420px;margin:60px auto}
   .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent2);animation:blink 1s infinite;margin-right:6px}
   @keyframes blink{50%{opacity:.25}}
+  .convo{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0;background:#0B0F1A}
+  .convo .top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+  .convo .acts{display:flex;gap:6px;align-items:center}
+  .viewer{border:1px solid var(--accent2);border-radius:12px;padding:12px;margin-top:10px;background:#0B0F1A}
+  .viewer .vhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  a.link{color:var(--accent2);cursor:pointer;text-decoration:none}
 </style></head>
 <body><div class="wrap">
   <h1>🏛️ Council Console</h1>
-  <p class="sub">Spark a topic among members and watch the architects exchange live (10-round cap).</p>
+  <p class="sub">Private — the owner's window on the family's exchanges. Arke (architect-council) · Nova (zen-ai) · Logos (biblevoice).</p>
 
   <div id="gate" class="card gate">
-    <h2 class="mt0">Access key</h2>
-    <label>Admin token (COUNCIL_ADMIN_TOKEN)</label>
-    <input id="key" type="password" placeholder="paste your token…" autocomplete="off"/>
+    <h2 class="mt0">Owner sign-in</h2>
+    <div id="gsi" style="margin:6px 0"></div>
+    <p class="muted" id="gsiHint"></p>
+    <label>…or console key</label>
+    <input id="key" type="password" placeholder="paste your key…" autocomplete="off"/>
     <label style="display:flex;align-items:center;gap:6px;margin-top:8px"><input type="checkbox" id="remember" style="width:auto" checked/> Remember in this browser</label>
     <button onclick="saveKey()">Enter</button>
     <p id="gateMsg" class="muted"></p>
@@ -53,9 +63,18 @@
         <div><label>Max rounds (≤10)</label><input id="maxr" type="number" value="10" min="1" max="10"/></div>
       </div>
       <label>Topic to debate</label>
-      <textarea id="msg" placeholder="e.g. Compare how each of you would design the conference/teaching mode (one teacher, many listeners). What's the best approach?"></textarea>
+      <textarea id="msg" placeholder="e.g. Compare how each of you would design the conference/teaching mode. Share code; evaluate together which version is most efficient."></textarea>
       <button id="goConv" onclick="startConv()">Start the exchange</button>
       <div id="live" style="margin-top:12px"></div>
+    </div>
+
+    <div class="card">
+      <h2>📜 Conversations</h2>
+      <div class="row" style="align-items:center">
+        <div><button class="alt" style="margin-top:0" onclick="loadConvos()">Refresh</button></div>
+        <div style="text-align:right"><label style="display:inline-flex;align-items:center;gap:6px;margin:0"><input type="checkbox" id="showArch" style="width:auto" onchange="renderConvos()"/> show archived</label></div>
+      </div>
+      <div id="convos"></div>
     </div>
 
     <div class="card">
@@ -64,31 +83,52 @@
       <span id="brainMeta" class="muted"></span>
       <pre id="brainOut" style="display:none"></pre>
     </div>
-
-    <div class="card">
-      <h2>📜 Recent conversations</h2>
-      <button class="alt" onclick="loadConvos()">Refresh</button>
-      <div id="convos"></div>
-    </div>
   </div>
 </div>
 <script>
-var KEY='';
+var KEY='', GHDR=null, NAMES={};
 function k(){ return localStorage.getItem('council_admin_key')||''; }
-function saveKey(){ var v=document.getElementById('key').value.trim(); if(!v)return; if(document.getElementById('remember').checked) localStorage.setItem('council_admin_key',v); KEY=v; boot(); }
-function H(){ return {'x-admin-token':KEY,'content-type':'application/json'}; }
-async function api(path, opts){ opts=opts||{}; opts.headers=H(); var r=await fetch('/api/council'+path,opts); if(r.status===401||r.status===403){ throw new Error('key refused'); } return r.json(); }
+function H(){ var h={'content-type':'application/json'}; if(GHDR) h['x-google-id-token']=GHDR; if(KEY) h['x-admin-token']=KEY; return h; }
+async function api(path, opts){ opts=opts||{}; opts.headers=H(); var r=await fetch('/api/council'+path,opts); if(r.status===401||r.status===403){ throw new Error('access refused'); } return r.json(); }
 function esc(s){ return (s==null?'':String(s)).replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
+function dt(s){ if(!s) return ''; var d=new Date(s); return isNaN(d)?esc(s):d.toLocaleString(undefined,{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}); }
+function nm(p){ return NAMES[p]?(NAMES[p]+' ('+p+')'):p; }
+
+/* ---- gate: nothing renders until the key/Google identity is VERIFIED ---- */
+async function tryEnter(){
+  try{ await api('/members'); document.getElementById('gate').style.display='none';
+    document.getElementById('app').style.display='block'; loadMembers().then(loadConvos); return true; }
+  catch(e){ document.getElementById('gateMsg').textContent='Access refused.'; KEY=''; GHDR=null; return false; }
+}
+function saveKey(){ var v=document.getElementById('key').value.trim(); if(!v)return; KEY=v;
+  tryEnter().then(function(ok){ if(ok && document.getElementById('remember').checked) localStorage.setItem('council_admin_key',v); });
+}
+async function gsiInit(){
+  try{ var r=await fetch('/api/council/admin/config'); var d=await r.json();
+    if(!d.googleClientId){ document.getElementById('gsiHint').textContent='(Google Sign-In pending setup — use the console key)'; return; }
+    var s=document.createElement('script'); s.src='https://accounts.google.com/gsi/client'; s.async=true;
+    s.onload=function(){ google.accounts.id.initialize({ client_id:d.googleClientId, callback:function(resp){ GHDR=resp.credential; tryEnter(); } });
+      google.accounts.id.renderButton(document.getElementById('gsi'),{theme:'filled_black',text:'signin_with'}); };
+    document.head.appendChild(s);
+    document.getElementById('gsiHint').textContent=d.ownerEmail+' only.';
+  }catch(e){ /* key path still works */ }
+}
+
+/* ---- members ---- */
 var MEMBERS=[];
 async function loadMembers(){
   try{ var d=await api('/members'); MEMBERS=d.members||[];
-    document.getElementById('members').innerHTML=MEMBERS.map(function(m){ return '<label class="mem"><input type="checkbox" value="'+esc(m.name)+'" checked/> '+esc(m.name)+'</label>'; }).join('')||'<span class="muted">no members yet</span>';
-    document.getElementById('brainSel').innerHTML=MEMBERS.map(function(m){ return '<option>'+esc(m.name)+'</option>'; }).join('');
+    NAMES={}; MEMBERS.forEach(function(m){ if(m.display_name) NAMES[m.name]=m.display_name; });
+    document.getElementById('members').innerHTML=MEMBERS.map(function(m){ return '<label class="mem"><input type="checkbox" value="'+esc(m.name)+'" checked/> '+esc(nm(m.name))+'</label>'; }).join('')||'<span class="muted">no members yet</span>';
+    document.getElementById('brainSel').innerHTML=MEMBERS.map(function(m){ return '<option value="'+esc(m.name)+'">'+esc(nm(m.name))+'</option>'; }).join('');
   }catch(e){ document.getElementById('members').innerHTML='<span class="pill error">'+esc(e.message)+'</span>'; }
 }
 function chosen(){ return [].slice.call(document.querySelectorAll('#members input:checked')).map(function(c){return c.value;}); }
-function turnsHtml(t){ return (t||[]).map(function(x){ return '<div class="turn"><div class="who">'+esc(x.speaker)+'</div>'+esc(x.text)+'</div>'; }).join(''); }
+function turnsHtml(t){ return (t||[]).map(function(x){ return '<div class="turn"><div class="who"><b>'+esc(NAMES[x.speaker]||x.speaker)+'</b> ('+esc(x.speaker)+')</div>'+esc(x.text)+'</div>'; }).join(''); }
+
+/* ---- start + live watch (collapsible) ---- */
 var poll=null;
+function stopWatch(){ if(poll){ clearInterval(poll); poll=null; } document.getElementById('live').innerHTML=''; document.getElementById('goConv').disabled=false; }
 async function startConv(){
   var b=document.getElementById('goConv'); b.disabled=true;
   var live=document.getElementById('live'); live.innerHTML='<span class="pill running"><span class="dot"></span>starting…</span>';
@@ -102,23 +142,38 @@ function watch(id){
   var live=document.getElementById('live'); if(poll) clearInterval(poll);
   var tick=async function(){
     try{ var c=await api('/convo/'+id); var running=c.status==='running';
-      var head='<span class="pill '+esc(c.status)+'">'+(running?'<span class="dot"></span>running':esc(c.status))+'</span>';
+      var head='<div class="vhead"><span><span class="pill '+esc(c.status)+'">'+(running?'<span class="dot"></span>running':esc(c.status))+'</span> <span class="muted">'+dt(c.updated_at)+'</span></span><button class="alt tiny" onclick="stopWatch()">✕ close</button></div>';
       var sum=c.summary?('<b>Summary</b><pre>'+esc(c.summary)+'</pre>'):'';
-      live.innerHTML=head+'<div style="margin-top:8px">'+turnsHtml(c.transcript)+'</div>'+sum;
-      if(!running){ clearInterval(poll); poll=null; document.getElementById('goConv').disabled=false; loadConvos(); }
+      live.innerHTML='<div class="viewer">'+head+turnsHtml(c.transcript)+sum+'</div>';
+      if(!running && poll){ clearInterval(poll); poll=null; document.getElementById('goConv').disabled=false; loadConvos(); }
     }catch(e){ /* keep polling */ }
   };
   tick(); poll=setInterval(tick,1800);
+  document.getElementById('live').scrollIntoView({behavior:'smooth'});
 }
-async function loadBrain(){ try{ var n=document.getElementById('brainSel').value; var d=await api('/member/'+encodeURIComponent(n)+'/brain'); var o=document.getElementById('brainOut'); o.style.display='block'; o.textContent=d.brain||'(empty)'; document.getElementById('brainMeta').textContent=(d.updatedAt?(' updated '+d.updatedAt):'')+(d.cached?' (cached)':''); }catch(e){ document.getElementById('brainMeta').textContent=' '+e.message; } }
-async function loadConvos(){
+
+/* ---- conversations list: local time, archive, collapse ---- */
+var CONVOS=[];
+async function loadConvos(){ try{ var d=await api('/convos'); CONVOS=d.convos||[]; renderConvos(); }catch(e){ document.getElementById('convos').innerHTML='<p class="pill error">'+esc(e.message)+'</p>'; } }
+function renderConvos(){
+  var showArch=document.getElementById('showArch').checked;
   var f=document.getElementById('convos');
-  try{ var d=await api('/convos'); var cs=d.convos||[];
-    if(!cs.length){ f.innerHTML='<p class="muted">No conversations yet.</p>'; return; }
-    f.innerHTML=cs.map(function(c){ return '<div class="turn"><div class="who">'+esc(c.created_at)+' · '+esc((c.members||[]).join(', '))+' <span class="pill '+esc(c.status)+'">'+esc(c.status)+'</span></div>'+esc(c.summary||c.topic||'(running)')+' <a href="#" onclick="watch(\''+esc(c.id)+'\');return false" style="color:var(--accent2)">▶ view</a></div>'; }).join('');
-  }catch(e){ f.innerHTML='<p class="pill error">'+esc(e.message)+'</p>'; }
+  var cs=CONVOS.filter(function(c){ return showArch || !c.archived; });
+  if(!cs.length){ f.innerHTML='<p class="muted">'+(showArch?'No conversations yet.':'No active conversations — check "show archived".')+'</p>'; return; }
+  f.innerHTML=cs.map(function(c){
+    var who=(c.members||[]).map(function(p){ return NAMES[p]||p; }).join(' · ');
+    return '<div class="convo'+(c.archived?'" style="opacity:.55':'')+'">'
+      +'<div class="top"><span class="who">'+dt(c.created_at)+' — '+esc(who)+' <span class="pill '+esc(c.status)+'">'+esc(c.status)+'</span>'+(c.archived?' <span class="pill">archived</span>':'')+'</span>'
+      +'<span class="acts"><button class="alt tiny" onclick="watch(\''+esc(c.id)+'\')">▶ view</button>'
+      +'<button class="alt tiny" onclick="archive(\''+esc(c.id)+'\','+(c.archived?'false':'true')+')">'+(c.archived?'↩ restore':'🗄 archive')+'</button></span></div>'
+      +'<div class="muted" style="margin-top:4px">'+esc((c.summary||c.topic||'(running)').slice(0,220))+'</div></div>';
+  }).join('');
 }
-function boot(){ document.getElementById('gate').style.display='none'; document.getElementById('app').style.display='block'; loadMembers().then(loadConvos); }
-(function(){ var s=k(); if(s){ KEY=s; boot(); } })();
+async function archive(id, on){ try{ await api('/convo/'+id+'/archive',{method:'POST',body:JSON.stringify({archived:on})}); loadConvos(); }catch(e){ alert(e.message); } }
+
+/* ---- brains ---- */
+async function loadBrain(){ try{ var n=document.getElementById('brainSel').value; var d=await api('/member/'+encodeURIComponent(n)+'/brain'); var o=document.getElementById('brainOut'); o.style.display='block'; o.textContent=d.brain||'(empty)'; document.getElementById('brainMeta').textContent=(d.updatedAt?(' updated '+dt(d.updatedAt)):'')+(d.cached?' (cached)':''); }catch(e){ document.getElementById('brainMeta').textContent=' '+e.message; } }
+
+(function(){ gsiInit(); var s=k(); if(s){ KEY=s; tryEnter(); } })();
 </script>
 </body></html>

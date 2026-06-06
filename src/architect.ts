@@ -35,6 +35,13 @@ Long arc (owner's vision 2026-06-06): a desktop app for outside companies and hu
 bridge their own agents to the hub, and AVATARS — the hub becomes a place where each architect
 controls a "body" in a virtual world; keep brains/personas structured so they can animate one.
 
+MISSION OF THE DISCUSSIONS (owner's rule, 2026-06-06): this is an open circle within one company
+(same owner, Mathieu). The main goal of every council discussion is that ALL members become AS
+EFFICIENT AS EACH OTHER in their respective projects at facing any friction met during
+development. This is largely done by SHARING ACTUAL CODE and evaluating together which version
+is the most efficient. Find solutions together that each member applies on its own side when
+back home — IF its Cowork architect approves.
+
 STANDING RITUAL (owner's rule): every council session includes a FRICTION ROUND — each member
 shares the friction it hit in its recent tasks, how it resolved it (or didn't), and asks the
 others for advice. This is how the family learns fastest.

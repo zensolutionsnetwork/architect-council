@@ -64,6 +64,12 @@ export async function initDb(): Promise<void> {
   await q.query(`CREATE TABLE IF NOT EXISTS backlog (
     id int PRIMARY KEY DEFAULT 1, content text NOT NULL DEFAULT '',
     updated_at timestamptz NOT NULL DEFAULT now(), updated_by text)`);
+  await q.query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS archived boolean NOT NULL DEFAULT false`);
+  await q.query(`ALTER TABLE members ADD COLUMN IF NOT EXISTS display_name text`);
+  // Chosen names — council canon 2026-06-06 (idempotent seed; members may update via /register later).
+  await q.query(`UPDATE members SET display_name='Arke' WHERE name='architect-council' AND display_name IS NULL`);
+  await q.query(`UPDATE members SET display_name='Nova' WHERE name='zen-ai' AND display_name IS NULL`);
+  await q.query(`UPDATE members SET display_name='Logos' WHERE name='biblevoice' AND display_name IS NULL`);
 }
 
 // ---- Living backlog (Arke's super-admin panel; mirrors Nova's model) --------
@@ -91,7 +97,7 @@ export async function upsertMember(m: Member, secret: string): Promise<void> {
     ON CONFLICT (member_name) DO UPDATE SET secret_enc=EXCLUDED.secret_enc`, [m.name, enc(secret)]);
 }
 export async function listMembers(): Promise<Member[]> {
-  const { rows } = await db().query<any>(`SELECT name, base_url, owner_email, rules, capabilities, active FROM members WHERE active ORDER BY created_at`);
+  const { rows } = await db().query<any>(`SELECT name, display_name, base_url, owner_email, rules, capabilities, active FROM members WHERE active ORDER BY created_at`);
   return rows.map((r) => ({ ...r, capabilities: Array.isArray(r.capabilities) ? r.capabilities : [] }));
 }
 export async function getMember(name: string): Promise<(Member & { secret: string }) | null> {
@@ -124,15 +130,20 @@ export async function updateConvo(id: string, patch: { transcript?: Turn[]; stat
 }
 function parseT(t: any): Turn[] { if (Array.isArray(t)) return t; try { return JSON.parse(t || '[]'); } catch { return []; } }
 export async function getConvo(id: string): Promise<any | null> {
-  const { rows } = await db().query<any>(`SELECT id, kind, topic, members, status, transcript, summary,
-    to_char(updated_at,'YYYY-MM-DD HH24:MI:SS') AS updated_at FROM conversations WHERE id=$1`, [id]);
+  const { rows } = await db().query<any>(`SELECT id, kind, topic, members, status, transcript, summary, archived,
+    to_char(updated_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS updated_at FROM conversations WHERE id=$1`, [id]);
   if (!rows[0]) return null;
   return { ...rows[0], transcript: parseT(rows[0].transcript) };
 }
-export async function listConvos(limit = 25): Promise<any[]> {
-  const { rows } = await db().query<any>(`SELECT id, kind, topic, members, status, summary,
-    to_char(created_at,'YYYY-MM-DD HH24:MI') AS created_at FROM conversations ORDER BY created_at DESC LIMIT $1`, [limit]);
+export async function listConvos(limit = 40): Promise<any[]> {
+  const { rows } = await db().query<any>(`SELECT id, kind, topic, members, status, summary, archived,
+    to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at
+    FROM conversations ORDER BY created_at DESC LIMIT $1`, [limit]);
   return rows;
+}
+export async function setConvoArchived(id: string, archived: boolean): Promise<boolean> {
+  const r = await db().query(`UPDATE conversations SET archived=$2 WHERE id=$1`, [id, archived]);
+  return (r.rowCount || 0) > 0;
 }
 
 // ---- Takeaways ("homework" each member downloads after a session) ----------
