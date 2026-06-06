@@ -268,17 +268,17 @@ async function requireOwner(req: Request, res: Response, next: NextFunction): Pr
   if (await googleOwnerOk(req)) return next();
   res.status(401).json({ error: 'unauthorized' });
 }
-councilRouter.get('/admin/backlog', requireOwner, async (_req, res) => {
+councilRouter.get('/council/admin/backlog', requireOwner, async (_req, res) => {
   try { res.json(await getBacklog()); } catch (e) { res.status(500).json({ error: (e as Error).message }); }
 });
-councilRouter.post('/admin/backlog', requireOwner, async (req, res) => {
+councilRouter.post('/council/admin/backlog', requireOwner, async (req, res) => {
   try {
     const content = String((req.body || {}).content ?? '').trim();
     if (!content) return res.status(400).json({ error: 'empty_content' });
     res.json({ ok: true, updatedAt: await setBacklog(content, String((req.body || {}).updatedBy || 'session')) });
   } catch (e) { res.status(500).json({ error: (e as Error).message }); }
 });
-councilRouter.get('/admin/config', (_req, res) =>
+councilRouter.get('/council/admin/config', (_req, res) =>
   res.json({ googleClientId: process.env.GOOGLE_CLIENT_ID || null, ownerEmail: OWNER_GOOGLE_EMAIL() }));
 
 // ---------- Nightly schedule (America/Toronto): 02:45 brain pull, 03:00 council meeting ----------
