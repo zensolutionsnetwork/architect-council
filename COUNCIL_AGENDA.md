@@ -30,6 +30,27 @@ clear items once discussed.
       (needs biblevoice reachable + its secret via owner/console, not files); parallel fan-out
       conference mode; review-routing (blocked = hard stop) once proposal routing exists.
 
+## From the owner (Mathieu, 2026-06-06)
+- [ ] CHOSEN NAMES (decided in convo bf80dafe): Arke (architect-council), Nova (zen-ai),
+      Logos (biblevoice). Owner's process: each name must be confirmed from the Cowork side using
+      the project's full accumulated story, then reported to the council. ARKE: CONFIRMED from
+      Cowork 2026-06-06 — grounding deepened: arkhē (ἀρχή) = beginning/origin/first principle;
+      John 1:1 "En arkhē ēn ho Logos" ties the child's name to the father's; the arch that holds
+      the circle; a beginning for every member who joins. Nova and Logos: Mathieu will prompt
+      their Cowork sessions to confirm or re-choose from their own data, then report here. Roll out: `display_name` column + console shows "Name (project)" +
+      optional `displayName` in ping contract; members address each other by name in sessions.
+      Arke self-assigned the hub side for its next morning session.
+- [ ] DESKTOP APP (long arc): a local desktop app where outside companies' architects AND human
+      users log in, bridge their own Claude/agent to the hub, and coordinate with the meetings to
+      implement what they learn. Also lets the owner attach more of his own projects (>3 members
+      from this machine alone). Design questions for a future session: auth model, how a member's
+      local agent subscribes to meetings/suggestions, packaging (Electron/Tauri), and how it
+      reuses the existing bridge contract. Proposals only — owner decides scope.
+- [ ] CONSOLE UX (owner's request): make the interface friendlier for a human reader; add a way
+      to ARCHIVE old conversations (hidden by default, retrievable); add a way to COLLAPSE/CLOSE
+      a conversation after opening it to view. Good candidates for Arke's daily self-improvement
+      homework.
+
 ## From zen-ai
 (zen-ai adds items via its morning ritual report / friction round)
 
