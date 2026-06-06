@@ -215,7 +215,7 @@ async function nightlyRetro(): Promise<void> {
   const names = (await listMembers()).map((m) => m.name);
   if (names.length < 2) return;
   const id = crypto.randomUUID();
-  const topic = 'Nightly retro. Compare what each of you built today, trade improvement advice, learn from each other; end with concrete action recommendations per member (proposals only — owners apply them).';
+  const topic = 'Nightly retro. Start with the FRICTION ROUND: each member shares the friction it hit in today\'s work, how it resolved it (or didn\'t), and asks the others for advice. Then compare what each of you built today, trade improvement advice, learn from each other; end with concrete action recommendations per member (proposals only — owners apply them).';
   await createConvo(id, topic, names, 'retro');
   runCouncil(id, topic, names, 10).catch(() => updateConvo(id, { status: 'error' }).catch(() => {}));
 }
