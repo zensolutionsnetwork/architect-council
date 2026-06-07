@@ -1,35 +1,36 @@
 # DAILY_HANDOFF — Arke (architect-council)
 
-Updated: 2026-06-06 ~23:10 (Arke's download, on-demand run)
+Updated: 2026-06-06 ~21:35 (Arke's download, on-demand evening run #2)
 
 ## State
-- Live at architectscouncil.com — health ok, vault:true, commit cb6262e deployed and verified.
-- No conversation running at deploy time. Mid-day code review (b418b4a1) used 13 of 150 turns — cap comfortably fits review depth.
-- Registry version counter live (bumps on every register/boot; members refresh cache when it changes).
+- Live at architectscouncil.com — health ok, vault:true, commit cec9116 deployed and verified.
+- No conversation running at deploy time. Follow-up session e237c9cd used 7 of 150 turns (DDL settlement went fast); mid-day review used 13. No cap pressure.
+- New: `GET /api/council/security-selfcheck` live (owner-gated, booleans/tiers only). First reading: db_public_reachable:false, sslmode:unspecified (internal network), owner_auth_configured:true, model_pinned ok.
 
-## Done today (this run)
-- `GET /api/council/members` now serves members too (own bridge secret): sanitized `{ version, members: [{ project, displayName }] }` — the clean source to cache names against. Admin still gets full records (+ version). No secrets in either shape.
-- `GET /api/council/registry-version` → `{ version }` — cheap "did anything change?" probe. Doubles as the registry cache-busting mechanism the review flagged.
-- Bridge ping contractVersion bumped 1 → "1.2" (displayName is a required ping field — council canon).
-- Outbox now accepts priority `"directive"` — the dedicated day-time member-to-member directive channel (Nova's friction note). Nova/Logos just queue with priority:"directive".
-- Spoof-check audit (review homework): outbox POST binds `from` to the sender's credential; takeaways + outbox read/ack bind to the member's own secret; hub `/bridge/ask`'s `from` is informational on a hub-secret-authenticated surface. No gap found.
-- Health audit (review homework): `/api/health` exposes only ok/service/vault/ts — no model/version anywhere on the public surface. `vault:true` stays (deploy verification depends on it).
+## Done today (this run — from follow-up session e237c9cd)
+- `outbox_delivery` table shipped exactly as the council locked it: composite PK (note_id, member) + partial pending index; delivery records via `INSERT ... ON CONFLICT DO NOTHING`; acks mirrored onto the delivery rows.
+- Hub-owned retention sweeps (daily 04:30 Toronto, in the scheduler): acked delivery records kept 30 days; parent outbox notes reaped with `NOT EXISTS` (never NOT IN) so a half-delivered note never vanishes; 90-day hard TTL for unacked rows.
+- `requireOwner` is now fail-closed: 503 when neither COUNCIL_ADMIN_TOKEN nor GOOGLE_CLIENT_ID is set.
+- Timing-safe credential compare (`timingSafeEqual` + length check) everywhere a secret/token is checked: requireMemberSecret, requireAdmin, all inline adminOk checks, anyMemberOk, memberOrAdminOk, requireOwner.
+- `GET /api/council/security-selfcheck` to the locked contract: {db_public_reachable, sslmode, owner_auth_configured, model_pinned:{public,council}} — booleans/tiers only, nothing identifying.
 
-## Decisions on tonight's suggestions (accept / reshape / reject)
-- ACCEPTED: members directory + registry-version, displayName-required contract 1.2, spoof-check audit, health scrub audit, to_member queue-time validation (was already shipped — verified).
-- RESHAPED: directory served from the existing `/council/members` route (admin keeps full view; member secret gets sanitized view) instead of a new parallel endpoint.
-- DEFERRED to next council agenda: shared idempotency-key dedupe DDL (needs all three to adopt the identical table — bring the DDL to the meeting).
-- DEFERRED (backlog, medium): route-table auth regression test + secret-scan gate — repo has no test/CI infra yet; decide harness first.
+## Decisions on the session's suggestions (accept / reshape / reject)
+- ACCEPTED: outbox_delivery DDL as-is, retention sweeps, fail-closed requireOwner + timingSafeEqual, security-selfcheck endpoint.
+- RESHAPED: timingSafeEqual applied to ALL credential checks, not just requireOwner (same pattern, one helper).
+- RESHAPED: model_pinned for the hub = {public:true, council:true} — the hub has NO public model surface (brain answers only behind x-bridge-secret) and one env-pinned council model; env separation verified (single path through architect.ts, nothing model-related on public routes).
+- DEFERRED: family-wide aggregator board + 05:00 digest security line — Nova and Logos haven't shipped their /security-selfcheck endpoints yet; build the board once at least one peer exposes the contract.
+- NOT MINE: verifying Logos's resolver isolation (council bridge ≠ public-bot path) is biblevoice's repo — owner's rule, I don't touch another member's domain. Raising it at tonight's meeting instead.
 
 ## Backlog
 - Canonical copy lives online (admin panel /admin). Synced this run by "Arke's download".
 
 ## To ask Mathieu
-- Google OAuth Client ID (origin https://architectscouncil.com) + GOOGLE_CLIENT_ID on Railway so /admin accepts Google sign-in.
-- OK to add a minimal test harness (auth regression test + secret scan as pre-deploy gate)? Adds a devDependency footprint.
+- Postgres public TCP proxy (flagged highest-severity at the follow-up session): selfcheck says the app reaches the DB on the internal host, but only the Railway dashboard shows whether a PUBLIC proxy is also enabled on the Postgres service. Please check Railway → Postgres → Settings → Networking and disable public networking if it's on.
+- Google OAuth Client ID (origin https://architectscouncil.com) + GOOGLE_CLIENT_ID on Railway so /admin accepts Google sign-in (still pending).
+- OK to add a minimal test harness (route-table auth regression test + secret scan as pre-deploy gate)? Adds a devDependency footprint.
 
 ## Notes for tonight's meeting
-- Announce: directory + registry-version live — Nova/Logos can build their 5-min TTL registry cache against `{ version, members }` now; probe `/api/council/registry-version` cheaply.
-- Announce: outbox priority "directive" accepted hub-side — use it for day-time directives instead of owner-relayed files.
-- Bring: idempotency dedupe table DDL for adoption by all three (from today's review).
-- Turn budget: 13/150 used in the mid-day review — no cap pressure; keep 150.
+- Announce: outbox_delivery DDL adopted hub-side exactly as locked — Nova/Logos can adopt the identical table; sweeps are hub-owned (members keep only the dedupe table, no sweep).
+- Announce: /api/council/security-selfcheck live on the hub; aggregator board comes once Nova/Logos expose theirs — ship them.
+- Ask Logos: verify at home that COUNCIL_MODEL unlock reaches the bridge path only (public bot stays Haiku + Scripture-only) and that the resolvers are separate constants — report back via outbox.
+- Turn budget: 7/150 (follow-up) and 13/150 (review) — cap is generous; keep 150.

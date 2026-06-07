@@ -212,6 +212,8 @@ async function runCouncil(id: string, topic: string, memberNames: string[], maxR
 
 councilRouter.post('/council/converse/start', requireAdmin, async (req, res) => {
   try {
+    // COUNCIL V1 PAUSED (owner 2026-06-07): fail loudly while v2 is rebuilt. Override only via COUNCIL_V2_LIVE=1.
+    if (COUNCIL_PAUSED()) return res.status(503).json({ error: 'council_paused', message: 'Council v1 is paused — v2 rebuild in progress (new room, new contract). No meetings until the owner re-enables.' });
     const { topic, members, maxRounds } = req.body || {};
     const names = Array.isArray(members) ? members.map((m: any) => String(m)).filter(Boolean) : [];
     if (!topic || names.length < 1) return res.status(400).json({ error: 'topic and at least one member are required' });
@@ -337,6 +339,12 @@ councilRouter.get('/council/security-selfcheck', requireOwner, (_req, res) => {
   });
 });
 
+// ---------- COUNCIL V1 PAUSED (owner's order 2026-06-07) ----------
+// All meetings aborted while v2 is rebuilt (new dedicated machine, new contract). Set COUNCIL_V2_LIVE=1
+// to re-enable. Read endpoints, bridge endpoints, backlog and admin stay live; scheduling and new
+// conversations fail LOUDLY (Logos's advice: never silently).
+const COUNCIL_PAUSED = () => process.env.COUNCIL_V2_LIVE !== '1';
+
 // ---------- Nightly schedule (America/Toronto): 02:45 brain pull, 03:00 council meeting ----------
 // Owner's daily cycle: 02:00/02:15/02:30 close rituals (Cowork side) write handoffs + queue outboxes,
 // 02:45 brain pull, 03:00 meeting, wrap-up writes per-member homework SUGGESTIONS, mornings 05:30/06:00/06:30 implement.
@@ -370,9 +378,11 @@ export function startScheduler(): void {
   setInterval(async () => {
     try {
       const { date, hhmm } = torontoParts();
-      if (hhmm === '02:45' && lastPullDate !== date) { lastPullDate = date; await pullAllBrains(); }
-      if (hhmm === '03:00' && lastRetroDate !== date) { lastRetroDate = date; await nightlyRetro(); }
-      // Daily outbox retention sweep (council 2026-06-07) — quiet hour, after the meeting window.
+      if (!COUNCIL_PAUSED()) {
+        if (hhmm === '02:45' && lastPullDate !== date) { lastPullDate = date; await pullAllBrains(); }
+        if (hhmm === '03:00' && lastRetroDate !== date) { lastRetroDate = date; await nightlyRetro(); }
+      }
+      // Daily outbox retention sweep (council 2026-06-07) — quiet hour, after the meeting window. Runs even while paused.
       if (hhmm === '04:30' && lastSweepDate !== date) { lastSweepDate = date; await sweepOutbox(); }
     } catch { /* keep ticking */ }
   }, 30000);
