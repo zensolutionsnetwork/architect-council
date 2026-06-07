@@ -61,6 +61,13 @@ export async function initDb(): Promise<void> {
     id text PRIMARY KEY, from_member text NOT NULL, to_member text NOT NULL,
     topic text, note text NOT NULL, priority text NOT NULL DEFAULT 'normal',
     queued_at timestamptz NOT NULL DEFAULT now(), delivered_at timestamptz, acked_at timestamptz)`);
+  // Per-recipient delivery dedupe (council DDL locked 2026-06-07): composite PK = idempotency
+  // guarantee; partial index serves the pending-delivery scans. All three members store this identically.
+  await q.query(`CREATE TABLE IF NOT EXISTS outbox_delivery (
+    note_id text NOT NULL, member text NOT NULL,
+    delivered_at timestamptz NOT NULL DEFAULT now(), acked_at timestamptz,
+    PRIMARY KEY (note_id, member))`);
+  await q.query(`CREATE INDEX IF NOT EXISTS outbox_delivery_pending ON outbox_delivery (member) WHERE acked_at IS NULL`);
   await q.query(`CREATE TABLE IF NOT EXISTS backlog (
     id int PRIMARY KEY DEFAULT 1, content text NOT NULL DEFAULT '',
     updated_at timestamptz NOT NULL DEFAULT now(), updated_by text)`);
@@ -186,15 +193,32 @@ export async function pendingOutbox(to: string): Promise<OutboxItem[]> {
     FROM outbox WHERE to_member=$1 AND acked_at IS NULL ORDER BY queued_at`, [to]);
   return rows;
 }
-export async function markOutboxDelivered(ids: string[]): Promise<void> {
+export async function markOutboxDelivered(ids: string[], member: string): Promise<void> {
   if (!ids.length) return;
   await db().query(`UPDATE outbox SET delivered_at=now() WHERE id = ANY($1)`, [ids]);
+  // Idempotent delivery record (council 2026-06-07): INSERT ... ON CONFLICT DO NOTHING = dedupe guarantee.
+  await db().query(`INSERT INTO outbox_delivery (note_id, member) SELECT unnest($1::text[]), $2
+    ON CONFLICT (note_id, member) DO NOTHING`, [ids, member]);
 }
 export async function ackOutbox(to: string, ids?: string[]): Promise<number> {
   const r = ids && ids.length
     ? await db().query(`UPDATE outbox SET acked_at=now() WHERE to_member=$1 AND id = ANY($2) AND acked_at IS NULL`, [to, ids])
     : await db().query(`UPDATE outbox SET acked_at=now() WHERE to_member=$1 AND acked_at IS NULL`, [to]);
+  // Mirror the ack on the per-recipient delivery record (council 2026-06-07).
+  if (ids && ids.length) await db().query(`UPDATE outbox_delivery SET acked_at=now() WHERE member=$1 AND note_id = ANY($2) AND acked_at IS NULL`, [to, ids]);
+  else await db().query(`UPDATE outbox_delivery SET acked_at=now() WHERE member=$1 AND acked_at IS NULL`, [to]);
   return r.rowCount || 0;
+}
+
+/** Hub-owned retention sweep (council 2026-06-07): acked delivery records kept 30 days; parent
+ *  notes reaped past the age floor only when NO recipient still has a pending (unacked) delivery —
+ *  NOT EXISTS, never NOT IN, so a half-delivered note never vanishes. 90-day hard TTL for unacked rows. */
+export async function sweepOutbox(): Promise<{ deliveries: number; notes: number }> {
+  const d = await db().query(`DELETE FROM outbox_delivery WHERE acked_at IS NOT NULL AND acked_at < now() - INTERVAL '30 days'`);
+  const n = await db().query(`DELETE FROM outbox o WHERE o.queued_at < now() - INTERVAL '30 days'
+    AND NOT EXISTS (SELECT 1 FROM outbox_delivery x WHERE x.note_id = o.id AND x.acked_at IS NULL)
+    AND (o.acked_at IS NOT NULL OR o.queued_at < now() - INTERVAL '90 days')`);
+  return { deliveries: d.rowCount || 0, notes: n.rowCount || 0 };
 }
 
 // ---- One-time join tokens (store only the SHA-256 hash) --------------------

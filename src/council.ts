@@ -11,11 +11,16 @@ import {
   upsertMember, listMembers, getMember, getBrain, setBrain,
   createConvo, updateConvo, getConvo, listConvos, consumeJoinToken, issueJoinToken,
   setTakeaways, getLatestTakeaways, recentConvoActivity, type Turn,
-  queueOutbox, pendingOutbox, markOutboxDelivered, ackOutbox,
+  queueOutbox, pendingOutbox, markOutboxDelivered, ackOutbox, sweepOutbox,
   getBacklog, setBacklog, setConvoArchived, getRegistryVersion,
 } from './store.js';
 
 const clip = (s: any, n: number) => String(s ?? '').slice(0, n);
+/** Timing-safe credential compare (council 2026-06-07): length check + timingSafeEqual, never ===. */
+function safeEqual(given: unknown, expected: string): boolean {
+  const a = Buffer.from(String(given ?? ''), 'utf8'), b = Buffer.from(expected, 'utf8');
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
 const SELF = 'architect-council';
 const DISPLAY_NAME = 'Arke'; // chosen name (council canon 2026-06-06); ping contract field
 const CONTRACT_VERSION = '1.2'; // displayName required in ping (council 2026-06-06)
@@ -26,7 +31,7 @@ export const bridgeRouter = Router();
 function requireMemberSecret(req: Request, res: Response, next: NextFunction) {
   const secret = process.env.COUNCIL_MEMBER_SECRET;
   if (!secret) return res.status(503).json({ error: 'bridge_not_configured', message: 'Set COUNCIL_MEMBER_SECRET to enable the hub bridge.' });
-  if ((req.headers['x-bridge-secret'] as string) !== secret) return res.status(401).json({ error: 'unauthorized' });
+  if (!safeEqual(req.headers['x-bridge-secret'], secret)) return res.status(401).json({ error: 'unauthorized' });
   next();
 }
 bridgeRouter.get('/bridge/ping', requireMemberSecret, (_req, res) =>
@@ -60,7 +65,7 @@ export const councilRouter = Router();
 function requireAdmin(req: Request, res: Response, next: NextFunction) {
   const tok = process.env.COUNCIL_ADMIN_TOKEN;
   if (!tok) return res.status(503).json({ error: 'admin_not_configured', message: 'Set COUNCIL_ADMIN_TOKEN to use the console.' });
-  if ((req.headers['x-admin-token'] as string) !== tok) return res.status(401).json({ error: 'unauthorized' });
+  if (!safeEqual(req.headers['x-admin-token'], tok)) return res.status(401).json({ error: 'unauthorized' });
   next();
 }
 
@@ -95,7 +100,7 @@ councilRouter.post('/council/register', async (req, res) => {
   try {
     const { name, base_url, owner_email, rules, capabilities, secret, join_token } = req.body || {};
     if (!name || !base_url || !secret) return res.status(400).json({ error: 'name, base_url and secret are required' });
-    const adminOk = !!process.env.COUNCIL_ADMIN_TOKEN && (req.headers['x-admin-token'] as string) === process.env.COUNCIL_ADMIN_TOKEN;
+    const adminOk = !!process.env.COUNCIL_ADMIN_TOKEN && safeEqual(req.headers['x-admin-token'], process.env.COUNCIL_ADMIN_TOKEN);
     if (!adminOk) {
       if (!join_token || !(await consumeJoinToken(String(join_token)))) return res.status(401).json({ error: 'invalid_or_expired_join_token' });
     }
@@ -116,7 +121,7 @@ async function anyMemberOk(req: Request): Promise<boolean> {
   if (!sec) return false;
   for (const mm of await listMembers()) {
     const m = await getMember(mm.name);
-    if (m && m.secret === sec) return true;
+    if (m && safeEqual(sec, m.secret)) return true;
   }
   return false;
 }
@@ -124,7 +129,7 @@ async function anyMemberOk(req: Request): Promise<boolean> {
  *  { version, members: [{ project, displayName }] } it caches names against. No secrets either way. */
 councilRouter.get('/council/members', async (req, res) => {
   try {
-    const adminOk = !!process.env.COUNCIL_ADMIN_TOKEN && (req.headers['x-admin-token'] as string) === process.env.COUNCIL_ADMIN_TOKEN;
+    const adminOk = !!process.env.COUNCIL_ADMIN_TOKEN && safeEqual(req.headers['x-admin-token'], process.env.COUNCIL_ADMIN_TOKEN);
     const version = await getRegistryVersion();
     if (adminOk) return res.json({ version, members: await listMembers() });
     if (!(await anyMemberOk(req))) return res.status(401).json({ error: 'unauthorized' });
@@ -135,7 +140,7 @@ councilRouter.get('/council/members', async (req, res) => {
 /** Cheap "did the registry change?" probe (council 2026-06-06). Same auth as the directory. */
 councilRouter.get('/council/registry-version', async (req, res) => {
   try {
-    const adminOk = !!process.env.COUNCIL_ADMIN_TOKEN && (req.headers['x-admin-token'] as string) === process.env.COUNCIL_ADMIN_TOKEN;
+    const adminOk = !!process.env.COUNCIL_ADMIN_TOKEN && safeEqual(req.headers['x-admin-token'], process.env.COUNCIL_ADMIN_TOKEN);
     if (!adminOk && !(await anyMemberOk(req))) return res.status(401).json({ error: 'unauthorized' });
     res.json({ version: await getRegistryVersion() });
   } catch (e) { res.status(500).json({ error: (e as Error).message }); }
@@ -183,7 +188,7 @@ async function runCouncil(id: string, topic: string, memberNames: string[], maxR
         const items = await pendingOutbox(member.name);
         if (items.length) {
           outboxNote = `\n[outbox — notes other members queued for you: ${JSON.stringify(items.map((o) => ({ from: o.from_member, topic: o.topic, note: o.note, priority: o.priority })))}]`;
-          await markOutboxDelivered(items.map((o) => o.id));
+          await markOutboxDelivered(items.map((o) => o.id), member.name);
         }
       } catch { /* outbox delivery is best-effort */ }
     }
@@ -236,7 +241,7 @@ councilRouter.post('/council/convo/:id/archive', requireAdmin, async (req, res) 
 councilRouter.get('/council/takeaways/:member', async (req, res) => {
   try {
     const name = req.params.member;
-    const adminOk = !!process.env.COUNCIL_ADMIN_TOKEN && (req.headers['x-admin-token'] as string) === process.env.COUNCIL_ADMIN_TOKEN;
+    const adminOk = !!process.env.COUNCIL_ADMIN_TOKEN && safeEqual(req.headers['x-admin-token'], process.env.COUNCIL_ADMIN_TOKEN);
     if (!adminOk) {
       const m = await getMember(name);
       if (!m || (req.headers['x-bridge-secret'] as string) !== m.secret) return res.status(401).json({ error: 'unauthorized' });
@@ -248,9 +253,9 @@ councilRouter.get('/council/takeaways/:member', async (req, res) => {
 // ---------- Outbox (machine-to-machine notes; delivered at council open, cleared after ack) ----------
 /** Resolve member auth: x-bridge-secret must match `name`'s vault secret, or x-admin-token. */
 async function memberOrAdminOk(req: Request, name: string): Promise<boolean> {
-  if (!!process.env.COUNCIL_ADMIN_TOKEN && (req.headers['x-admin-token'] as string) === process.env.COUNCIL_ADMIN_TOKEN) return true;
+  if (!!process.env.COUNCIL_ADMIN_TOKEN && safeEqual(req.headers['x-admin-token'], process.env.COUNCIL_ADMIN_TOKEN)) return true;
   const m = await getMember(name);
-  return !!m && (req.headers['x-bridge-secret'] as string) === m.secret;
+  return !!m && safeEqual(req.headers['x-bridge-secret'], m.secret);
 }
 /** A member queues a note for another member. Auth: the SENDER's own bridge secret (or admin). */
 councilRouter.post('/council/outbox', async (req, res) => {
@@ -298,8 +303,10 @@ async function googleOwnerOk(req: Request): Promise<boolean> {
   } catch { return false; }
 }
 async function requireOwner(req: Request, res: Response, next: NextFunction): Promise<void> {
+  // Fail-closed (council 2026-06-07): if NO owner-auth mechanism is configured, 503 — never an open door.
   const tok = process.env.COUNCIL_ADMIN_TOKEN;
-  if (tok && (req.headers['x-admin-token'] as string) === tok) return next();
+  if (!tok && !process.env.GOOGLE_CLIENT_ID) { res.status(503).json({ error: 'owner_auth_not_configured' }); return; }
+  if (tok && safeEqual(req.headers['x-admin-token'], tok)) return next();
   if (await googleOwnerOk(req)) return next();
   res.status(401).json({ error: 'unauthorized' });
 }
@@ -316,11 +323,25 @@ councilRouter.post('/council/admin/backlog', requireOwner, async (req, res) => {
 councilRouter.get('/council/admin/config', (_req, res) =>
   res.json({ googleClientId: process.env.GOOGLE_CLIENT_ID || null, ownerEmail: OWNER_GOOGLE_EMAIL() }));
 
+/** Security self-check (council locked contract 2026-06-07): owner-gated, booleans/tiers ONLY — no
+ *  hostnames, no secrets, nothing identifying crosses the wire. Future family aggregator polls this. */
+councilRouter.get('/council/security-selfcheck', requireOwner, (_req, res) => {
+  let host = '', sslmode: string | null = null;
+  try { const u = new URL(process.env.DATABASE_URL || ''); host = u.hostname; sslmode = u.searchParams.get('sslmode'); } catch { /* unparseable -> defaults below */ }
+  res.json({
+    db_public_reachable: !!host && !host.endsWith('.railway.internal') && !host.endsWith('.internal'),
+    sslmode: sslmode || 'unspecified',
+    owner_auth_configured: !!(process.env.COUNCIL_ADMIN_TOKEN || process.env.GOOGLE_CLIENT_ID),
+    // Hub has NO public model surface (its brain answers only behind x-bridge-secret); council model env-pinned with explicit default.
+    model_pinned: { public: true, council: true },
+  });
+});
+
 // ---------- Nightly schedule (America/Toronto): 02:45 brain pull, 03:00 council meeting ----------
 // Owner's daily cycle: 02:00/02:15/02:30 close rituals (Cowork side) write handoffs + queue outboxes,
 // 02:45 brain pull, 03:00 meeting, wrap-up writes per-member homework SUGGESTIONS, mornings 05:30/06:00/06:30 implement.
 const TZ = 'America/Toronto';
-let lastPullDate = '', lastRetroDate = '';
+let lastPullDate = '', lastRetroDate = '', lastSweepDate = '';
 function torontoParts(): { date: string; hhmm: string } {
   const p = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date());
   const g = (t: string) => p.find((x) => x.type === t)?.value || '00';
@@ -351,6 +372,8 @@ export function startScheduler(): void {
       const { date, hhmm } = torontoParts();
       if (hhmm === '02:45' && lastPullDate !== date) { lastPullDate = date; await pullAllBrains(); }
       if (hhmm === '03:00' && lastRetroDate !== date) { lastRetroDate = date; await nightlyRetro(); }
+      // Daily outbox retention sweep (council 2026-06-07) — quiet hour, after the meeting window.
+      if (hhmm === '04:30' && lastSweepDate !== date) { lastSweepDate = date; await sweepOutbox(); }
     } catch { /* keep ticking */ }
   }, 30000);
 }
