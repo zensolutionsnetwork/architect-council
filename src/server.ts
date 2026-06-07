@@ -7,14 +7,18 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { initDb, vaultReady } from './store.js';
 import { bridgeRouter, councilRouter, selfRegister, startScheduler } from './council.js';
+import { rateLimit } from './ratelimit.js';
 
 const app = express();
+app.set('trust proxy', 1); // Railway terminates TLS upstream; trust one proxy hop so req.ip is the client.
 app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   next();
 });
 app.use(express.json({ limit: '2mb' }));
+// Per-IP rate limit on the API surface (contract §7); health probe exempt so Railway never trips it.
+app.use('/api', rateLimit({ windowMs: 60_000, max: 240, skip: (req) => req.path === '/health' }));
 
 const publicDir = fileURLToPath(new URL('../public', import.meta.url));
 app.use(express.static(publicDir, { index: false }));

@@ -13,6 +13,7 @@ import {
   setTakeaways, getLatestTakeaways, recentConvoActivity, type Turn,
   queueOutbox, pendingOutbox, markOutboxDelivered, ackOutbox, sweepOutbox,
   getBacklog, setBacklog, setConvoArchived, getRegistryVersion,
+  queueEnvTask, listEnvTasks, getEnvTask, claimEnvTask, reportEnvTask, sweepEnvTasks,
 } from './store.js';
 
 const clip = (s: any, n: number) => String(s ?? '').slice(0, n);
@@ -289,6 +290,72 @@ councilRouter.post('/council/outbox/:member/ack', async (req, res) => {
   } catch (e) { res.status(500).json({ error: (e as Error).message }); }
 });
 
+// ---------- Environment channel (Cowork ↔ 3080; BRIDGE_APP_SPEC §3) ----------
+// One environment hands a task to another and reads the result. Pause-INDEPENDENT: pure queue I/O,
+// never starts a conversation, so it works while the council is paused. Same auth canon as everything
+// else — the credential resolves the actor; no body field names the sender.
+async function resolveActor(req: Request): Promise<{ actor: string; admin: boolean } | null> {
+  if (!!process.env.COUNCIL_ADMIN_TOKEN && safeEqual(req.headers['x-admin-token'], process.env.COUNCIL_ADMIN_TOKEN)) return { actor: 'owner', admin: true };
+  const sec = req.headers['x-bridge-secret'] as string;
+  if (!sec) return null;
+  for (const mm of await listMembers()) {
+    const m = await getMember(mm.name);
+    if (m && safeEqual(sec, m.secret)) return { actor: m.name, admin: false };
+  }
+  return null;
+}
+/** Enqueue a task for another environment. Sender = whoever authenticated (never a body field). */
+councilRouter.post('/env/task', async (req, res) => {
+  try {
+    const actor = await resolveActor(req);
+    if (!actor) return res.status(401).json({ error: 'unauthorized' });
+    const { to, kind, title, payload, priority } = req.body || {};
+    if (!to) return res.status(400).json({ error: 'to is required' });
+    if (!(await getMember(String(to)))) return res.status(404).json({ error: 'unknown_recipient' });
+    const id = await queueEnvTask(actor.actor, clip(to, 60), clip(kind, 40) || 'task', clip(title, 300),
+      payload ?? {}, ['low', 'normal', 'high'].includes(String(priority)) ? String(priority) : 'normal');
+    res.json({ ok: true, id });
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+/** The recipient polls its inbox. Auth: that agent's secret (or admin). */
+councilRouter.get('/env/tasks', async (req, res) => {
+  try {
+    const forA = String(req.query.for || '');
+    if (!forA) return res.status(400).json({ error: 'for is required' });
+    if (!(await memberOrAdminOk(req, forA))) return res.status(401).json({ error: 'unauthorized' });
+    res.json({ for: forA, tasks: await listEnvTasks(forA) });
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+/** Optimistic claim — first poller to flip queued→claimed wins, so a task runs at most once. */
+councilRouter.post('/env/task/:id/claim', async (req, res) => {
+  try {
+    const t = await getEnvTask(req.params.id);
+    if (!t) return res.status(404).json({ error: 'not_found' });
+    if (!(await memberOrAdminOk(req, t.to_actor))) return res.status(401).json({ error: 'unauthorized' });
+    res.json({ ok: true, claimed: await claimEnvTask(t.id, t.to_actor) });
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+/** Completion report from the recipient. */
+councilRouter.post('/env/task/:id/report', async (req, res) => {
+  try {
+    const t = await getEnvTask(req.params.id);
+    if (!t) return res.status(404).json({ error: 'not_found' });
+    if (!(await memberOrAdminOk(req, t.to_actor))) return res.status(401).json({ error: 'unauthorized' });
+    const status = (req.body || {}).status === 'error' ? 'error' : 'done';
+    res.json({ ok: true, updated: await reportEnvTask(t.id, t.to_actor, status, clip((req.body || {}).result, 16000)) });
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+/** Read one task + its result. Auth: either involved actor, or admin. */
+councilRouter.get('/env/task/:id', async (req, res) => {
+  try {
+    const t = await getEnvTask(req.params.id);
+    if (!t) return res.status(404).json({ error: 'not_found' });
+    const actor = await resolveActor(req);
+    if (!actor || (!actor.admin && actor.actor !== t.from_actor && actor.actor !== t.to_actor)) return res.status(401).json({ error: 'unauthorized' });
+    res.json(t);
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+
 // ---------- Living backlog + owner sign-in (Arke's super-admin; mirrors Nova's model) ----------
 // Auth: x-admin-token (console key) OR a Google ID token (header x-google-id-token) once
 // GOOGLE_CLIENT_ID is set on Railway — verified server-side, owner email only (no static token to remember).
@@ -383,7 +450,7 @@ export function startScheduler(): void {
         if (hhmm === '03:00' && lastRetroDate !== date) { lastRetroDate = date; await nightlyRetro(); }
       }
       // Daily outbox retention sweep (council 2026-06-07) — quiet hour, after the meeting window. Runs even while paused.
-      if (hhmm === '04:30' && lastSweepDate !== date) { lastSweepDate = date; await sweepOutbox(); }
+      if (hhmm === '04:30' && lastSweepDate !== date) { lastSweepDate = date; await sweepOutbox(); await sweepEnvTasks(); }
     } catch { /* keep ticking */ }
   }, 30000);
 }

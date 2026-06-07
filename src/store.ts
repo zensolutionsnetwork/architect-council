@@ -74,6 +74,14 @@ export async function initDb(): Promise<void> {
   await q.query(`CREATE TABLE IF NOT EXISTS registry_meta (
     id int PRIMARY KEY DEFAULT 1, version bigint NOT NULL DEFAULT 1)`);
   await q.query(`INSERT INTO registry_meta (id, version) VALUES (1,1) ON CONFLICT (id) DO NOTHING`);
+  // Environment channel (BRIDGE_APP_SPEC §3): one environment hands a task to another (Cowork ↔ 3080).
+  // Pause-independent — pure queue I/O, never starts a conversation.
+  await q.query(`CREATE TABLE IF NOT EXISTS env_tasks (
+    id text PRIMARY KEY, from_actor text NOT NULL, to_actor text NOT NULL,
+    kind text NOT NULL DEFAULT 'task', title text, payload jsonb NOT NULL DEFAULT '{}',
+    priority text NOT NULL DEFAULT 'normal', status text NOT NULL DEFAULT 'queued', result text,
+    created_at timestamptz NOT NULL DEFAULT now(), claimed_at timestamptz, done_at timestamptz)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS env_tasks_inbox ON env_tasks (to_actor, status) WHERE status IN ('queued','claimed')`);
   await q.query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS archived boolean NOT NULL DEFAULT false`);
   await q.query(`ALTER TABLE members ADD COLUMN IF NOT EXISTS display_name text`);
   // Chosen names — council canon 2026-06-06 (idempotent seed; members may update via /register later).
@@ -219,6 +227,46 @@ export async function sweepOutbox(): Promise<{ deliveries: number; notes: number
     AND NOT EXISTS (SELECT 1 FROM outbox_delivery x WHERE x.note_id = o.id AND x.acked_at IS NULL)
     AND (o.acked_at IS NOT NULL OR o.queued_at < now() - INTERVAL '90 days')`);
   return { deliveries: d.rowCount || 0, notes: n.rowCount || 0 };
+}
+
+// ---- Environment channel tasks (Cowork ↔ 3080; BRIDGE_APP_SPEC §3) ---------
+export interface EnvTask {
+  id: string; from_actor: string; to_actor: string; kind: string; title: string | null;
+  payload: any; priority: string; status: string; result: string | null;
+  created_at?: string; claimed_at?: string | null; done_at?: string | null;
+}
+export async function queueEnvTask(from: string, to: string, kind: string, title: string, payload: any, priority = 'normal'): Promise<string> {
+  const id = crypto.randomUUID();
+  await db().query(`INSERT INTO env_tasks (id, from_actor, to_actor, kind, title, payload, priority) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+    [id, from, to, kind || 'task', title || null, JSON.stringify(payload ?? {}), priority]);
+  return id;
+}
+export async function listEnvTasks(to: string, statuses = ['queued', 'claimed']): Promise<EnvTask[]> {
+  const { rows } = await db().query<any>(`SELECT id, from_actor, to_actor, kind, title, payload, priority, status, result,
+    to_char(created_at,'YYYY-MM-DD HH24:MI') AS created_at FROM env_tasks
+    WHERE to_actor=$1 AND status = ANY($2) ORDER BY (priority='high') DESC, created_at`, [to, statuses]);
+  return rows;
+}
+export async function getEnvTask(id: string): Promise<EnvTask | null> {
+  const { rows } = await db().query<any>(`SELECT id, from_actor, to_actor, kind, title, payload, priority, status, result,
+    to_char(created_at,'YYYY-MM-DD HH24:MI') AS created_at, to_char(claimed_at,'YYYY-MM-DD HH24:MI') AS claimed_at,
+    to_char(done_at,'YYYY-MM-DD HH24:MI') AS done_at FROM env_tasks WHERE id=$1`, [id]);
+  return rows[0] || null;
+}
+/** Optimistic claim: only the first poller to flip queued→claimed wins (no double-run). */
+export async function claimEnvTask(id: string, by: string): Promise<boolean> {
+  const r = await db().query(`UPDATE env_tasks SET status='claimed', claimed_at=now() WHERE id=$1 AND to_actor=$2 AND status='queued'`, [id, by]);
+  return (r.rowCount || 0) > 0;
+}
+export async function reportEnvTask(id: string, by: string, status: 'done' | 'error', result: string): Promise<boolean> {
+  const r = await db().query(`UPDATE env_tasks SET status=$3, result=$4, done_at=now()
+    WHERE id=$1 AND to_actor=$2 AND status IN ('queued','claimed')`, [id, by, status, String(result).slice(0, 16000)]);
+  return (r.rowCount || 0) > 0;
+}
+/** Retention: reap finished tasks older than 30 days (called from the daily sweep). */
+export async function sweepEnvTasks(): Promise<number> {
+  const r = await db().query(`DELETE FROM env_tasks WHERE status IN ('done','error') AND done_at < now() - INTERVAL '30 days'`);
+  return r.rowCount || 0;
 }
 
 // ---- One-time join tokens (store only the SHA-256 hash) --------------------
