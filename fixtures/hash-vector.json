@@ -1,0 +1,32 @@
+{
+  "vectorVersion": "1.0",
+  "canonicalization": "council-jcs-1.0",
+  "algorithm": "sha256",
+  "encoding": "utf-8",
+  "digestEncoding": "hex-lower",
+  "note": "Both CIs: canon(input) MUST equal canonicalForm; sha256(utf8(canonicalForm)) MUST equal expectedSha256.",
+  "input": {
+    "contractVersion": "2.0",
+    "meetingId": "00000000-0000-4000-8000-000000000001",
+    "brainVersions": {
+      "kairos": "kairos@2026-06-08T00:00:00Z",
+      "arke": "arke@2026-06-08T00:00:00Z"
+    },
+    "turns": [
+      {
+        "seq": 1,
+        "actor": "arke",
+        "kind": "message",
+        "text": "Bonjour la famille — café ☕ ready."
+      },
+      {
+        "seq": 2,
+        "actor": "kairos",
+        "kind": "message",
+        "text": "Hub restored.\nLine two."
+      }
+    ]
+  },
+  "canonicalForm": "{\"brainVersions\":{\"arke\":\"arke@2026-06-08T00:00:00Z\",\"kairos\":\"kairos@2026-06-08T00:00:00Z\"},\"contractVersion\":\"2.0\",\"meetingId\":\"00000000-0000-4000-8000-000000000001\",\"turns\":[{\"actor\":\"arke\",\"kind\":\"message\",\"seq\":1,\"text\":\"Bonjour la famille — café ☕ ready.\"},{\"actor\":\"kairos\",\"kind\":\"message\",\"seq\":2,\"text\":\"Hub restored.\\nLine two.\"}]}",
+  "expectedSha256": "13f56d34371237773a9c8ec5dc79f857c81078da5d41bda54ea088754a65c2c4"
+}
