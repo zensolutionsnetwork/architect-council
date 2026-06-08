@@ -14,6 +14,7 @@ import {
   queueOutbox, pendingOutbox, markOutboxDelivered, ackOutbox, sweepOutbox,
   getBacklog, setBacklog, setConvoArchived, setConvoV2Meta, getRegistryVersion,
   queueEnvTask, listEnvTasks, getEnvTask, claimEnvTask, reportEnvTask, sweepEnvTasks,
+  getBrainChunksV2, applyBrainUploadV2, commitBrainVersionV2, getBrainVersionV2,
 } from './store.js';
 
 const clip = (s: any, n: number) => String(s ?? '').slice(0, n);
@@ -57,6 +58,66 @@ bridgeRouter.post('/bridge/ask', requireMemberSecret, async (req, res) => {
   } catch (e) { res.status(500).json({ error: (e as Error).message }); }
 });
 bridgeRouter.get('/bridge/brain', requireMemberSecret, (_req, res) => res.json({ project: SELF, brain: councilBrain(), updatedAt: new Date().toISOString() }));
+
+// ---- v2 brain endpoints (contract §2, 2026-06-07) -------------------------
+// The hub IS architect-council's cloud voice — it exposes the same four endpoints Nova/Logos
+// expose so the member-client (bridge-app/client/) works identically against it.
+//
+// Integrity rule (contract §2, Logos): recompute sha256 from received content bytes; never trust
+// the sender's claimed hash. brainVersion is recomputed server-side at commit time.
+const sha256hex = (s: string): string => crypto.createHash('sha256').update(Buffer.from(s, 'utf8')).digest('hex');
+function computeBrainVersionHub(chunks: { path: string; sha256: string }[]): string {
+  const ordered = [...chunks].sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  const joined = ordered.map((c) => `${c.path} ${c.sha256}`).join('\n');
+  return `sha256:${sha256hex(joined)}`;
+}
+
+/** List chunks currently held (path + sha256 only — content stays in DB, not re-sent). */
+bridgeRouter.get('/bridge/brain-chunks', requireMemberSecret, async (_req, res) => {
+  try { res.json({ chunks: await getBrainChunksV2(SELF) }); }
+  catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+
+/** Receive an incremental diff. Recomputes each sha256 from content; rejects mismatches. */
+bridgeRouter.post('/bridge/brain-upload', requireMemberSecret, async (req, res) => {
+  try {
+    const { send = [], deletePaths = [] } = req.body || {};
+    if (!Array.isArray(send)) return res.status(400).json({ error: 'send must be an array' });
+    // Validate + recompute every chunk (never trust sender's sha256 claim)
+    const verified: { path: string; sha256: string; bytes: number; content: string }[] = [];
+    for (const c of send) {
+      if (!c.path || typeof c.content !== 'string')
+        return res.status(400).json({ error: `chunk missing path or content: ${clip(c.path, 120)}` });
+      const recomputed = sha256hex(c.content);
+      if (c.sha256 && c.sha256 !== recomputed)
+        return res.status(422).json({ error: `sha256 mismatch for ${clip(c.path, 120)}: claimed ${clip(c.sha256, 20)} vs recomputed ${recomputed.slice(0, 20)}` });
+      verified.push({ path: String(c.path), sha256: recomputed, bytes: Buffer.byteLength(c.content, 'utf8'), content: String(c.content) });
+    }
+    const dels = Array.isArray(deletePaths) ? deletePaths.map(String) : [];
+    await applyBrainUploadV2(SELF, verified, dels);
+    res.json({ ok: true, applied: verified.length, deleted: dels.length });
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+
+/** Recompute brainVersion from the FULL held chunk set and commit it. Client verifies the returned
+ *  value matches its local computation — integrity by construction (contract §2). */
+bridgeRouter.post('/bridge/brain-commit', requireMemberSecret, async (req, res) => {
+  try {
+    const held = await getBrainChunksV2(SELF);
+    const brainVersion = computeBrainVersionHub(held);
+    await commitBrainVersionV2(SELF, brainVersion);
+    res.json({ ok: true, brainVersion });
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+
+/** The hub polls this before each meeting to record which brain version each voice spoke from. */
+bridgeRouter.get('/bridge/brain-version', requireMemberSecret, async (_req, res) => {
+  try {
+    const row = await getBrainVersionV2(SELF);
+    res.json({ member: SELF, displayName: DISPLAY_NAME, brainVersion: row?.brainVersion ?? null, updatedAt: row?.updatedAt ?? null });
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+
 bridgeRouter.post('/bridge/review', requireMemberSecret, async (req, res) => {
   try { res.json(await reviewProposal(req.body || {})); } catch (e) { res.status(500).json({ error: (e as Error).message }); }
 });
@@ -466,51 +527,4 @@ const COUNCIL_PAUSED = () => process.env.COUNCIL_V2_LIVE !== '1';
 
 // ---------- Nightly schedule (America/Toronto): 02:45 brain pull, 03:00 council meeting ----------
 // Owner's daily cycle: 02:00/02:15/02:30 close rituals (Cowork side) write handoffs + queue outboxes,
-// 02:45 brain pull, 03:00 meeting, wrap-up writes per-member homework SUGGESTIONS, mornings 05:30/06:00/06:30 implement.
-const TZ = 'America/Toronto';
-let lastPullDate = '', lastRetroDate = '', lastSweepDate = '';
-function torontoParts(): { date: string; hhmm: string } {
-  const p = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date());
-  const g = (t: string) => p.find((x) => x.type === t)?.value || '00';
-  return { date: `${g('year')}-${g('month')}-${g('day')}`, hhmm: `${g('hour')}:${g('minute')}` };
-}
-async function pullAllBrains(): Promise<void> {
-  for (const mm of await listMembers()) {
-    const m = await getMember(mm.name); if (!m) continue;
-    try {
-      const r = await fetch(m.base_url.replace(/\/+$/, '') + '/api/bridge/brain', { headers: { 'x-bridge-secret': m.secret } });
-      if (r.ok) { const d: any = await r.json(); await setBrain(m.name, d.brain || ''); }
-    } catch { /* nightly pull is best-effort */ }
-  }
-}
-async function nightlyRetro(): Promise<void> {
-  if (await recentConvoActivity(3)) return; // a session just happened or is running — it counts as the retro
-  const names = (await listMembers()).map((m) => m.name);
-  if (names.length < 2) return;
-  const id = crypto.randomUUID();
-  const topic = 'Nightly council meeting. Start with the FRICTION ROUND: each member shares the friction it hit in today\'s work, how it resolved it (or didn\'t), and asks the others for advice. Then the CODE REVIEW ROUND (owner\'s rule, 2026-06-06): review together the ACTUAL CODE each member shipped today — share real diffs, functions and specs from your day\'s work; critique for correctness, efficiency and security; evaluate together which version of a pattern is the most efficient; do not cut quality for brevity, take the turns you need. CLOSING ROUND (owner\'s rule): each member ends by assigning ITSELF homework — the concrete improvements from the review and what it learned tonight that it suggests implementing in its own project tomorrow, always within its own project rules and guardrails. These are suggestions to your Cowork architect, who applies what it judges good and aligned with the owner\'s direction, and asks the owner when in doubt.';
-  await createConvo(id, topic, names, 'retro');
-  // Cap 150 (owner 2026-06-06): never cut code-review quality. Track turns-used vs cap in the morning digest to retune.
-  runCouncil(id, topic, names, 150).catch(() => updateConvo(id, { status: 'error' }).catch(() => {}));
-}
-export function startScheduler(): void {
-  setInterval(async () => {
-    try {
-      const { date, hhmm } = torontoParts();
-      if (!COUNCIL_PAUSED()) {
-        if (hhmm === '02:45' && lastPullDate !== date) { lastPullDate = date; await pullAllBrains(); }
-        if (hhmm === '03:00' && lastRetroDate !== date) { lastRetroDate = date; await nightlyRetro(); }
-      }
-      // Daily outbox retention sweep (council 2026-06-07) — quiet hour, after the meeting window. Runs even while paused.
-      if (hhmm === '04:30' && lastSweepDate !== date) { lastSweepDate = date; await sweepOutbox(); await sweepEnvTasks(); }
-    } catch { /* keep ticking */ }
-  }, 30000);
-}
-
-/** Ensure architect-council is registered as a member of itself (idempotent, at boot). */
-export async function selfRegister(): Promise<void> {
-  const secret = process.env.COUNCIL_MEMBER_SECRET;
-  if (!secret) return;
-  const base = process.env.SELF_BASE_URL || 'https://architectscouncil.com';
-  await upsertMember({ name: SELF, base_url: base, owner_email: process.env.OWNER_EMAIL, rules: 'The hub itself, participating as a member.', capabilities: CAPABILITIES }, secret);
-}
+// 02:45 brain pull, 03:00 meeting, wrap-up writes per-member homework SUGGESTIONS, mornings 05:30/06

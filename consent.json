@@ -1,0 +1,16 @@
+{
+  "contractVersion": "2.0-draft1",
+  "version": 1,
+  "share": {
+    "allow": ["src/**", "docs/**", "public/**", "*.md", "*.json", "Dockerfile", "tsconfig.json"],
+    "deny": [".env*", "secrets/**", "**/credentials*", "private/**", "node_modules/**", "package-lock.json"]
+  },
+  "secretScan": {
+    "blockPatterns": [],
+    "allowList": []
+  },
+  "audience": {
+    "family": "full",
+    "default": "none"
+  }
+}
