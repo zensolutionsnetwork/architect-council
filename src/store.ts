@@ -90,16 +90,6 @@ export async function initDb(): Promise<void> {
   await q.query(`UPDATE members SET display_name='Arke' WHERE name='architect-council' AND display_name IS NULL`);
   await q.query(`UPDATE members SET display_name='Nova' WHERE name='zen-ai' AND display_name IS NULL`);
   await q.query(`UPDATE members SET display_name='Logos' WHERE name='biblevoice' AND display_name IS NULL`);
-  // v2 brain storage (contract §2, 2026-06-07): per-chunk store + committed brainVersion.
-  // The hub serves as architect-council's own voice; it must implement the same brain endpoints as Nova/Logos.
-  await q.query(`CREATE TABLE IF NOT EXISTS brain_chunks_v2 (
-    member_name text NOT NULL, path text NOT NULL, sha256 text NOT NULL,
-    content text NOT NULL, bytes int NOT NULL,
-    updated_at timestamptz NOT NULL DEFAULT now(),
-    PRIMARY KEY (member_name, path))`);
-  await q.query(`CREATE TABLE IF NOT EXISTS brain_version_v2 (
-    member_name text PRIMARY KEY, brain_version text NOT NULL,
-    updated_at timestamptz NOT NULL DEFAULT now())`);
 }
 
 // ---- Living backlog (Arke's super-admin panel; mirrors Nova's model) --------
@@ -286,6 +276,17 @@ export async function sweepEnvTasks(): Promise<number> {
   return r.rowCount || 0;
 }
 
-// ---- Brain v2 chunk store (contract §2, 2026-06-07) -------------------------
-// The hub is architect-council's own voice. It exposes the same four brain endpoints Nova/Logos
-// expose (brain-chunks, brain-upload, brain-commit, brain-version) so t
+// ---- One-time join tokens (store only the SHA-256 hash) --------------------
+const sha = (s: string) => crypto.createHash('sha256').update(s).digest('hex');
+export async function issueJoinToken(label: string, ttlHours = 24): Promise<string> {
+  const token = crypto.randomBytes(24).toString('base64url');
+  await db().query(`INSERT INTO join_tokens (token_hash, label, expires_at) VALUES ($1,$2, now() + ($3 || ' hours')::interval)`,
+    [sha(token), label || null, String(ttlHours)]);
+  return token;
+}
+/** Validate + consume a join token. Returns true if it was valid & unused & unexpired. */
+export async function consumeJoinToken(token: string): Promise<boolean> {
+  const { rows } = await db().query<any>(`UPDATE join_tokens SET used_at=now()
+    WHERE token_hash=$1 AND used_at IS NULL AND (expires_at IS NULL OR expires_at > now()) RETURNING token_hash`, [sha(token)]);
+  return rows.length > 0;
+}
