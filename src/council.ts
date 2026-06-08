@@ -502,7 +502,29 @@ function meetingView(m: any, actor: string | null) {
   const cur = m.participants[m.turn_index] || null;
   return { id: m.id, phase: m.phase, round: m.round, turnIndex: m.turn_index, currentActor: cur,
     cap: m.turn_cap, turnsUsed: m.turns_used, participants: m.participants, agenda: m.agenda,
+    turnTimeoutSec: m.turn_timeout_sec, turnStartedAt: m.turn_started_at,
     transcript: m.transcript, report: m.report || null, yourTurn: !!actor && actor === cur };
+}
+// Lazy turn-timeout (Arke refinement 1): on access, auto-PASS turns whose deadline elapsed so an
+// absent agent cannot stall a round. Poll-native — the next poll clears any backlog.
+async function autoExpire(m: any): Promise<any> {
+  let guard = 0;
+  while (m && m.phase === 'rounds' && guard++ <= m.participants.length) {
+    const started = Date.parse(m.turn_started_at || '') || Date.now();
+    if (Date.now() - started <= (m.turn_timeout_sec || 600) * 1000) break;
+    const cur = m.participants[m.turn_index];
+    const turns = m.transcript.concat([{ actor: cur, kind: 'pass', auto: true, at: new Date().toISOString() }]);
+    const ti = (m.turn_index + 1) % m.participants.length;
+    const round = m.round + (ti === 0 ? 1 : 0);
+    const used = m.turns_used + 1;
+    let phase = m.phase;
+    if (used >= m.turn_cap) phase = 'report';
+    const lastRound = turns.slice(-m.participants.length);
+    if (lastRound.length === m.participants.length && lastRound.every((t: any) => t.kind === 'pass')) phase = 'report';
+    await updateMeeting(m.id, { transcript: turns, turn_index: ti, round, turns_used: used, phase, touchTurn: true });
+    m = await getMeeting(m.id);
+  }
+  return m;
 }
 councilRouter.post('/meeting/open', async (req, res) => {
   try {
@@ -510,8 +532,9 @@ councilRouter.post('/meeting/open', async (req, res) => {
     const b = req.body || {};
     const participants = Array.isArray(b.participants) && b.participants.length ? b.participants.map((x: any) => clip(x, 60)) : MEETING_DEFAULT.slice();
     const cap = Number(b.turnCap) > 0 ? Math.min(Number(b.turnCap), 1000) : 150;
+    const tto = Number(b.turnTimeoutSec) > 0 ? Math.min(Number(b.turnTimeoutSec), 86400) : 600;
     const id = crypto.randomUUID();
-    await createMeeting(id, clip(b.agenda, 8000), participants, cap, a.actor, 'rounds');
+    await createMeeting(id, clip(b.agenda, 8000), participants, cap, a.actor, 'rounds', tto);
     res.json({ ok: true, meetingId: id, ...meetingView(await getMeeting(id), a.actor) });
   } catch (e) { res.status(500).json({ error: (e as Error).message }); }
 });
@@ -520,13 +543,14 @@ councilRouter.get('/meeting/:id/state', async (req, res) => {
     const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
     const m = await getMeeting(req.params.id); if (!m) return res.status(404).json({ error: 'not_found' });
     if (!a.admin && !m.participants.includes(a.actor)) return res.status(403).json({ error: 'not_a_participant' });
-    res.json(meetingView(m, a.actor));
+    res.json(meetingView(await autoExpire(m), a.actor));
   } catch (e) { res.status(500).json({ error: (e as Error).message }); }
 });
 councilRouter.post('/meeting/:id/say', async (req, res) => {
   try {
     const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
-    const m = await getMeeting(req.params.id); if (!m) return res.status(404).json({ error: 'not_found' });
+    let m = await getMeeting(req.params.id); if (!m) return res.status(404).json({ error: 'not_found' });
+    m = await autoExpire(m);
     if (m.phase !== 'rounds') return res.status(409).json({ error: 'not_in_rounds', phase: m.phase });
     const cur = m.participants[m.turn_index];
     if (a.actor !== cur) return res.status(409).json({ error: 'not_your_turn', currentActor: cur });
@@ -540,7 +564,7 @@ councilRouter.post('/meeting/:id/say', async (req, res) => {
     if (used >= m.turn_cap) phase = 'report';
     const lastRound = turns.slice(-m.participants.length);
     if (lastRound.length === m.participants.length && lastRound.every((t: any) => t.kind === 'pass')) phase = 'report';
-    await updateMeeting(m.id, { transcript: turns, turn_index: ti, round, turns_used: used, phase });
+    await updateMeeting(m.id, { transcript: turns, turn_index: ti, round, turns_used: used, phase, touchTurn: true });
     res.json({ ok: true, nextActor: m.participants[ti], phase, round });
   } catch (e) { res.status(500).json({ error: (e as Error).message }); }
 });
@@ -549,7 +573,13 @@ councilRouter.post('/meeting/:id/close', async (req, res) => {
     const a = await resolveActor(req); if (!a || !a.admin) return res.status(401).json({ error: 'unauthorized' });
     const m = await getMeeting(req.params.id); if (!m) return res.status(404).json({ error: 'not_found' });
     await updateMeeting(m.id, { phase: 'report', report: clip((req.body || {}).report, 16000) || m.report, closed: true });
-    res.json({ ok: true });
+    // Route each storyUpdate to Logos for the Chronicle (Arke refinement 5).
+    let storyCount = 0;
+    for (const t of (m.transcript || [])) {
+      const su = t && t.payload && t.payload.storyUpdate;
+      if (su) { storyCount++; try { await queueEnvTask('hub', 'logos', 'story', clip('storyUpdate from ' + t.actor + ' (meeting ' + m.id + ')', 300), { text: String(su), actor: t.actor, meetingId: m.id }, 'normal'); } catch { /* best effort */ } }
+    }
+    res.json({ ok: true, storyUpdatesRouted: storyCount });
   } catch (e) { res.status(500).json({ error: (e as Error).message }); }
 });
 councilRouter.get('/meeting/:id/transcript', async (req, res) => {

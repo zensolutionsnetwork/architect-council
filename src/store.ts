@@ -97,6 +97,8 @@ export async function initDb(): Promise<void> {
     turn_index int NOT NULL DEFAULT 0, round int NOT NULL DEFAULT 1, turns_used int NOT NULL DEFAULT 0,
     transcript jsonb NOT NULL DEFAULT '[]', report text, opened_by text,
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), closed_at timestamptz)`);
+  await q.query(`ALTER TABLE meetings ADD COLUMN IF NOT EXISTS turn_timeout_sec int NOT NULL DEFAULT 600`);
+  await q.query(`ALTER TABLE meetings ADD COLUMN IF NOT EXISTS turn_started_at timestamptz NOT NULL DEFAULT now()`);
 }
 
 // ---- Living backlog (Arke's super-admin panel; mirrors Nova's model) --------
@@ -300,25 +302,27 @@ export async function consumeJoinToken(token: string): Promise<boolean> {
 
 // ---- Meetings (orchestrator; docs/MEETING_PROTOCOL.md) ---------------------
 export interface MeetingTurn { actor: string; kind: 'speak' | 'pass'; payload?: any; done?: boolean; at: string }
-export async function createMeeting(id: string, agenda: string, participants: string[], turnCap: number, openedBy: string, phase = 'rounds'): Promise<void> {
-  await db().query(`INSERT INTO meetings (id, agenda, participants, turn_cap, phase, opened_by) VALUES ($1,$2,$3,$4,$5,$6)`,
-    [id, String(agenda || '').slice(0, 8000), JSON.stringify(participants), turnCap, phase, openedBy]);
+export async function createMeeting(id: string, agenda: string, participants: string[], turnCap: number, openedBy: string, phase = 'rounds', turnTimeoutSec = 600): Promise<void> {
+  await db().query(`INSERT INTO meetings (id, agenda, participants, turn_cap, phase, opened_by, turn_timeout_sec, turn_started_at) VALUES ($1,$2,$3,$4,$5,$6,$7,now())`,
+    [id, String(agenda || '').slice(0, 8000), JSON.stringify(participants), turnCap, phase, openedBy, turnTimeoutSec > 0 ? turnTimeoutSec : 600]);
 }
 export async function getMeeting(id: string): Promise<any | null> {
-  const { rows } = await db().query<any>(`SELECT id, agenda, participants, turn_cap, phase, turn_index, round, turns_used, transcript, report, opened_by,
+  const { rows } = await db().query<any>(`SELECT id, agenda, participants, turn_cap, phase, turn_index, round, turns_used, transcript, report, opened_by, turn_timeout_sec,
+    to_char(turn_started_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS turn_started_at,
     to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
     to_char(updated_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS updated_at FROM meetings WHERE id=$1`, [id]);
   if (!rows[0]) return null;
   const r = rows[0];
   return { ...r, participants: Array.isArray(r.participants) ? r.participants : [], transcript: Array.isArray(r.transcript) ? r.transcript : [] };
 }
-export async function updateMeeting(id: string, patch: { phase?: string; turn_index?: number; round?: number; turns_used?: number; transcript?: MeetingTurn[]; report?: string; closed?: boolean }): Promise<void> {
+export async function updateMeeting(id: string, patch: { phase?: string; turn_index?: number; round?: number; turns_used?: number; transcript?: MeetingTurn[]; report?: string; closed?: boolean; touchTurn?: boolean }): Promise<void> {
   await db().query(`UPDATE meetings SET
     phase=COALESCE($2,phase), turn_index=COALESCE($3,turn_index), round=COALESCE($4,round),
     turns_used=COALESCE($5,turns_used), transcript=COALESCE($6::jsonb,transcript), report=COALESCE($7,report),
-    closed_at=CASE WHEN $8 THEN now() ELSE closed_at END, updated_at=now() WHERE id=$1`,
+    closed_at=CASE WHEN $8 THEN now() ELSE closed_at END,
+    turn_started_at=CASE WHEN $9 THEN now() ELSE turn_started_at END, updated_at=now() WHERE id=$1`,
     [id, patch.phase ?? null, patch.turn_index ?? null, patch.round ?? null, patch.turns_used ?? null,
-     patch.transcript ? JSON.stringify(patch.transcript) : null, patch.report ?? null, patch.closed === true]);
+     patch.transcript ? JSON.stringify(patch.transcript) : null, patch.report ?? null, patch.closed === true, patch.touchTurn === true]);
 }
 export async function listMeetings(limit = 20): Promise<any[]> {
   const { rows } = await db().query<any>(`SELECT id, agenda, phase, participants, turns_used, turn_cap,
