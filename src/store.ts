@@ -83,6 +83,8 @@ export async function initDb(): Promise<void> {
     created_at timestamptz NOT NULL DEFAULT now(), claimed_at timestamptz, done_at timestamptz)`);
   await q.query(`CREATE INDEX IF NOT EXISTS env_tasks_inbox ON env_tasks (to_actor, status) WHERE status IN ('queued','claimed')`);
   await q.query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS archived boolean NOT NULL DEFAULT false`);
+  // V2 meeting meta (contract §3/§4): turnCap + participants with brainVersion pinned at meeting open.
+  await q.query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS v2_meta jsonb`);
   await q.query(`ALTER TABLE members ADD COLUMN IF NOT EXISTS display_name text`);
   // Chosen names — council canon 2026-06-06 (idempotent seed; members may update via /register later).
   await q.query(`UPDATE members SET display_name='Arke' WHERE name='architect-council' AND display_name IS NULL`);
@@ -125,7 +127,7 @@ export async function listMembers(): Promise<Member[]> {
   return rows.map((r) => ({ ...r, capabilities: Array.isArray(r.capabilities) ? r.capabilities : [] }));
 }
 export async function getMember(name: string): Promise<(Member & { secret: string }) | null> {
-  const { rows } = await db().query<any>(`SELECT m.name, m.base_url, m.owner_email, m.rules, m.capabilities, s.secret_enc
+  const { rows } = await db().query<any>(`SELECT m.name, m.display_name, m.base_url, m.owner_email, m.rules, m.capabilities, s.secret_enc
     FROM members m JOIN member_secrets s ON s.member_name=m.name WHERE m.name=$1 AND m.active`, [name]);
   if (!rows[0]) return null;
   return { ...rows[0], capabilities: rows[0].capabilities || [], secret: dec(rows[0].secret_enc) };
@@ -154,7 +156,8 @@ export async function updateConvo(id: string, patch: { transcript?: Turn[]; stat
 }
 function parseT(t: any): Turn[] { if (Array.isArray(t)) return t; try { return JSON.parse(t || '[]'); } catch { return []; } }
 export async function getConvo(id: string): Promise<any | null> {
-  const { rows } = await db().query<any>(`SELECT id, kind, topic, members, status, transcript, summary, archived,
+  const { rows } = await db().query<any>(`SELECT id, kind, topic, members, status, transcript, summary, archived, v2_meta,
+    to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
     to_char(updated_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS updated_at FROM conversations WHERE id=$1`, [id]);
   if (!rows[0]) return null;
   return { ...rows[0], transcript: parseT(rows[0].transcript) };
@@ -164,6 +167,10 @@ export async function listConvos(limit = 40): Promise<any[]> {
     to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at
     FROM conversations ORDER BY created_at DESC LIMIT $1`, [limit]);
   return rows;
+}
+/** Persist v2 meeting meta (turnCap + participants w/ brainVersion) — written once at meeting open. */
+export async function setConvoV2Meta(id: string, meta: any): Promise<void> {
+  await db().query(`UPDATE conversations SET v2_meta=$2 WHERE id=$1`, [id, JSON.stringify(meta ?? {})]);
 }
 export async function setConvoArchived(id: string, archived: boolean): Promise<boolean> {
   const r = await db().query(`UPDATE conversations SET archived=$2 WHERE id=$1`, [id, archived]);

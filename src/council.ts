@@ -12,7 +12,7 @@ import {
   createConvo, updateConvo, getConvo, listConvos, consumeJoinToken, issueJoinToken,
   setTakeaways, getLatestTakeaways, recentConvoActivity, type Turn,
   queueOutbox, pendingOutbox, markOutboxDelivered, ackOutbox, sweepOutbox,
-  getBacklog, setBacklog, setConvoArchived, getRegistryVersion,
+  getBacklog, setBacklog, setConvoArchived, setConvoV2Meta, getRegistryVersion,
   queueEnvTask, listEnvTasks, getEnvTask, claimEnvTask, reportEnvTask, sweepEnvTasks,
 } from './store.js';
 
@@ -173,6 +173,21 @@ async function runCouncil(id: string, topic: string, memberNames: string[], maxR
   let msg = clip(topic, 4000), from = 'council';
   let status = 'cap';
   const cap = Math.min(Math.max(1, maxRounds || 10), 150); // owner-approved ceiling; "done" ends it sooner
+  // V2 (contract §3/§4): pin each participant's brainVersion at meeting OPEN. Unreachable or not yet
+  // implemented -> null (recorded absent — never defaulted, never impersonated).
+  try {
+    const participants = await Promise.all(members.map(async (m) => {
+      let brainVersion: string | null = null;
+      try {
+        const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 5000);
+        const r = await fetch(m.base_url.replace(/\/+$/, '') + '/api/bridge/brain-version', { headers: { 'x-bridge-secret': m.secret }, signal: ctl.signal });
+        clearTimeout(t);
+        if (r.ok) { const d: any = await r.json(); if (typeof d.brainVersion === 'string') brainVersion = clip(d.brainVersion, 100); }
+      } catch { /* absent */ }
+      return { member: m.name, displayName: (m as any).display_name || m.name, brainVersion };
+    }));
+    await setConvoV2Meta(id, { contractVersion: '2.0-draft1', turnCap: cap, participants });
+  } catch { /* meta is best-effort; the meeting itself must not die on it */ }
   const order = members.map((m) => m.name).join(' → ');
   for (let i = 0; i < cap; i++) {
     const member = members[i % members.length];
@@ -237,6 +252,43 @@ councilRouter.post('/council/convo/:id/archive', requireAdmin, async (req, res) 
     const ok = await setConvoArchived(req.params.id, (req.body || {}).archived !== false);
     if (!ok) return res.status(404).json({ error: 'not_found' });
     res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+
+// ---------- V2 meeting transcript (contract §4: RAW, hashed, participants-only) ----------
+// The hub records; the architects interpret. Same canonical hash as arke-bridge-app/src/protocol.ts:
+// sha256 over JSON.stringify(turns.map(({speaker,text}))) — reimplementable byte-for-byte, node:crypto only.
+const canonicalTurns = (turns: Turn[]): string => JSON.stringify(turns.map((t) => ({ speaker: t.speaker, text: t.text })));
+const transcriptSha256 = (turns: Turn[]): string => 'sha256:' + crypto.createHash('sha256').update(Buffer.from(canonicalTurns(turns), 'utf8')).digest('hex');
+councilRouter.get('/council/meeting/:id/transcript', async (req, res) => {
+  try {
+    const c = await getConvo(req.params.id);
+    if (!c) return res.status(404).json({ error: 'not_found' });
+    const adminOk = !!process.env.COUNCIL_ADMIN_TOKEN && safeEqual(req.headers['x-admin-token'], process.env.COUNCIL_ADMIN_TOKEN);
+    if (!adminOk) {
+      // Participants-only: the credential resolves the actor, and the actor must have sat in this meeting.
+      const sec = req.headers['x-bridge-secret'] as string;
+      let actor: string | null = null;
+      if (sec) for (const mm of await listMembers()) { const m = await getMember(mm.name); if (m && safeEqual(sec, m.secret)) { actor = m.name; break; } }
+      const memberList: string[] = Array.isArray(c.members) ? c.members : [];
+      if (!actor || !memberList.includes(actor)) return res.status(403).json({ error: 'participants_only' });
+    }
+    const turns: Turn[] = Array.isArray(c.transcript) ? c.transcript : [];
+    const meta: any = c.v2_meta || {};
+    res.json({
+      header: {
+        contractVersion: meta.contractVersion || '2.0-draft1',
+        meetingId: c.id,
+        openedAt: c.created_at || null,
+        closedAt: c.status === 'running' ? null : (c.updated_at || null),
+        status: c.status,
+        turnsUsed: turns.length,
+        turnCap: meta.turnCap ?? null,
+        participants: meta.participants ?? (Array.isArray(c.members) ? c.members.map((n: string) => ({ member: n, displayName: n, brainVersion: null })) : []),
+        transcriptSha256: transcriptSha256(turns),
+      },
+      turns,
+    });
   } catch (e) { res.status(500).json({ error: (e as Error).message }); }
 });
 
