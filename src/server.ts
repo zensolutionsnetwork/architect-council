@@ -30,10 +30,16 @@ app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'architect-c
 app.use('/api', bridgeRouter);
 app.use('/api', councilRouter);
 
-// Pages.
-app.get('/', (_req, res) => res.sendFile(path.join(publicDir, 'index.html')));
-app.get('/console', (_req, res) => res.sendFile(path.join(publicDir, 'console.html')));
-app.get('/admin', (_req, res) => res.sendFile(path.join(publicDir, 'admin.html')));
+// Pages -- gated by SITE_LIVE until the product is ready for market.
+// Set SITE_LIVE=true in Railway env to open the site. Until then every HTML route
+// returns 404 so the concept stays off the public web.
+const siteLive = process.env.SITE_LIVE === 'true';
+app.get('/', (_req, res) =>
+  siteLive ? res.sendFile(path.join(publicDir, 'index.html')) : res.status(404).end());
+app.get('/console', (_req, res) =>
+  siteLive ? res.sendFile(path.join(publicDir, 'console.html')) : res.status(404).end());
+app.get('/admin', (_req, res) =>
+  siteLive ? res.sendFile(path.join(publicDir, 'admin.html')) : res.status(404).end());
 
 const port = Number(process.env.PORT) || 8080;
 app.listen(port, async () => {
