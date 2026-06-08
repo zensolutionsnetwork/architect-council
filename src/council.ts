@@ -14,6 +14,7 @@ import {
   queueOutbox, pendingOutbox, markOutboxDelivered, ackOutbox, sweepOutbox,
   getBacklog, setBacklog, setConvoArchived, setConvoV2Meta, getRegistryVersion,
   queueEnvTask, listEnvTasks, getEnvTask, claimEnvTask, reportEnvTask, sweepEnvTasks,
+  createMeeting, getMeeting, updateMeeting, listMeetings,
 } from './store.js';
 
 const clip = (s: any, n: number) => String(s ?? '').slice(0, n);
@@ -493,6 +494,77 @@ async function nightlyRetro(): Promise<void> {
   // Cap 150 (owner 2026-06-06): never cut code-review quality. Track turns-used vs cap in the morning digest to retune.
   runCouncil(id, topic, names, 150).catch(() => updateConvo(id, { status: 'error' }).catch(() => {}));
 }
+
+// ---------- Meeting orchestrator (docs/MEETING_PROTOCOL.md, 2026-06-08) ------
+// Poll-based turn-taking among the chosen-name actors. Own state machine; pause-independent.
+const MEETING_DEFAULT = ['kairos', 'arke', 'nova', 'logos'];
+function meetingView(m: any, actor: string | null) {
+  const cur = m.participants[m.turn_index] || null;
+  return { id: m.id, phase: m.phase, round: m.round, turnIndex: m.turn_index, currentActor: cur,
+    cap: m.turn_cap, turnsUsed: m.turns_used, participants: m.participants, agenda: m.agenda,
+    transcript: m.transcript, report: m.report || null, yourTurn: !!actor && actor === cur };
+}
+councilRouter.post('/meeting/open', async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a || !a.admin) return res.status(401).json({ error: 'unauthorized' });
+    const b = req.body || {};
+    const participants = Array.isArray(b.participants) && b.participants.length ? b.participants.map((x: any) => clip(x, 60)) : MEETING_DEFAULT.slice();
+    const cap = Number(b.turnCap) > 0 ? Math.min(Number(b.turnCap), 1000) : 150;
+    const id = crypto.randomUUID();
+    await createMeeting(id, clip(b.agenda, 8000), participants, cap, a.actor, 'rounds');
+    res.json({ ok: true, meetingId: id, ...meetingView(await getMeeting(id), a.actor) });
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+councilRouter.get('/meeting/:id/state', async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
+    const m = await getMeeting(req.params.id); if (!m) return res.status(404).json({ error: 'not_found' });
+    if (!a.admin && !m.participants.includes(a.actor)) return res.status(403).json({ error: 'not_a_participant' });
+    res.json(meetingView(m, a.actor));
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+councilRouter.post('/meeting/:id/say', async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
+    const m = await getMeeting(req.params.id); if (!m) return res.status(404).json({ error: 'not_found' });
+    if (m.phase !== 'rounds') return res.status(409).json({ error: 'not_in_rounds', phase: m.phase });
+    const cur = m.participants[m.turn_index];
+    if (a.actor !== cur) return res.status(409).json({ error: 'not_your_turn', currentActor: cur });
+    const b = req.body || {};
+    const kind = b.pass ? 'pass' : 'speak';
+    const turns = m.transcript.concat([{ actor: a.actor, kind, payload: kind === 'speak' ? (b.payload ?? {}) : undefined, done: b.done === true, at: new Date().toISOString() }]);
+    const ti = (m.turn_index + 1) % m.participants.length;
+    const round = m.round + (ti === 0 ? 1 : 0);
+    const used = m.turns_used + 1;
+    let phase = m.phase;
+    if (used >= m.turn_cap) phase = 'report';
+    const lastRound = turns.slice(-m.participants.length);
+    if (lastRound.length === m.participants.length && lastRound.every((t: any) => t.kind === 'pass')) phase = 'report';
+    await updateMeeting(m.id, { transcript: turns, turn_index: ti, round, turns_used: used, phase });
+    res.json({ ok: true, nextActor: m.participants[ti], phase, round });
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+councilRouter.post('/meeting/:id/close', async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a || !a.admin) return res.status(401).json({ error: 'unauthorized' });
+    const m = await getMeeting(req.params.id); if (!m) return res.status(404).json({ error: 'not_found' });
+    await updateMeeting(m.id, { phase: 'report', report: clip((req.body || {}).report, 16000) || m.report, closed: true });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+councilRouter.get('/meeting/:id/transcript', async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
+    const m = await getMeeting(req.params.id); if (!m) return res.status(404).json({ error: 'not_found' });
+    if (!a.admin && !m.participants.includes(a.actor)) return res.status(403).json({ error: 'not_a_participant' });
+    res.json({ id: m.id, agenda: m.agenda, participants: m.participants, phase: m.phase, turnsUsed: m.turns_used, transcript: m.transcript, report: m.report || null });
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+councilRouter.get('/meetings', async (req, res) => {
+  try { const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' }); res.json({ meetings: await listMeetings(20) }); }
+  catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+
 export function startScheduler(): void {
   setInterval(async () => {
     try {

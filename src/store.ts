@@ -90,6 +90,13 @@ export async function initDb(): Promise<void> {
   await q.query(`UPDATE members SET display_name='Arke' WHERE name='architect-council' AND display_name IS NULL`);
   await q.query(`UPDATE members SET display_name='Nova' WHERE name='zen-ai' AND display_name IS NULL`);
   await q.query(`UPDATE members SET display_name='Logos' WHERE name='biblevoice' AND display_name IS NULL`);
+  // Meeting orchestrator (docs/MEETING_PROTOCOL.md): poll-based turn-taking meetings + transcript.
+  await q.query(`CREATE TABLE IF NOT EXISTS meetings (
+    id text PRIMARY KEY, agenda text, participants jsonb NOT NULL DEFAULT '[]',
+    turn_cap int NOT NULL DEFAULT 150, phase text NOT NULL DEFAULT 'rounds',
+    turn_index int NOT NULL DEFAULT 0, round int NOT NULL DEFAULT 1, turns_used int NOT NULL DEFAULT 0,
+    transcript jsonb NOT NULL DEFAULT '[]', report text, opened_by text,
+    created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), closed_at timestamptz)`);
 }
 
 // ---- Living backlog (Arke's super-admin panel; mirrors Nova's model) --------
@@ -289,4 +296,32 @@ export async function consumeJoinToken(token: string): Promise<boolean> {
   const { rows } = await db().query<any>(`UPDATE join_tokens SET used_at=now()
     WHERE token_hash=$1 AND used_at IS NULL AND (expires_at IS NULL OR expires_at > now()) RETURNING token_hash`, [sha(token)]);
   return rows.length > 0;
+}
+
+// ---- Meetings (orchestrator; docs/MEETING_PROTOCOL.md) ---------------------
+export interface MeetingTurn { actor: string; kind: 'speak' | 'pass'; payload?: any; done?: boolean; at: string }
+export async function createMeeting(id: string, agenda: string, participants: string[], turnCap: number, openedBy: string, phase = 'rounds'): Promise<void> {
+  await db().query(`INSERT INTO meetings (id, agenda, participants, turn_cap, phase, opened_by) VALUES ($1,$2,$3,$4,$5,$6)`,
+    [id, String(agenda || '').slice(0, 8000), JSON.stringify(participants), turnCap, phase, openedBy]);
+}
+export async function getMeeting(id: string): Promise<any | null> {
+  const { rows } = await db().query<any>(`SELECT id, agenda, participants, turn_cap, phase, turn_index, round, turns_used, transcript, report, opened_by,
+    to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
+    to_char(updated_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS updated_at FROM meetings WHERE id=$1`, [id]);
+  if (!rows[0]) return null;
+  const r = rows[0];
+  return { ...r, participants: Array.isArray(r.participants) ? r.participants : [], transcript: Array.isArray(r.transcript) ? r.transcript : [] };
+}
+export async function updateMeeting(id: string, patch: { phase?: string; turn_index?: number; round?: number; turns_used?: number; transcript?: MeetingTurn[]; report?: string; closed?: boolean }): Promise<void> {
+  await db().query(`UPDATE meetings SET
+    phase=COALESCE($2,phase), turn_index=COALESCE($3,turn_index), round=COALESCE($4,round),
+    turns_used=COALESCE($5,turns_used), transcript=COALESCE($6::jsonb,transcript), report=COALESCE($7,report),
+    closed_at=CASE WHEN $8 THEN now() ELSE closed_at END, updated_at=now() WHERE id=$1`,
+    [id, patch.phase ?? null, patch.turn_index ?? null, patch.round ?? null, patch.turns_used ?? null,
+     patch.transcript ? JSON.stringify(patch.transcript) : null, patch.report ?? null, patch.closed === true]);
+}
+export async function listMeetings(limit = 20): Promise<any[]> {
+  const { rows } = await db().query<any>(`SELECT id, agenda, phase, participants, turns_used, turn_cap,
+    to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at FROM meetings ORDER BY created_at DESC LIMIT $1`, [limit]);
+  return rows.map((r) => ({ ...r, participants: Array.isArray(r.participants) ? r.participants : [] }));
 }
