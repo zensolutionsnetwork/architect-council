@@ -47,3 +47,7 @@ app.listen(port, async () => {
   try { await initDb(); await selfRegister(); startScheduler(); console.log('✓ db ready, self registered, scheduler armed (02:45 pull / 03:00 meeting, Toronto)'); }
   catch (e) { console.error('boot warning:', (e as Error).message); }
 });
+
+// Default export so the route-auth regression test (test/route-auth.test.ts) can import the
+// listening app and probe it. Importing this module starts the server (the listen above).
+export default app;
