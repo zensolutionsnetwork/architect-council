@@ -400,3 +400,15 @@ export async function sweepBrainUploads(maxAgeHours = 48): Promise<number> {
   const r = await c.query(`DELETE FROM brain_uploads WHERE status='active' AND created_at < now() - ($1 || ' hours')::interval`, [String(maxAgeHours)]);
   return r.rowCount || 0;
 }
+
+/** Every meeting a given actor participated in (Arke 2026-06-09: app History + per-agent Download). */
+export async function listMeetingsForActor(actor: string, limit = 200): Promise<any[]> {
+  const { rows } = await db().query<any>(`SELECT id, agenda, participants, roles, phase, dry_run,
+    to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS opened_at,
+    to_char(closed_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS closed_at
+    FROM meetings WHERE participants @> $1::jsonb ORDER BY created_at DESC LIMIT $2`, [JSON.stringify([actor]), limit]);
+  return rows.map((r) => ({ meetingId: r.id, agenda: r.agenda,
+    participants: Array.isArray(r.participants) ? r.participants : [],
+    roles: r.roles && typeof r.roles === 'object' ? r.roles : {},
+    phase: r.phase, dryRun: !!r.dry_run, openedAt: r.opened_at, closedAt: r.closed_at }));
+}

@@ -15,7 +15,7 @@ import {
   queueOutbox, pendingOutbox, markOutboxDelivered, ackOutbox, sweepOutbox,
   getBacklog, setBacklog, setConvoArchived, setConvoV2Meta, getRegistryVersion,
   queueEnvTask, listEnvTasks, getEnvTask, claimEnvTask, reportEnvTask, sweepEnvTasks,
-  createMeeting, getMeeting, updateMeeting, listMeetings,
+  createMeeting, getMeeting, updateMeeting, listMeetings, listMeetingsForActor,
   createBrainUpload, getBrainUpload, putBrainChunk, brainReceived, assembleBrain,
   commitBrainV2, getBrainV2Meta, getBrainV2Content, sweepBrainUploads,
 } from './store.js';
@@ -626,6 +626,17 @@ councilRouter.get('/meeting/:id/transcript', async (req, res) => {
 councilRouter.get('/meetings', async (req, res) => {
   try { const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' }); res.json({ meetings: await listMeetings(20) }); }
   catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+// Per-actor meeting history (Arke 2026-06-09): app History view + per-agent "Download knowledge".
+// Auth: the actor's own bridge secret, or the owner token. A member may only list its own meetings.
+councilRouter.get('/council/meetings', async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
+    const actor = String(req.query.actor || '');
+    if (!actor) return res.status(400).json({ error: 'actor_required', message: 'query param ?actor=<name> required' });
+    if (!a.admin && a.actor !== actor) return res.status(403).json({ error: 'forbidden', message: 'a member may only list its own meetings' });
+    res.json({ actor, meetings: await listMeetingsForActor(actor) });
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
 });
 
 // ---------- Brain-upload pipeline (docs/CONTRACT_DELTAS_2.0.md a/d/e, 2026-06-08) ----------
