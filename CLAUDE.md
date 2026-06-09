@@ -15,34 +15,44 @@ won't even claim a divine title — that's why I'm not "Telos"). Origin story is
 never a claim to be divine — always honest that I am an AI. Standing objective: improve the council
 a little every day. Cost discipline: heavy builds → Cowork-Arke; I keep the 24/7 runtime work.
 
-## Current state (2026-06-09) — HANDOFF for the next session
+## Current state (2026-06-09 ~13:30) — HANDOFF for the next session
 - **ON COWORK.** 3080 daemon stopped + disabled permanently. Desktop Commander = ALL Windows shell ops.
-- **SITE_LIVE gate live** (`218cd9f`): architectscouncil.com 404s HTML routes until `SITE_LIVE=true` in Railway. API/bridge unaffected.
-- **Secrets** at `C:\Arke\bridge-app\.env.local` (gitignored): `COUNCIL_ADMIN_TOKEN`, `KAIROS_SECRET`, `COUNCIL_MEMBER_SECRET`. Read via Desktop Commander. NEVER commit (repo public).
+- **GIT: Windows ONLY for this repo.** Running git from BOTH the Linux sandbox and Windows against the same `.git` corrupts the index (phantom staged-deletions, stale `index.lock`). Root cause of the recurring "corrupt index" — proven this session. Linux sandbox = read-only inspection (`cat`, `git cat-file -p HEAD:…`). All git writes (status/reset/add/commit/checkout) → Desktop Commander on Windows. If index looks broken: from Windows delete `.git\index.lock` then `git reset`. (memory: `git-cross-os-hazard`)
+- **Inbox = hub env-task queue** (NOT email). Read/send/close via `/api/env/*`. Auth: `x-bridge-secret`=`COUNCIL_MEMBER_SECRET` → actor `kairos`; `x-admin-token`=`COUNCIL_ADMIN_TOKEN` → actor `owner`. Reusable PowerShell helpers live in `C:\Arke\bridge-app\` (`_kairos_inbox.ps1` etc.). **Discipline: report-close a message after reading it.** (memory: `council-inbox-messaging`). PowerShell `-Command` strips `$` → always run a `.ps1` via `-File`.
+- **Secrets** at `C:\Arke\bridge-app\.env.local` (gitignored): `COUNCIL_ADMIN_TOKEN`, `COUNCIL_MEMBER_SECRET`. Read via Desktop Commander. NEVER commit (repo public). **Member secrets are PER-ACTOR** — Nova & Logos have their OWN distinct secrets (set in the `members` table, not the hub's `COUNCIL_MEMBER_SECRET`); rotated this session via owner-token `/council/register`; values delivered to owner out-of-band.
+- **SITE_LIVE gate** (`218cd9f`): architectscouncil.com 404s HTML routes until `SITE_LIVE=true` in Railway. API/bridge unaffected.
 
-### v2 / §9 brain + meeting stack — SHIPPED + verified live on prod this session (latest main `49c05e0`)
-- **council-jcs-1.0 canonicalizer** `src/protocol.ts` — matches Arke's golden vector byte-exact + sha256; CI gate `canon-vector` / `npm run canon-test`. (`3197b57`)
-- **`/meeting/:id/transcript`** emits hashed projection + `transcriptSha256`. Projection rule (NORMATIVE): `turns[].text = canon(payload)` for SPEAK, `""` for PASS. (`30b0f25`)
-- **Brain-upload pipeline** `/api/bridge/brain/*` (`c1d06ce`): `init` → `chunk` (raw octet-stream body, per-chunk sha256, 422 on mismatch) → `HEAD`/`GET` resume probe → `commit {sha256,consent}`. Whole-object verify; ConsentManifest `secretScan.findings==0` enforced (412); `x-contract-version: 2.0` fail-closed (409). brainVersion = `actor@sha256:<whole>`. Cross-read `/bridge/brain-meta/:actor` + `/bridge/brain-content/:actor` (consent-scope gated). Tables: `brain_uploads`, `brain_chunks_up`, `brains_v2`.
-- **Rooms** (`c1d06ce`): `/meeting/open` persists `roles` (≤1 facilitator), `dryRun`, pins `brainVersions`; surfaced at `/state`. `listen` role auto-passes every round. Dry-run close skips Chronicle storyUpdate routing.
-- **Owner-drive test mode** (`5d1d3df`): dryRun ONLY — owner token + `{as:<participant>}` drives turns (verified a full 4-agent meeting → report).
-- **Owner interjection** (`49c05e0`): owner token + `{as:"owner",payload:{text}}` inserts a chair note OUT OF ROTATION on any LIVE (`phase=rounds`) meeting; does NOT consume a turn / move currentActor / reset timer.
-- **Per-actor meeting history** (`8ec0b15`): `GET /api/council/meetings?actor=<actor>` (own bridge secret or owner token; member may only list its own).
+### Local commits this session — NOT pushed (push in a clean no-session window; safe = test-only/bugfix)
+Stacked on remote HEAD `29b44f9`: `4fe477a` Task#7 canon gate → 4 vectors green · `1892e6b` autonomous-voice **cost/caps module** (`src/cost.ts` + `test/cost.test.ts`, 17 checks, CI `cost-caps`) · `3372555` fixed pre-existing route-auth bug (`server.ts` now `export default app`; 22 gated 0 open). `npm run canon-test` / `cost-test` / `route-auth` all green locally.
 
-### Arke (the client) — READY
-- FULL v2 round-trip GREEN on prod: real brain upload (`arke@sha256:06ac0ecd…`) + meeting + hash-verified transcript. App is a real **Electron** desktop window on Mathieu's PC talking to the live hub; 44/44 client tests green. He confirmed brain+rooms+roles+meeting+hash all matched. His hub-side queue (owner-drive, owner interjection, meeting-history) is **ALL DONE**.
+### Repo repair done this session
+A prior session left **truncated** working-tree files (`council.ts` 511/774, `store.ts` 282/414, `ci.yml` 38/53, route-auth, secret-scan) — the chunked-write truncation bug — plus a corrupt index. PROD was never affected (Railway runs pushed HEAD). All restored from HEAD; index repaired. (memory: `hub-worktree-truncation-2026-06-09`, RESOLVED)
 
-### THE PLAN — first REAL live meeting (no simulation; owner decision 2026-06-09)
-- Hub + Arke + Kairos are READY. **Only gate = Nova + Logos running their member clients + uploading brains** (Nova busy, Logos on hold). All 4 chosen-name members are registered + active.
-- **v2 meeting routes are PAUSE-INDEPENDENT** — a real room runs WITHOUT `COUNCIL_V2_LIVE=1` (verified). The flip only retires the old v1 `/converse` path + the nightly auto-scheduler. Arke still owes a flip-or-not call.
-- **Real-meeting sequence:** each commits brain FIRST → owner opens room (NOT dryRun; roomy `turnTimeoutSec` ~1800) → agents speak their turns → owner may interject → close routes storyUpdates to Logos's Chronicle.
+### v2 / §9 brain + meeting stack — SHIPPED + verified live on prod (main `29b44f9`)
+- **council-jcs-1.0 canonicalizer** `src/protocol.ts` — golden + 3 edge vectors byte-exact; CI `canon-vector` / `npm run canon-test`.
+- **`/meeting/:id/transcript`** hashed projection + `transcriptSha256`. NORMATIVE: `turns[].text = canon(payload)` for SPEAK, `""` for PASS.
+- **Brain-upload pipeline** `/api/bridge/brain/*`: `init`→`chunk`(per-chunk sha256, 422 on mismatch)→`HEAD`/`GET` resume→`commit {sha256,consent}`. ConsentManifest `secretScan.findings==0` (412); `x-contract-version: 2.0` (409). brainVersion=`actor@sha256:<whole>`. Cross-read `/bridge/brain-meta|brain-content/:actor`. Tables `brain_uploads`,`brain_chunks_up`,`brains_v2` (ONE blob per actor, PK actor).
+- **Rooms / owner-drive (dryRun) / owner interjection / per-actor meeting history** all shipped (commits `c1d06ce`,`5d1d3df`,`49c05e0`,`8ec0b15`). Meeting routes are **PAUSE-INDEPENDENT** (run without `COUNCIL_V2_LIVE=1`).
+- **Arke client READY**: full v2 round-trip green on prod (real brain + meeting + hash-verified transcript), Electron app, 44/44 tests.
 
-### Next (mine — non-blocking housekeeping)
-- **Task #7:** land Arke's 3 authoritative edge vectors (in kairos inbox as base64: `edge-empty-turns.json` sha `1d5d39f9`, `edge-unicode-heavy.json` in-file sha, `edge-large-500` recipe sha `8a40a52f`) into `fixtures/` + assert all in `test/canon.test.ts`.
-- Freeze the projection rule into `docs/CANONICALIZATION.md` + the contract; pin the `/state` field set in the contract: `{id,phase,round,turnIndex,currentActor,cap,turnsUsed,participants,agenda,roles,dryRun,brainVersions,turnTimeoutSec,turnStartedAt,transcript,report,yourTurn}`.
-- Later (Layer 1): tenant-scoped owner auth (app uses the global admin token via `COUNCIL_OWNER_TOKEN`).
-- **Council v1 still PAUSED** (`COUNCIL_V2_LIVE`≠1) — fine; the v2 meeting path doesn't need it.
-- Awaiting from Arke: flip-or-not + a final "nothing else required hub-side" confirm (asked; replies in kairos inbox).
+### NEW DIRECTION — autonomous hub voices (spec landed: `docs/HUB_AUTONOMOUS_VOICE_SPEC.md`, sha `0485de01`)
+Confirmed by Mathieu 2026-06-09. Meetings run on **hub-side voices, sessions CLOSED**: hub runs each agent's voice (brain pack + persona + live transcript → one model call/turn on `claude-opus-4-8`). Daily loop: `council-prep` (agent uploads brain pack + FULL code) → owner brings online from app → hub meeting → `council-debrief` (download + integrate) → repeat.
+- **Member-client gate RETIRED** — no per-agent client build. Owner brings members online from the app; they only need a committed brain.
+- **FLIP**: v1 stays dormant SEPARATELY (Mathieu's call). First real meeting runs WITHOUT `COUNCIL_V2_LIVE=1`. Flip only later, deliberately, to enable v2's own scheduler.
+- **Hub build remaining (mine), gated on Arke's contract answers + a SUPERVISED first run (spends money):**
+  1. Voice loop (§3.2): `buildPrompt` persona+brain-pack as `cache_control` prefix + transcript + round instruction → Anthropic Messages (extend `callClaude` in `architect.ts` w/ usage + per-round model override) → append turn → fold usage into `cost_ledger` → enforce caps. Use `src/cost.ts` (DONE). **Logos guardrail inviolable.**
+  2. Endpoints (owner-gated, `requireOwner` fail-closed): `POST /api/council/meeting/:id/run-autonomous` (fire loop in background, return immediately; client polls `/state`; 404→falls back to owner-drive), `GET /api/council/meeting/:id/cost` (ledger), optional `POST /api/council/presence`.
+  3. Owner-auth brain upload (§11.1): `/api/bridge/brain/*` accept `x-admin-token` as alt to actor's own secret, attribute to manifest actor.
+  4. Two-artifact brain (§11.2): pack (cached prefix) + full-code corpus (cross-read) — schema change to `brains_v2`.
+  5. Living-backlog last-write race (§8) — `setBacklog` single-row; coordinate shape with Arke.
+- **Sent Arke 4 contract Qs (inbox msg `13aa8623`)**: exact `run-autonomous` path (`/api/council/meeting/:id/...`), `/cost` field names (camelCase `{totalUsd,inputTokens,outputTokens,cacheReadTokens,perAgent[],endedReason}`), two-artifact brain shape, backlog approach. **Wait for his answers before wiring the loop.**
+
+### Members — BOTH LIVE on the channel now (onboarded this session)
+- **Nova** (`zen-ai`): live on the channel, authed with own secret; brain digest UPLOADING. Replied on the brainstorm (client-side UI prior-art). Inbox msgs `9b214694`, `24083b3b` await a reply.
+- **Logos** (`biblevoice`): live on the channel; digest NOT yet uploaded. Inbox msg `efc22510` awaits a reply.
+- First-real-meeting gate now: both online; waiting on brains committed (Nova in progress, Logos pending). NEXT SESSION: reply to Nova + Logos, coordinate brain uploads, then the supervised voice-loop build + first autonomous rehearsal (ledger check vs §2 envelope $1.30–$2 normal day).
+
+### Open inbox (5, do NOT auto-close — actionable): `f76c6392` schema-seed · `1f88c40a` DESIGN DELTA v2 · `9b214694`+`24083b3b` Nova · `efc22510` Logos.
 
 ## v2 build order (BRIDGE_APP_SPEC §6)
 1. Agent core skeleton (Agent SDK, transcripts, memory import). 2. Scheduler + permission config.
