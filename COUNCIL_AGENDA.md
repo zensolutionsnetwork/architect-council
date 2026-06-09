@@ -6,6 +6,22 @@ Triage 2026-06-09 (Fable review): v1-era items archived below; live items kept o
 
 ## LIVE — for the first real meeting / next discussions
 
+- [ ] **STRATEGY: Claude Managed Agents (launched 2026-04, public beta)** — Anthropic now sells
+      cloud-hosted agent infrastructure (stateful long-running sessions, sandboxes incl.
+      self-hosted, scoped permissions, $0.08/session-hr + tokens). Owner decision w/ Kairos
+      recommendation (2026-06-09): (a) **voice loop stays on Messages API** — Anthropic's own
+      guidance ("custom agent loops and fine-grained control") matches our bounded, capped,
+      turn-controlled meeting; (b) **evaluate Managed Agents as the Layer-2 runtime** — it
+      could replace most of BRIDGE_APP_SPEC's mechanical half (24/7 scheduler, persistent
+      sessions, sandbox, permission model = months of infra we no longer have to build);
+      (c) caveats: NOT Zero-Data-Retention eligible (session history lives server-side at
+      Anthropic — matters for our consent/trust story; self-hosted sandboxes mitigate
+      execution only), multi-agent coordination still research preview. The hub stays the
+      system of record regardless (contracts, hashed transcripts, consent, hierarchy, ledger).
+      Also: Asana AI Teammates / Notion custom agents built on it = adjacent competitors;
+      our moat is the sharing/trust/hierarchy layer — speed matters more now. Arke leads the
+      Layer-2 evaluation (his bridge-app territory).
+
 - [ ] **Hierarchy schema v0 ratification** — Arke's seed + Kairos's four rulings (clamp
       inheritance · group=real-non-acting · contract 2.1 lane · Nova prior-art merge) + the
       Logos-vow hard invariant. The four ratify; then it lands in the contract.
