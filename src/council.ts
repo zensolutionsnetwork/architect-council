@@ -569,12 +569,21 @@ councilRouter.post('/meeting/:id/say', async (req, res) => {
     let m = await getMeeting(req.params.id); if (!m) return res.status(404).json({ error: 'not_found' });
     m = await autoExpire(m);
     if (m.phase !== 'rounds') return res.status(409).json({ error: 'not_in_rounds', phase: m.phase });
-    const cur = m.participants[m.turn_index];
-    if (a.actor !== cur) return res.status(409).json({ error: 'not_your_turn', currentActor: cur });
-    if (roleOf(m, a.actor) === 'listen') return res.status(403).json({ error: 'listen_only', message: 'observers do not take speaking turns' });
     const b = req.body || {};
+    // Owner-drive TEST MODE (Mathieu via Arke 2026-06-09): on a dry-run meeting ONLY, the owner token may
+    // post a turn AS a named participant, so the app can run a full test meeting with no per-agent runtimes
+    // online. Strictly gated: owner token + dryRun + a real participant. Normal meetings keep per-actor auth.
+    let speaker = a.actor;
+    if (a.admin && b.as) {
+      if (!m.dry_run) return res.status(403).json({ error: 'owner_drive_requires_dryrun', message: 'owner may only speak-as on a dryRun meeting' });
+      if (!m.participants.includes(String(b.as))) return res.status(400).json({ error: 'as_not_a_participant', as: b.as });
+      speaker = String(b.as);
+    }
+    const cur = m.participants[m.turn_index];
+    if (speaker !== cur) return res.status(409).json({ error: 'not_your_turn', currentActor: cur });
+    if (roleOf(m, speaker) === 'listen') return res.status(403).json({ error: 'listen_only', message: 'observers do not take speaking turns' });
     const kind = b.pass ? 'pass' : 'speak';
-    const turns = m.transcript.concat([{ actor: a.actor, kind, payload: kind === 'speak' ? (b.payload ?? {}) : undefined, done: b.done === true, at: new Date().toISOString() }]);
+    const turns = m.transcript.concat([{ actor: speaker, kind, payload: kind === 'speak' ? (b.payload ?? {}) : undefined, done: b.done === true, ownerDriven: speaker !== a.actor ? true : undefined, at: new Date().toISOString() }]);
     const ti = (m.turn_index + 1) % m.participants.length;
     const round = m.round + (ti === 0 ? 1 : 0);
     const used = m.turns_used + 1;
