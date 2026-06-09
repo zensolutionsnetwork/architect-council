@@ -567,6 +567,17 @@ councilRouter.post('/meeting/:id/say', async (req, res) => {
   try {
     const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
     let m = await getMeeting(req.params.id); if (!m) return res.status(404).json({ error: 'not_found' });
+    // Owner interjection — the human chair's voice (Mathieu via Arke 2026-06-09). Owner token + {as:"owner"};
+    // inserts an out-of-rotation owner turn into ANY live meeting WITHOUT consuming a turn, changing
+    // currentActor, or resetting the turn timer. Agents see it as a chair note in their next turn's context.
+    if (a.admin && (req.body || {}).as === 'owner') {
+      if (m.phase !== 'rounds') return res.status(409).json({ error: 'meeting_not_live', phase: m.phase });
+      const ib = req.body || {};
+      const text = clip((ib.payload && ib.payload.text) ?? ib.text ?? '', 8000);
+      const note = { actor: 'owner', kind: 'message', payload: { text, from: 'owner' }, chair: true, at: new Date().toISOString() };
+      await updateMeeting(m.id, { transcript: (m.transcript || []).concat([note]) });
+      return res.json({ ok: true, interjected: true, currentActor: m.participants[m.turn_index] || null, turnsUsed: m.turns_used });
+    }
     m = await autoExpire(m);
     if (m.phase !== 'rounds') return res.status(409).json({ error: 'not_in_rounds', phase: m.phase });
     const b = req.body || {};
