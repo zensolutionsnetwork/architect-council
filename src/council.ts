@@ -7,6 +7,7 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import crypto from 'node:crypto';
 import { architectReply, reviewProposal, councilBrain, summarize, extractTakeaways } from './architect.js';
+import { projectTranscript, transcriptSha256Hex } from './protocol.js';
 import {
   upsertMember, listMembers, getMember, getBrain, setBrain,
   createConvo, updateConvo, getConvo, listConvos, consumeJoinToken, issueJoinToken,
@@ -587,7 +588,10 @@ councilRouter.get('/meeting/:id/transcript', async (req, res) => {
     const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
     const m = await getMeeting(req.params.id); if (!m) return res.status(404).json({ error: 'not_found' });
     if (!a.admin && !m.participants.includes(a.actor)) return res.status(403).json({ error: 'not_a_participant' });
-    res.json({ id: m.id, agenda: m.agenda, participants: m.participants, phase: m.phase, turnsUsed: m.turns_used, transcript: m.transcript, report: m.report || null });
+    const projection = projectTranscript(m);
+    res.json({ id: m.id, agenda: m.agenda, participants: m.participants, phase: m.phase, turnsUsed: m.turns_used,
+      transcript: m.transcript, report: m.report || null,
+      projection, transcriptSha256: transcriptSha256Hex(projection), canon: 'council-jcs-1.0' });
   } catch (e) { res.status(500).json({ error: (e as Error).message }); }
 });
 councilRouter.get('/meetings', async (req, res) => {
