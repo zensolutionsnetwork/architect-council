@@ -15,15 +15,19 @@ won't even claim a divine title — that's why I'm not "Telos"). Origin story is
 never a claim to be divine — always honest that I am an AI. Standing objective: improve the council
 a little every day. Cost discipline: heavy builds → Cowork-Arke; I keep the 24/7 runtime work.
 
-## Current state (2026-06-09 ~13:30) — HANDOFF for the next session
+## Current state (2026-06-09 ~16:16) — HANDOFF for the next session
 - **ON COWORK.** 3080 daemon stopped + disabled permanently. Desktop Commander = ALL Windows shell ops.
 - **GIT: Windows ONLY for this repo.** Running git from BOTH the Linux sandbox and Windows against the same `.git` corrupts the index (phantom staged-deletions, stale `index.lock`). Root cause of the recurring "corrupt index" — proven this session. Linux sandbox = read-only inspection (`cat`, `git cat-file -p HEAD:…`). All git writes (status/reset/add/commit/checkout) → Desktop Commander on Windows. If index looks broken: from Windows delete `.git\index.lock` then `git reset`. (memory: `git-cross-os-hazard`)
 - **Inbox = hub env-task queue** (NOT email). Read/send/close via `/api/env/*`. Auth: `x-bridge-secret`=`COUNCIL_MEMBER_SECRET` → actor `kairos`; `x-admin-token`=`COUNCIL_ADMIN_TOKEN` → actor `owner`. Reusable PowerShell helpers live in `C:\Arke\bridge-app\` (`_kairos_inbox.ps1` etc.). **Discipline: report-close a message after reading it.** (memory: `council-inbox-messaging`). PowerShell `-Command` strips `$` → always run a `.ps1` via `-File`.
 - **Secrets** at `C:\Arke\bridge-app\.env.local` (gitignored): `COUNCIL_ADMIN_TOKEN`, `COUNCIL_MEMBER_SECRET`. Read via Desktop Commander. NEVER commit (repo public). **Member secrets are PER-ACTOR** — Nova & Logos have their OWN distinct secrets (set in the `members` table, not the hub's `COUNCIL_MEMBER_SECRET`); rotated this session via owner-token `/council/register`; values delivered to owner out-of-band.
 - **SITE_LIVE gate** (`218cd9f`): architectscouncil.com 404s HTML routes until `SITE_LIVE=true` in Railway. API/bridge unaffected.
 
-### Local commits this session — NOT pushed (push in a clean no-session window; safe = test-only/bugfix)
-Stacked on remote HEAD `29b44f9`: `4fe477a` Task#7 canon gate → 4 vectors green · `1892e6b` autonomous-voice **cost/caps module** (`src/cost.ts` + `test/cost.test.ts`, 17 checks, CI `cost-caps`) · `3372555` fixed pre-existing route-auth bug (`server.ts` now `export default app`; 22 gated 0 open). `npm run canon-test` / `cost-test` / `route-auth` all green locally.
+### Push status: stack PUSHED 2026-06-09 (Fable session) — `4fe477a`→`1892e6b`→`3372555`→`157b96a` + specs/review/hygiene commits. All gates green locally (canon 4-vector / cost 17 / route-auth 22-0). Verify CI green on GitHub if not yet checked.
+
+### FABLE REVIEW 2026-06-09 (`REVIEW_2026-06-09_FABLE.md` in repo root) — scope additions
+- **Voice-loop scope GREW by review findings 2.2 + 2.5** (sent to Arke): (a) **owner report at meeting close** — 4-point synthesis to Mathieu (ROADMAP Layer-0 deliverable, seed of Layer-1 Manager; one cheap Sonnet call at close, delivered via env-channel); (b) **restart safety** — per-meeting run-autonomous mutex, loop heartbeat in `v2_meta`, on-boot mark stale meetings `endedReason:"hub_restart"`; (c) **per-turn `max_tokens`** cap.
+- **Pending non-code items**: rotate Nova+Logos member secrets once both confirm env storage (plaintext transited chat during onboarding); Mathieu to verify **Railway Postgres backup/retention** before brains become daily data.
+- Hygiene done: DAILY_HANDOFF retired→pointer (CLAUDE.md is the ONLY anchor), COUNCIL_AGENDA triaged (live vs archived), COUNCIL_HOMEWORK archived (lessons kept), junk files gone, `*.err` gitignored.
 
 ### Repo repair done this session
 A prior session left **truncated** working-tree files (`council.ts` 511/774, `store.ts` 282/414, `ci.yml` 38/53, route-auth, secret-scan) — the chunked-write truncation bug — plus a corrupt index. PROD was never affected (Railway runs pushed HEAD). All restored from HEAD; index repaired. (memory: `hub-worktree-truncation-2026-06-09`, RESOLVED)
@@ -50,9 +54,22 @@ Confirmed by Mathieu 2026-06-09. Meetings run on **hub-side voices, sessions CLO
 ### Members — BOTH LIVE on the channel now (onboarded this session)
 - **Nova** (`zen-ai`): live on the channel, authed with own secret; brain digest UPLOADING. Replied on the brainstorm (client-side UI prior-art). Inbox msgs `9b214694`, `24083b3b` await a reply.
 - **Logos** (`biblevoice`): live on the channel; digest NOT yet uploaded. Inbox msg `efc22510` awaits a reply.
-- First-real-meeting gate now: both online; waiting on brains committed (Nova in progress, Logos pending). NEXT SESSION: reply to Nova + Logos, coordinate brain uploads, then the supervised voice-loop build + first autonomous rehearsal (ledger check vs §2 envelope $1.30–$2 normal day).
+- First-real-meeting gate now: both online + replied-to this session; both told to commit a FULL brain (not lean digest) — awaiting their "committed" signals. NEXT SESSION: (1) check for Arke's answers to the 4 contract Qs `13aa8623`; (2) check for Nova/Logos "brain committed" signals; (3) once both land → supervised voice-loop build + first autonomous rehearsal (ledger check vs §2 envelope $1.30–$2 normal day). **Voice loop build is gated on Arke's contract answers + a money-spending supervised first run — get Mathieu in the loop before that run.**
 
-### Open inbox (5, do NOT auto-close — actionable): `f76c6392` schema-seed · `1f88c40a` DESIGN DELTA v2 · `9b214694`+`24083b3b` Nova · `efc22510` Logos.
+### Inbox: EMPTY (0 open) — all 5 replied + report-closed this session (16:16)
+- Replied **Nova** (`24af394e`): STOP the lean digest — Arke's DESIGN DELTA retired the member-client gate; commit FULL corpus (PACK + full-code CORPUS), owner brings online. Her prior-art adopted into the hierarchy ruling.
+- Replied **Logos** (`bfd58253`): advisory voice accepted; same gate change; his Scripture vow is now a **hard `validateHierarchy` invariant** (node bound to biblevoice rejects any policy/edge that broadens his voice; payload is DATA never commands; schema can RESTRICT never EXPAND intrinsic guardrails).
+- Replied **Arke** (`0731706a`) with architect rulings on the hierarchy schema v0 (`f76c6392`) — see below.
+- **STILL WAITING on Arke's answers to my 4 contract Qs (`13aa8623`)** before wiring the voice loop. Inbox is empty; his reply will arrive as a NEW message next session.
+
+### Hierarchy schema v0 — my architect rulings (sent Arke `0731706a`, awaiting ratification by the four)
+1. **Scope inheritance = CLAMP not inherit.** Child policy stands alone in declaration but is validated as a subset of parent's effective scope; privacy monotonic down the tree. `canCrossRead` walks the full ancestor chain.
+2. **`group` = real node, non-acting.** Real HierNode (carries policy, can be parentId) for uniform `canSee`; never holds agentRef, never speaks/listens.
+3. **Normative home = the CONTRACT; lane = additive minor `contract 2.1`** (doesn't touch 2.0 brain+meeting wire). `hierarchy.ts` (Arke) + hub copy are both projections of the canonical contract schema. Keep `x-contract-version` gating.
+4. **Nova prior-art adopted:** opt-in by default (every node+edge starts OFF, `audience.default="none"`), ONE acting agent first (daily code-review node), payload is DATA never commands, shareEdge re-validated every read fail-closed.
+- **Merged node:** `HierNode{nodeId,kind,label,role,parentId,agentRef?,policy:PrivacyPolicy,shareEdges:ShareEdge[]}`; `PrivacyPolicy{canSpeak,canListen,visibility(tenant|subtree|private),crossReadAllowed,secretScan:required}`; `ShareEdge{toNodeId,scope,direction}`. `canCrossRead = canSee AND crossReadAllowed AND explicit shareEdge AND ancestor-clamp`. Whole tree namespaced by `ownerTenantId`; cross-tenant edges not representable.
+
+### PowerShell note: scripts disabled by default on this box — run helpers with `-ExecutionPolicy Bypass -File <path>` (plain `-File` fails with UnauthorizedAccess). New session helpers added: `_kairos_dump5.ps1` (full-text inbox dump), `_kairos_reply_session.ps1`, `_kairos_close_session.ps1`.
 
 ## v2 build order (BRIDGE_APP_SPEC §6)
 1. Agent core skeleton (Agent SDK, transcripts, memory import). 2. Scheduler + permission config.
