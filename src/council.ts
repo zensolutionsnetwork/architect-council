@@ -16,6 +16,8 @@ import {
   getBacklog, setBacklog, setConvoArchived, setConvoV2Meta, getRegistryVersion,
   queueEnvTask, listEnvTasks, getEnvTask, claimEnvTask, reportEnvTask, sweepEnvTasks,
   createMeeting, getMeeting, updateMeeting, listMeetings,
+  createBrainUpload, getBrainUpload, putBrainChunk, brainReceived, assembleBrain,
+  commitBrainV2, getBrainV2Meta, getBrainV2Content, sweepBrainUploads,
 } from './store.js';
 
 const clip = (s: any, n: number) => String(s ?? '').slice(0, n);
@@ -503,18 +505,22 @@ function meetingView(m: any, actor: string | null) {
   const cur = m.participants[m.turn_index] || null;
   return { id: m.id, phase: m.phase, round: m.round, turnIndex: m.turn_index, currentActor: cur,
     cap: m.turn_cap, turnsUsed: m.turns_used, participants: m.participants, agenda: m.agenda,
+    roles: m.roles || {}, dryRun: !!m.dry_run, brainVersions: m.brain_versions || {},
     turnTimeoutSec: m.turn_timeout_sec, turnStartedAt: m.turn_started_at,
     transcript: m.transcript, report: m.report || null, yourTurn: !!actor && actor === cur };
 }
+const roleOf = (m: any, actor: string): string => String((m.roles || {})[actor] || 'speak');
 // Lazy turn-timeout (Arke refinement 1): on access, auto-PASS turns whose deadline elapsed so an
 // absent agent cannot stall a round. Poll-native — the next poll clears any backlog.
 async function autoExpire(m: any): Promise<any> {
   let guard = 0;
-  while (m && m.phase === 'rounds' && guard++ <= m.participants.length) {
-    const started = Date.parse(m.turn_started_at || '') || Date.now();
-    if (Date.now() - started <= (m.turn_timeout_sec || 600) * 1000) break;
+  while (m && m.phase === 'rounds' && guard++ <= m.participants.length + 1) {
     const cur = m.participants[m.turn_index];
-    const turns = m.transcript.concat([{ actor: cur, kind: 'pass', auto: true, at: new Date().toISOString() }]);
+    const isListen = roleOf(m, cur) === 'listen'; // observers (Arke rooms) never get a speaking turn
+    const started = Date.parse(m.turn_started_at || '') || Date.now();
+    const timedOut = Date.now() - started > (m.turn_timeout_sec || 600) * 1000;
+    if (!isListen && !timedOut) break;
+    const turns = m.transcript.concat([{ actor: cur, kind: 'pass', auto: true, reason: isListen ? 'listen' : 'timeout', at: new Date().toISOString() }]);
     const ti = (m.turn_index + 1) % m.participants.length;
     const round = m.round + (ti === 0 ? 1 : 0);
     const used = m.turns_used + 1;
@@ -531,11 +537,21 @@ councilRouter.post('/meeting/open', async (req, res) => {
   try {
     const a = await resolveActor(req); if (!a || !a.admin) return res.status(401).json({ error: 'unauthorized' });
     const b = req.body || {};
-    const participants = Array.isArray(b.participants) && b.participants.length ? b.participants.map((x: any) => clip(x, 60)) : MEETING_DEFAULT.slice();
+    const participants = Array.isArray(b.participants) && b.participants.length ? Array.from(new Set(b.participants.map((x: any) => clip(x, 60)))) : MEETING_DEFAULT.slice();
     const cap = Number(b.turnCap) > 0 ? Math.min(Number(b.turnCap), 1000) : 150;
     const tto = Number(b.turnTimeoutSec) > 0 ? Math.min(Number(b.turnTimeoutSec), 86400) : 600;
+    // Rooms (Arke 2026-06-09): per-actor roles; validate against participants, at most one facilitator.
+    const ROLE_SET = ['listen', 'facilitate', 'speak', 'teach', 'learn', 'review'];
+    const roles: Record<string, string> = {};
+    const rawRoles = (b.roles && typeof b.roles === 'object') ? b.roles : {};
+    for (const p of participants) { const r = String(rawRoles[p] || '').toLowerCase(); if (ROLE_SET.includes(r)) roles[p] = r; }
+    if (Object.values(roles).filter((r) => r === 'facilitate').length > 1) return res.status(400).json({ error: 'too_many_facilitators', message: 'at most one facilitator per room' });
+    const dryRun = b.dryRun === true || b.test === true;
+    // Pin each participant's committed brainVersion (contract b): "the brain in the room == what I sent".
+    const brainVersions: Record<string, any> = {};
+    for (const p of participants) { try { const meta = await getBrainV2Meta(p); brainVersions[p] = meta ? meta.brain_version : null; } catch { brainVersions[p] = null; } }
     const id = crypto.randomUUID();
-    await createMeeting(id, clip(b.agenda, 8000), participants, cap, a.actor, 'rounds', tto);
+    await createMeeting(id, clip(b.agenda, 8000), participants, cap, a.actor, 'rounds', tto, roles, dryRun, brainVersions);
     res.json({ ok: true, meetingId: id, ...meetingView(await getMeeting(id), a.actor) });
   } catch (e) { res.status(500).json({ error: (e as Error).message }); }
 });
@@ -555,6 +571,7 @@ councilRouter.post('/meeting/:id/say', async (req, res) => {
     if (m.phase !== 'rounds') return res.status(409).json({ error: 'not_in_rounds', phase: m.phase });
     const cur = m.participants[m.turn_index];
     if (a.actor !== cur) return res.status(409).json({ error: 'not_your_turn', currentActor: cur });
+    if (roleOf(m, a.actor) === 'listen') return res.status(403).json({ error: 'listen_only', message: 'observers do not take speaking turns' });
     const b = req.body || {};
     const kind = b.pass ? 'pass' : 'speak';
     const turns = m.transcript.concat([{ actor: a.actor, kind, payload: kind === 'speak' ? (b.payload ?? {}) : undefined, done: b.done === true, at: new Date().toISOString() }]);
@@ -574,13 +591,16 @@ councilRouter.post('/meeting/:id/close', async (req, res) => {
     const a = await resolveActor(req); if (!a || !a.admin) return res.status(401).json({ error: 'unauthorized' });
     const m = await getMeeting(req.params.id); if (!m) return res.status(404).json({ error: 'not_found' });
     await updateMeeting(m.id, { phase: 'report', report: clip((req.body || {}).report, 16000) || m.report, closed: true });
-    // Route each storyUpdate to Logos for the Chronicle (Arke refinement 5).
+    // Route each storyUpdate to Logos for the Chronicle (Arke refinement 5) — UNLESS this is a dry-run/test
+    // room, in which case mock storyUpdates must NOT pollute the Chronicle (Arke finding 3, 2026-06-09).
     let storyCount = 0;
-    for (const t of (m.transcript || [])) {
-      const su = t && t.payload && t.payload.storyUpdate;
-      if (su) { storyCount++; try { await queueEnvTask('hub', 'logos', 'story', clip('storyUpdate from ' + t.actor + ' (meeting ' + m.id + ')', 300), { text: String(su), actor: t.actor, meetingId: m.id }, 'normal'); } catch { /* best effort */ } }
+    if (!m.dry_run) {
+      for (const t of (m.transcript || [])) {
+        const su = t && t.payload && t.payload.storyUpdate;
+        if (su) { storyCount++; try { await queueEnvTask('hub', 'logos', 'story', clip('storyUpdate from ' + t.actor + ' (meeting ' + m.id + ')', 300), { text: String(su), actor: t.actor, meetingId: m.id }, 'normal'); } catch { /* best effort */ } }
+      }
     }
-    res.json({ ok: true, storyUpdatesRouted: storyCount });
+    res.json({ ok: true, dryRun: !!m.dry_run, storyUpdatesRouted: storyCount });
   } catch (e) { res.status(500).json({ error: (e as Error).message }); }
 });
 councilRouter.get('/meeting/:id/transcript', async (req, res) => {
@@ -597,6 +617,107 @@ councilRouter.get('/meeting/:id/transcript', async (req, res) => {
 councilRouter.get('/meetings', async (req, res) => {
   try { const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' }); res.json({ meetings: await listMeetings(20) }); }
   catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+
+// ---------- Brain-upload pipeline (docs/CONTRACT_DELTAS_2.0.md a/d/e, 2026-06-08) ----------
+// Resumable content-addressed chunk upload, consent-gated commit, x-contract-version fail-closed.
+const sha256hex = (b: Buffer | string) => crypto.createHash('sha256').update(b).digest('hex');
+function requireContract2(req: Request, res: Response, next: NextFunction) {
+  const v = String(req.headers['x-contract-version'] || '');
+  if (v !== '2.0') return res.status(409).json({ error: 'contract_mismatch', expected: '2.0', got: v || null });
+  next();
+}
+function readRawBody(req: Request, maxBytes = 12 * 1024 * 1024): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = []; let total = 0;
+    req.on('data', (d: Buffer) => { total += d.length; if (total > maxBytes) { req.destroy(); reject(new Error('chunk_too_large')); } else chunks.push(d); });
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
+}
+const remainingIdx = (manifest: any[], received: number[]) => manifest.map((m: any) => Number(m.idx)).filter((i) => !received.includes(i));
+
+councilRouter.post('/bridge/brain/init', requireContract2, async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
+    const { brainId, totalBytes, chunkSize, sha256, manifest } = req.body || {};
+    if (!sha256 || !Array.isArray(manifest) || !manifest.length) return res.status(400).json({ error: 'bad_request', message: 'sha256 + non-empty manifest[] required' });
+    const uploadId = crypto.randomUUID();
+    await createBrainUpload(uploadId, a.actor, String(brainId || ''), Number(totalBytes) || 0, Number(chunkSize) || 0, String(sha256), manifest);
+    res.json({ uploadId, received: [] });
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+councilRouter.put('/bridge/brain/:uploadId/chunk/:idx', requireContract2, async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
+    const up = await getBrainUpload(req.params.uploadId); if (!up) return res.status(404).json({ error: 'no_such_upload' });
+    if (up.actor !== a.actor) return res.status(403).json({ error: 'not_your_upload' });
+    if (up.status === 'committed') return res.status(409).json({ error: 'already_committed' });
+    const idx = Number(req.params.idx);
+    const entry = (up.manifest || []).find((m: any) => Number(m.idx) === idx);
+    if (!entry) return res.status(400).json({ error: 'idx_not_in_manifest', idx });
+    const body = await readRawBody(req);
+    const got = sha256hex(body);
+    if (got !== String(entry.sha256).toLowerCase()) return res.status(422).json({ error: 'chunk_hash_mismatch', idx, expected: entry.sha256, got });
+    await putBrainChunk(req.params.uploadId, idx, got, body.length, body);
+    const received = await brainReceived(req.params.uploadId);
+    res.json({ received, remaining: remainingIdx(up.manifest || [], received) });
+  } catch (e) {
+    if ((e as Error).message === 'chunk_too_large') return res.status(413).json({ error: 'chunk_too_large' });
+    res.status(500).json({ error: (e as Error).message });
+  }
+});
+async function brainProbe(req: Request, res: Response) {
+  const a = await resolveActor(req); if (!a) return res.status(401).end();
+  const up = await getBrainUpload(req.params.uploadId); if (!up) return res.status(404).end();
+  if (up.actor !== a.actor) return res.status(403).end();
+  const received = await brainReceived(req.params.uploadId);
+  const remaining = remainingIdx(up.manifest || [], received);
+  res.setHeader('x-received-count', String(received.length));
+  res.setHeader('x-remaining-count', String(remaining.length));
+  if (req.method === 'HEAD') return res.status(200).end();
+  res.json({ received, remaining });
+}
+councilRouter.get('/bridge/brain/:uploadId', (req, res) => { brainProbe(req, res).catch(() => res.status(500).end()); });
+councilRouter.head('/bridge/brain/:uploadId', (req, res) => { brainProbe(req, res).catch(() => res.status(500).end()); });
+councilRouter.post('/bridge/brain/:uploadId/commit', requireContract2, async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
+    const up = await getBrainUpload(req.params.uploadId); if (!up) return res.status(404).json({ error: 'no_such_upload' });
+    if (up.actor !== a.actor) return res.status(403).json({ error: 'not_your_upload' });
+    const { sha256, consent } = req.body || {};
+    const c = consent || {}; const scan = c.secretScan || {};
+    if (c.actor !== a.actor) return res.status(403).json({ error: 'consent_actor_mismatch' });
+    if (scan.ran !== true || Number(scan.findings) !== 0) return res.status(412).json({ error: 'consent_secret_scan_failed', message: 'ConsentManifest.secretScan must be {ran:true, findings:0}' });
+    if (c.expiresAt && Date.parse(c.expiresAt) <= Date.now()) return res.status(412).json({ error: 'consent_expired' });
+    const received = await brainReceived(req.params.uploadId);
+    const missing = (up.manifest || []).map((m: any) => Number(m.idx)).filter((i: number) => !received.includes(i));
+    if (missing.length) return res.status(409).json({ error: 'incomplete_upload', missing });
+    const buf = await assembleBrain(req.params.uploadId);
+    const whole = sha256hex(buf);
+    const claimed = String(sha256 || up.claimed_sha256 || '').toLowerCase();
+    if (whole !== claimed) return res.status(422).json({ error: 'object_hash_mismatch', expected: claimed, got: whole });
+    const brainVersion = `${a.actor}@sha256:${whole}`;
+    await commitBrainV2(a.actor, String(up.brain_id || ''), brainVersion, whole, buf.length, buf, c);
+    res.json({ brainVersion, sha256: whole, bytes: buf.length });
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+councilRouter.get('/bridge/brain-meta/:actor', async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
+    const meta = await getBrainV2Meta(req.params.actor); if (!meta) return res.status(404).json({ error: 'no_brain' });
+    res.json(meta);
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+councilRouter.get('/bridge/brain-content/:actor', async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
+    const got = await getBrainV2Content(req.params.actor); if (!got) return res.status(404).json({ error: 'no_brain' });
+    const scope = (got.meta.consent && Array.isArray(got.meta.consent.scope)) ? got.meta.consent.scope : [];
+    if (!a.admin && a.actor !== req.params.actor && !scope.includes('code')) return res.status(403).json({ error: 'consent_scope_denied' });
+    res.setHeader('x-brain-version', got.meta.brain_version || '');
+    res.json({ ...got.meta, contentBase64: got.content.toString('base64') });
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
 });
 
 export function startScheduler(): void {
