@@ -51,3 +51,16 @@ jobs:
         run: npm ci
       - name: Assert golden vector (canon byte-exact + sha256)
         run: npx tsx test/canon.test.ts
+
+  cost-caps:
+    name: autonomous-voice cost/caps
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: npm ci
+      - name: Assert cost + caps math (spec section 2)
+        run: npx tsx test/cost.test.ts

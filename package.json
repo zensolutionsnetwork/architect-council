@@ -8,7 +8,8 @@
     "start": "tsx src/server.ts",
     "secret-scan": "node scripts/secret-scan.mjs",
     "route-auth": "tsx test/route-auth.test.ts",
-    "canon-test": "tsx test/canon.test.ts"
+    "canon-test": "tsx test/canon.test.ts",
+    "cost-test": "tsx test/cost.test.ts"
   },
   "dependencies": {
     "express": "^4.19.2",
