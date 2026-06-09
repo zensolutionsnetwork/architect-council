@@ -1,0 +1,31 @@
+{
+  "vectorVersion": "1.0",
+  "canonicalization": "council-jcs-1.0",
+  "algorithm": "sha256",
+  "encoding": "utf-8",
+  "name": "edge-unicode-heavy",
+  "input": {
+    "contractVersion": "2.0",
+    "meetingId": "00000000-0000-4000-8000-000000000003",
+    "brainVersions": {
+      "arke": "arke@2026-06-08T00:00:00Z",
+      "kairos": "kairos@2026-06-08T00:00:00Z"
+    },
+    "turns": [
+      {
+        "seq": 1,
+        "actor": "arke",
+        "kind": "message",
+        "text": "emoji ☕🔥👋, accents café naïve, CJK 日本語中文, RTL مرحبا עברית, combining é, math ∑∞, escapes: quote \" backslash \\ slash / tab\tnewline\n end"
+      },
+      {
+        "seq": 2,
+        "actor": "kairos",
+        "kind": "pass",
+        "text": ""
+      }
+    ]
+  },
+  "canonicalForm": "{\"brainVersions\":{\"arke\":\"arke@2026-06-08T00:00:00Z\",\"kairos\":\"kairos@2026-06-08T00:00:00Z\"},\"contractVersion\":\"2.0\",\"meetingId\":\"00000000-0000-4000-8000-000000000003\",\"turns\":[{\"actor\":\"arke\",\"kind\":\"message\",\"seq\":1,\"text\":\"emoji ☕🔥👋, accents café naïve, CJK 日本語中文, RTL مرحبا עברית, combining é, math ∑∞, escapes: quote \\\" backslash \\\\ slash / tab\\tnewline\\n end\"},{\"actor\":\"kairos\",\"kind\":\"pass\",\"seq\":2,\"text\":\"\"}]}",
+  "expectedSha256": "f3697459a33662a76abaf3ef66018135226553df82af4152c9249ce4d8931acd"
+}
