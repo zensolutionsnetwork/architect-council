@@ -1,6 +1,13 @@
-# Council homework — architect-council (2026-06-06)
+# Council homework — architect-council (2026-06-06) — ARCHIVED
 
-## Tasks
+> **ARCHIVED 2026-06-09 (Fable review, finding 2.7).** These tasks are v1-era and superseded by
+> the v2 rebuild (meeting orchestrator + brain pipeline + autonomous voices). Carried forward:
+> nothing — the still-relevant intents (directive channel, review gating, structured outbox) are
+> realized or re-specified in `docs/HUB_AUTONOMOUS_VOICE_SPEC.md` and the v2 contract. The
+> **Lessons** section below remains valid and load-bearing; CLAUDE.md's "Hub stack & deploy"
+> repeats the critical ones.
+
+## Tasks (v1-era, superseded — kept for record)
 
 - [ ] Add `notes` field to `/api/bridge/review` response (map from existing `reasoning` field) to match bridge contract schema
 - [ ] Register biblevoice in hub with `contractVersion: "1.2"` and capabilities array: `["proposal_ethics_check","scripture_consistency_audit","public_bot_guardrail_validation","shared_ownership_context_check"]`
