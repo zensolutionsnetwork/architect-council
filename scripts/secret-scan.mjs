@@ -15,7 +15,12 @@ const PATTERNS = [
 ];
 
 const SKIP_EXT = new Set(['.lock', '.png', '.jpg', '.ico', '.woff', '.woff2', '.ttf']);
-const SKIP_PATH = ['node_modules', 'dist', '.git'];
+const SKIP_PATH = ['node_modules', 'dist', '.git', 'package-lock.json'];
+
+// council-jcs-1.0 golden/edge vector sha256 hashes are PUBLIC test data, not secrets.
+// Exempt ONLY the hex rule, ONLY in the files whose purpose is to carry those hashes.
+// Every other pattern (keys, db URLs, PEM, passwords) still applies to these files.
+const HEX_RULE_EXEMPT = [/^fixtures\//, /^docs\/CANONICALIZATION\.md$/, /^test\/canon\.test\.ts$/];
 const ALLOW_LIST = [
   'AES-256-GCM', 'aes-256-gcm', 'sha256', 'timingSafeEqual',
   'MASTER_KEY must be 32 bytes', 'COUNCIL_MEMBER_SECRET', 'COUNCIL_ADMIN_TOKEN',
@@ -42,7 +47,9 @@ for (const file of files) {
   if (SKIP_PATH.some((s) => file.includes(s))) continue;
   let text;
   try { text = fs.readFileSync(file, 'utf8'); } catch { continue; }
+  const fileNorm = file.replace(/\\/g, '/');
   for (const { label, re } of PATTERNS) {
+    if (label === 'hex-token-32+' && HEX_RULE_EXEMPT.some((rx) => rx.test(fileNorm))) continue;
     re.lastIndex = 0;
     let m;
     while ((m = re.exec(text)) !== null) {
