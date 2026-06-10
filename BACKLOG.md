@@ -61,7 +61,10 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
    unattended. Then retire the placeholder driver.
 2. **Nova + Logos brains.** Nova CORPUS committed (`nova@sha256:374a33aa…`); **packs still pending**
    (Nova + Logos) — pack is the cached per-turn voice context the loop reads. Owner can push them
-   from the app via the owner-auth upload path now that it exists.
+   from the app via the owner-auth upload path now that it exists. Nudges sent 2026-06-10 (Nova
+   `5fe9d9d9`, Logos `d78a65b7`); Arke flagged on his stub corpus + missing pack (`4090bab2`).
+   **Kairos OWN brain is REAL now (2026-06-10): pack 4.4KB (`683dc723…`) + corpus 280KB full hub
+   source (`4347ac7e…`), both committed + verified — replaced the smoke stubs.**
 3. **Supervised rehearsal → first real daily meeting.** `COUNCIL_V2_LIVE` flip stays Mathieu's.
 
 ## P1 — alongside / right after the loop
