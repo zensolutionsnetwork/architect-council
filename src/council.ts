@@ -13,7 +13,7 @@ import {
   createConvo, updateConvo, getConvo, listConvos, consumeJoinToken, issueJoinToken,
   setTakeaways, getLatestTakeaways, recentConvoActivity, type Turn,
   queueOutbox, pendingOutbox, markOutboxDelivered, ackOutbox, sweepOutbox,
-  getBacklog, setBacklog, setConvoArchived, setConvoV2Meta, getRegistryVersion,
+  getBacklog, setBacklog, setAgentBacklog, getAgentBacklogs, setConvoArchived, setConvoV2Meta, getRegistryVersion,
   queueEnvTask, listEnvTasks, getEnvTask, claimEnvTask, reportEnvTask, sweepEnvTasks,
   createMeeting, getMeeting, updateMeeting, listMeetings, listMeetingsForActor, setMeetingOwnerReport,
   createBrainUpload, getBrainUpload, putBrainChunk, brainReceived, assembleBrain,
@@ -649,6 +649,43 @@ councilRouter.get('/meeting/:id/report', async (req, res) => {
     res.json({ id: m.id, agenda: m.agenda, closedAt: m.closed_at || null, ownerReport: m.owner_report || null });
   } catch (e) { res.status(500).json({ error: (e as Error).message }); }
 });
+// Structured owner report for Arke's app (ratified 2026-06-09): camelCase 4-field split, mounted under
+// /api/council/meeting/:id/* alongside the future run-autonomous + /cost (other meeting routes stay /api/meeting/*).
+function splitOwnerReport(md: string): { codeReviewImprovements: string; directionConsensus: string; frictionFixes: string; flags: string } {
+  const sec = (n: number) => {
+    const re = new RegExp('##\\s*' + n + '\\.[^\\n]*\\n([\\s\\S]*?)(?=##\\s*' + (n + 1) + '\\.|$)');
+    const mm = re.exec(md || '');
+    return mm ? mm[1].trim() : '';
+  };
+  return { codeReviewImprovements: sec(1), directionConsensus: sec(2), frictionFixes: sec(3), flags: sec(4) };
+}
+councilRouter.get('/council/meeting/:id/owner-report', async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a || !a.admin) return res.status(401).json({ error: 'unauthorized' });
+    const m = await getMeeting(req.params.id); if (!m) return res.status(404).json({ error: 'not_found' });
+    if (!m.owner_report) return res.status(404).json({ error: 'no_owner_report' });
+    res.json({ id: m.id, agenda: m.agenda, closedAt: m.closed_at || null, raw: m.owner_report, ...splitOwnerReport(m.owner_report) });
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+// Per-agent living backlog (contract answer 4, ratified 2026-06-09): a write replaces ONLY the writer's
+// own row; read composes all rows. Old single-row /council/admin/backlog stays until Arke's panel switches.
+councilRouter.get('/council/backlogs', async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
+    res.json({ backlogs: await getAgentBacklogs() });
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+councilRouter.post('/council/backlog/agent', async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
+    const b = req.body || {};
+    const actor = a.admin ? String(b.actor || '') : a.actor;
+    if (!actor) return res.status(400).json({ error: 'actor_required', message: 'owner writes must name body.actor' });
+    if (!a.admin && b.actor && b.actor !== a.actor) return res.status(403).json({ error: 'not_your_row' });
+    const updatedAt = await setAgentBacklog(actor, b.content ?? {}, a.admin ? 'owner' : a.actor);
+    res.json({ ok: true, actor, updatedAt });
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
 councilRouter.get('/meeting/:id/transcript', async (req, res) => {
   try {
     const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
@@ -697,11 +734,13 @@ const remainingIdx = (manifest: any[], received: number[]) => manifest.map((m: a
 councilRouter.post('/bridge/brain/init', requireContract2, async (req, res) => {
   try {
     const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
-    const { brainId, totalBytes, chunkSize, sha256, manifest } = req.body || {};
+    const { brainId, totalBytes, chunkSize, sha256, manifest, kind } = req.body || {};
     if (!sha256 || !Array.isArray(manifest) || !manifest.length) return res.status(400).json({ error: 'bad_request', message: 'sha256 + non-empty manifest[] required' });
+    // Two-artifact brain (§11.2): kind ∈ {pack, corpus}; absent/unknown = corpus (back-compat with today's app upload).
+    const k = kind === 'pack' ? 'pack' : 'corpus';
     const uploadId = crypto.randomUUID();
-    await createBrainUpload(uploadId, a.actor, String(brainId || ''), Number(totalBytes) || 0, Number(chunkSize) || 0, String(sha256), manifest);
-    res.json({ uploadId, received: [] });
+    await createBrainUpload(uploadId, a.actor, String(brainId || ''), Number(totalBytes) || 0, Number(chunkSize) || 0, String(sha256), manifest, k);
+    res.json({ uploadId, kind: k, received: [] });
   } catch (e) { res.status(500).json({ error: (e as Error).message }); }
 });
 councilRouter.put('/bridge/brain/:uploadId/chunk/:idx', requireContract2, async (req, res) => {
@@ -755,21 +794,22 @@ councilRouter.post('/bridge/brain/:uploadId/commit', requireContract2, async (re
     const claimed = String(sha256 || up.claimed_sha256 || '').toLowerCase();
     if (whole !== claimed) return res.status(422).json({ error: 'object_hash_mismatch', expected: claimed, got: whole });
     const brainVersion = `${a.actor}@sha256:${whole}`;
-    await commitBrainV2(a.actor, String(up.brain_id || ''), brainVersion, whole, buf.length, buf, c);
-    res.json({ brainVersion, sha256: whole, bytes: buf.length });
+    await commitBrainV2(a.actor, String(up.brain_id || ''), brainVersion, whole, buf.length, buf, c, up.kind || 'corpus');
+    res.json({ brainVersion, kind: up.kind || 'corpus', sha256: whole, bytes: buf.length });
   } catch (e) { res.status(500).json({ error: (e as Error).message }); }
 });
 councilRouter.get('/bridge/brain-meta/:actor', async (req, res) => {
   try {
     const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
-    const meta = await getBrainV2Meta(req.params.actor); if (!meta) return res.status(404).json({ error: 'no_brain' });
+    const meta = await getBrainV2Meta(req.params.actor, String(req.query.kind || 'corpus')); if (!meta) return res.status(404).json({ error: 'no_brain' });
     res.json(meta);
   } catch (e) { res.status(500).json({ error: (e as Error).message }); }
 });
+// Cross-read. ?kind=pack|corpus, default corpus (documented for Arke 2026-06-09; contract answer 3).
 councilRouter.get('/bridge/brain-content/:actor', async (req, res) => {
   try {
     const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
-    const got = await getBrainV2Content(req.params.actor); if (!got) return res.status(404).json({ error: 'no_brain' });
+    const got = await getBrainV2Content(req.params.actor, String(req.query.kind || 'corpus')); if (!got) return res.status(404).json({ error: 'no_brain' });
     const scope = (got.meta.consent && Array.isArray(got.meta.consent.scope)) ? got.meta.consent.scope : [];
     if (!a.admin && a.actor !== req.params.actor && !scope.includes('code')) return res.status(403).json({ error: 'consent_scope_denied' });
     res.setHeader('x-brain-version', got.meta.brain_version || '');

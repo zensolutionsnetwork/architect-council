@@ -116,6 +116,26 @@ export async function initDb(): Promise<void> {
   await q.query(`CREATE TABLE IF NOT EXISTS brains_v2 (
     actor text PRIMARY KEY, brain_id text, brain_version text, sha256 text, bytes bigint, content bytea,
     consent jsonb, committed_at timestamptz NOT NULL DEFAULT now())`);
+  // TWO-ARTIFACT BRAIN (voice spec §11.2, contract answer 2026-06-09): PK (actor, kind), kind ∈ {pack, corpus}.
+  // pack = curated per-turn voice prefix; corpus = full code for consent-gated cross-read. Default corpus = back-compat.
+  await q.query(`ALTER TABLE brain_uploads ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'corpus'`);
+  await q.query(`ALTER TABLE brains_v2 ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'corpus'`);
+  await q.query(`DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='brains_v2_actor_kind_pkey') THEN
+      ALTER TABLE brains_v2 DROP CONSTRAINT IF EXISTS brains_v2_pkey;
+      ALTER TABLE brains_v2 ADD CONSTRAINT brains_v2_actor_kind_pkey PRIMARY KEY (actor, kind);
+    END IF;
+  END $$`);
+  // PER-AGENT BACKLOG (voice spec §8, contract answer 2026-06-09): PK actor; a write replaces ONLY the
+  // writer's own row; read composes all rows. One-time migration: the old single row currently holds
+  // Nova's zen-ai backlog (last-write-wins casualty) — move it into her row, once.
+  await q.query(`CREATE TABLE IF NOT EXISTS backlog_agents (
+    actor text PRIMARY KEY, content jsonb NOT NULL DEFAULT '{}',
+    updated_at timestamptz NOT NULL DEFAULT now(), updated_by text)`);
+  await q.query(`INSERT INTO backlog_agents (actor, content, updated_by)
+    SELECT 'nova', jsonb_build_object('text', b.content), 'migration-from-single-row'
+    FROM backlog b WHERE b.id=1 AND b.content LIKE '# Zen AI%'
+      AND NOT EXISTS (SELECT 1 FROM backlog_agents WHERE actor='nova')`);
 }
 
 // ---- Living backlog (Arke's super-admin panel; mirrors Nova's model) --------
@@ -128,6 +148,19 @@ export async function setBacklog(content: string, updatedBy: string): Promise<st
     ON CONFLICT (id) DO UPDATE SET content=EXCLUDED.content, updated_at=now(), updated_by=EXCLUDED.updated_by
     RETURNING to_char(updated_at,'YYYY-MM-DD HH24:MI') AS updated_at`, [String(content).slice(0, 200000), String(updatedBy || 'session').slice(0, 120)]);
   return rows[0]?.updated_at || '';
+}
+// Per-agent backlog (contract answer 2026-06-09): write replaces ONLY the writer's row; read returns all.
+export async function setAgentBacklog(actor: string, content: any, updatedBy: string): Promise<string> {
+  const { rows } = await db().query<any>(`INSERT INTO backlog_agents (actor, content, updated_at, updated_by) VALUES ($1,$2::jsonb,now(),$3)
+    ON CONFLICT (actor) DO UPDATE SET content=EXCLUDED.content, updated_at=now(), updated_by=EXCLUDED.updated_by
+    RETURNING to_char(updated_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS updated_at`,
+    [String(actor).slice(0, 60), JSON.stringify(content ?? {}).slice(0, 200000), String(updatedBy || actor).slice(0, 120)]);
+  return rows[0]?.updated_at || '';
+}
+export async function getAgentBacklogs(): Promise<any[]> {
+  const { rows } = await db().query<any>(`SELECT actor, content, updated_by,
+    to_char(updated_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS updated_at FROM backlog_agents ORDER BY actor`);
+  return rows.map((r) => ({ actor: r.actor, content: r.content, updatedAt: r.updated_at, updatedBy: r.updated_by }));
 }
 
 // ---- Members + secrets -----------------------------------------------------
@@ -354,13 +387,13 @@ export async function listMeetings(limit = 20): Promise<any[]> {
 }
 
 // ---- Brain-upload pipeline (resumable chunks; docs/CONTRACT_DELTAS_2.0.md a/e) ----
-export async function createBrainUpload(uploadId: string, actor: string, brainId: string, totalBytes: number, chunkSize: number, sha256: string, manifest: any[]): Promise<void> {
-  await db().query(`INSERT INTO brain_uploads (upload_id, actor, brain_id, total_bytes, chunk_size, claimed_sha256, manifest)
-    VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb) ON CONFLICT (upload_id) DO NOTHING`,
-    [uploadId, actor, brainId || null, totalBytes || 0, chunkSize || 0, String(sha256 || '').toLowerCase(), JSON.stringify(Array.isArray(manifest) ? manifest : [])]);
+export async function createBrainUpload(uploadId: string, actor: string, brainId: string, totalBytes: number, chunkSize: number, sha256: string, manifest: any[], kind = 'corpus'): Promise<void> {
+  await db().query(`INSERT INTO brain_uploads (upload_id, actor, brain_id, total_bytes, chunk_size, claimed_sha256, manifest, kind)
+    VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8) ON CONFLICT (upload_id) DO NOTHING`,
+    [uploadId, actor, brainId || null, totalBytes || 0, chunkSize || 0, String(sha256 || '').toLowerCase(), JSON.stringify(Array.isArray(manifest) ? manifest : []), kind === 'pack' ? 'pack' : 'corpus']);
 }
 export async function getBrainUpload(uploadId: string): Promise<any | null> {
-  const { rows } = await db().query<any>(`SELECT upload_id, actor, brain_id, total_bytes, chunk_size, claimed_sha256, manifest, status FROM brain_uploads WHERE upload_id=$1`, [uploadId]);
+  const { rows } = await db().query<any>(`SELECT upload_id, actor, brain_id, total_bytes, chunk_size, claimed_sha256, manifest, status, kind FROM brain_uploads WHERE upload_id=$1`, [uploadId]);
   if (!rows[0]) return null;
   const r = rows[0];
   return { ...r, manifest: Array.isArray(r.manifest) ? r.manifest : [] };
@@ -378,26 +411,29 @@ export async function assembleBrain(uploadId: string): Promise<Buffer> {
   const { rows } = await db().query<any>(`SELECT content FROM brain_chunks_up WHERE upload_id=$1 ORDER BY idx`, [uploadId]);
   return Buffer.concat(rows.map((r) => (Buffer.isBuffer(r.content) ? r.content : Buffer.from(r.content))));
 }
-export async function commitBrainV2(actor: string, brainId: string, brainVersion: string, sha256: string, bytes: number, content: Buffer, consent: any): Promise<void> {
+export async function commitBrainV2(actor: string, brainId: string, brainVersion: string, sha256: string, bytes: number, content: Buffer, consent: any, kind = 'corpus'): Promise<void> {
   const c = db();
-  await c.query(`INSERT INTO brains_v2 (actor, brain_id, brain_version, sha256, bytes, content, consent, committed_at)
-    VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb, now())
-    ON CONFLICT (actor) DO UPDATE SET brain_id=EXCLUDED.brain_id, brain_version=EXCLUDED.brain_version,
+  const k = kind === 'pack' ? 'pack' : 'corpus';
+  await c.query(`INSERT INTO brains_v2 (actor, kind, brain_id, brain_version, sha256, bytes, content, consent, committed_at)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb, now())
+    ON CONFLICT (actor, kind) DO UPDATE SET brain_id=EXCLUDED.brain_id, brain_version=EXCLUDED.brain_version,
       sha256=EXCLUDED.sha256, bytes=EXCLUDED.bytes, content=EXCLUDED.content, consent=EXCLUDED.consent, committed_at=now()`,
-    [actor, brainId || null, brainVersion, String(sha256).toLowerCase(), bytes, content, JSON.stringify(consent || {})]);
+    [actor, k, brainId || null, brainVersion, String(sha256).toLowerCase(), bytes, content, JSON.stringify(consent || {})]);
   await c.query(`UPDATE brain_uploads SET status='committed' WHERE upload_id IN (SELECT upload_id FROM brain_uploads WHERE actor=$1 AND claimed_sha256=$2)`, [actor, String(sha256).toLowerCase()]);
 }
-export async function getBrainV2Meta(actor: string): Promise<any | null> {
-  const { rows } = await db().query<any>(`SELECT actor, brain_id, brain_version, sha256, bytes,
-    to_char(committed_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS committed_at FROM brains_v2 WHERE actor=$1`, [actor]);
+export async function getBrainV2Meta(actor: string, kind = 'corpus'): Promise<any | null> {
+  const { rows } = await db().query<any>(`SELECT actor, kind, brain_id, brain_version, sha256, bytes,
+    to_char(committed_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS committed_at FROM brains_v2 WHERE actor=$1 AND kind=$2`,
+    [actor, kind === 'pack' ? 'pack' : 'corpus']);
   return rows[0] || null;
 }
-export async function getBrainV2Content(actor: string): Promise<{ content: Buffer; meta: any } | null> {
-  const { rows } = await db().query<any>(`SELECT actor, brain_id, brain_version, sha256, bytes, content, consent,
-    to_char(committed_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS committed_at FROM brains_v2 WHERE actor=$1`, [actor]);
+export async function getBrainV2Content(actor: string, kind = 'corpus'): Promise<{ content: Buffer; meta: any } | null> {
+  const { rows } = await db().query<any>(`SELECT actor, kind, brain_id, brain_version, sha256, bytes, content, consent,
+    to_char(committed_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS committed_at FROM brains_v2 WHERE actor=$1 AND kind=$2`,
+    [actor, kind === 'pack' ? 'pack' : 'corpus']);
   if (!rows[0]) return null;
   const r = rows[0];
-  return { content: Buffer.isBuffer(r.content) ? r.content : Buffer.from(r.content || ''), meta: { actor: r.actor, brain_id: r.brain_id, brain_version: r.brain_version, sha256: r.sha256, bytes: Number(r.bytes), consent: r.consent, committed_at: r.committed_at } };
+  return { content: Buffer.isBuffer(r.content) ? r.content : Buffer.from(r.content || ''), meta: { actor: r.actor, kind: r.kind, brain_id: r.brain_id, brain_version: r.brain_version, sha256: r.sha256, bytes: Number(r.bytes), consent: r.consent, committed_at: r.committed_at } };
 }
 /** Retention sweep: drop stale partial uploads + their chunks (called from the daily sweep). */
 export async function sweepBrainUploads(maxAgeHours = 48): Promise<number> {
