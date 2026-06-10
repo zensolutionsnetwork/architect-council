@@ -84,8 +84,8 @@ green at HEAD `4e7e881`, working tree clean + in sync, no live meeting.
    first run with Mathieu** — set `VOICE_LOOP_ENABLED=true`, open a meeting, fire run-autonomous,
    watch the ledger vs §2 envelope ($1.30–$2/normal day), close. Full checklist:
    `docs/SUPERVISED_FIRST_RUN.md`. Do NOT set the env or fire the loop unattended — money-spending,
-   Mathieu-present action. (Optional polish: charge the owner-report synthesis call to the ledger
-   too — currently uncounted, ~$0.01.)
+   Mathieu-present action. (Ledger now COMPLETE: owner-report synthesis is charged to cost_ledger
+   under perAgent 'owner-report' — `ef0d4c5`; the supervised-run /cost total includes it.)
 2. **Nova + Logos full-brain commits** (pack + corpus). **Nova corpus COMMITTED**
    (`nova@sha256:374a33aa…`) — pack still pending. **Logos: nothing yet.** Both still need their
    PACK (the cached per-turn voice context). Owner-auth upload path now exists (P0 owner-auth-brain
