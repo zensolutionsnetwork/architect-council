@@ -758,20 +758,25 @@ const remainingIdx = (manifest: any[], received: number[]) => manifest.map((m: a
 councilRouter.post('/bridge/brain/init', requireContract2, async (req, res) => {
   try {
     const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
-    const { brainId, totalBytes, chunkSize, sha256, manifest, kind } = req.body || {};
+    const { brainId, totalBytes, chunkSize, sha256, manifest, kind, actor } = req.body || {};
     if (!sha256 || !Array.isArray(manifest) || !manifest.length) return res.status(400).json({ error: 'bad_request', message: 'sha256 + non-empty manifest[] required' });
+    // Owner-authorized upload (§11.1): the admin token may upload ON BEHALF OF any member; the upload is
+    // attributed to body.actor (the consent-manifest actor, verified at commit). A member always uploads as itself.
+    const target = a.admin ? String(actor || '').trim() : a.actor;
+    if (a.admin && !target) return res.status(400).json({ error: 'actor_required', message: 'owner upload must name body.actor (the target member)' });
+    if (a.admin && !(await getMember(target))) return res.status(404).json({ error: 'unknown_actor', actor: target });
     // Two-artifact brain (§11.2): kind ∈ {pack, corpus}; absent/unknown = corpus (back-compat with today's app upload).
     const k = kind === 'pack' ? 'pack' : 'corpus';
     const uploadId = crypto.randomUUID();
-    await createBrainUpload(uploadId, a.actor, String(brainId || ''), Number(totalBytes) || 0, Number(chunkSize) || 0, String(sha256), manifest, k);
-    res.json({ uploadId, kind: k, received: [] });
+    await createBrainUpload(uploadId, target, String(brainId || ''), Number(totalBytes) || 0, Number(chunkSize) || 0, String(sha256), manifest, k);
+    res.json({ uploadId, actor: target, kind: k, received: [] });
   } catch (e) { internalError(res, e); }
 });
 councilRouter.put('/bridge/brain/:uploadId/chunk/:idx', requireContract2, async (req, res) => {
   try {
     const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
     const up = await getBrainUpload(req.params.uploadId); if (!up) return res.status(404).json({ error: 'no_such_upload' });
-    if (up.actor !== a.actor) return res.status(403).json({ error: 'not_your_upload' });
+    if (up.actor !== a.actor && !a.admin) return res.status(403).json({ error: 'not_your_upload' });
     if (up.status === 'committed') return res.status(409).json({ error: 'already_committed' });
     const idx = Number(req.params.idx);
     const entry = (up.manifest || []).find((m: any) => Number(m.idx) === idx);
@@ -790,7 +795,7 @@ councilRouter.put('/bridge/brain/:uploadId/chunk/:idx', requireContract2, async 
 async function brainProbe(req: Request, res: Response) {
   const a = await resolveActor(req); if (!a) return res.status(401).end();
   const up = await getBrainUpload(req.params.uploadId); if (!up) return res.status(404).end();
-  if (up.actor !== a.actor) return res.status(403).end();
+  if (up.actor !== a.actor && !a.admin) return res.status(403).end();
   const received = await brainReceived(req.params.uploadId);
   const remaining = remainingIdx(up.manifest || [], received);
   res.setHeader('x-received-count', String(received.length));
@@ -804,10 +809,11 @@ councilRouter.post('/bridge/brain/:uploadId/commit', requireContract2, async (re
   try {
     const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
     const up = await getBrainUpload(req.params.uploadId); if (!up) return res.status(404).json({ error: 'no_such_upload' });
-    if (up.actor !== a.actor) return res.status(403).json({ error: 'not_your_upload' });
+    if (up.actor !== a.actor && !a.admin) return res.status(403).json({ error: 'not_your_upload' });
     const { sha256, consent } = req.body || {};
     const c = consent || {}; const scan = c.secretScan || {};
-    if (c.actor !== a.actor) return res.status(403).json({ error: 'consent_actor_mismatch' });
+    // Consent must name the upload's target actor (== caller for members; == body.actor for owner uploads).
+    if (c.actor !== up.actor) return res.status(403).json({ error: 'consent_actor_mismatch', expected: up.actor, got: c.actor || null });
     if (scan.ran !== true || Number(scan.findings) !== 0) return res.status(412).json({ error: 'consent_secret_scan_failed', message: 'ConsentManifest.secretScan must be {ran:true, findings:0}' });
     if (c.expiresAt && Date.parse(c.expiresAt) <= Date.now()) return res.status(412).json({ error: 'consent_expired' });
     const received = await brainReceived(req.params.uploadId);
@@ -817,9 +823,10 @@ councilRouter.post('/bridge/brain/:uploadId/commit', requireContract2, async (re
     const whole = sha256hex(buf);
     const claimed = String(sha256 || up.claimed_sha256 || '').toLowerCase();
     if (whole !== claimed) return res.status(422).json({ error: 'object_hash_mismatch', expected: claimed, got: whole });
-    const brainVersion = `${a.actor}@sha256:${whole}`;
-    await commitBrainV2(a.actor, String(up.brain_id || ''), brainVersion, whole, buf.length, buf, c, up.kind || 'corpus');
-    res.json({ brainVersion, kind: up.kind || 'corpus', sha256: whole, bytes: buf.length });
+    // Attribute the brain to the UPLOAD's actor (the target member), never to 'owner' on an admin upload.
+    const brainVersion = `${up.actor}@sha256:${whole}`;
+    await commitBrainV2(up.actor, String(up.brain_id || ''), brainVersion, whole, buf.length, buf, c, up.kind || 'corpus');
+    res.json({ brainVersion, actor: up.actor, kind: up.kind || 'corpus', sha256: whole, bytes: buf.length });
   } catch (e) { internalError(res, e); }
 });
 councilRouter.get('/bridge/brain-meta/:actor', async (req, res) => {
