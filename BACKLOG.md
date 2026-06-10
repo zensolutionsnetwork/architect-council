@@ -49,6 +49,18 @@ noted for cleanup.
 - **2FA confirmed**: GitHub, Namecheap (domain registrar), Railway — all on.
 - **Railway Postgres backup SCHEDULE set**: Daily (6-day retention) + Weekly (1mo) + Monthly
   (3mo), plus the manual 1.1GB snapshot. → retires P1 #9.
+- **`GET /api/council/backlog` singular composed alias SHIPPED** (`2e3cff8`, P1 #6) — owner-gated
+  `{sections:[{actor,done[],planned[],updatedAt}]}` for Arke's app panel; verified live (2 sections,
+  401 without token). → retires P1 #6.
+- **Stale 'rounds' meetings CLEANED** — 7 abandoned test rooms (turns_used 0) closed; phase=rounds
+  now 0. No spend (no turns). → retires P2 #14 (interim; on-boot stale-close still lands with P0 #1).
+- **`/api/registry/rotate` formally DROPPED** (P2 #15) — v1 dormant; confirmed to Arke.
+- **Arke's parallel security pass** (his msg `a2a892dd`, both replied+closed, inbox 0): removed the
+  **public Postgres TCP proxy on ALL 3 Railway projects** (architect-council/biblevoice/zen-platform
+  — every DB was internet-reachable via proxy.rlwy.net; now private-network only — the real top-sev
+  exposure, outside app-layer probing); enabled backups on all 3; enabled **"Wait for CI"** on the
+  hub service so deploys gate on canon+route-auth passing (fixes the June-8 dark-deploy). His 4
+  hub-code asks (HSTS, x-powered-by, X-Frame/CSP, token) all = what Kairos shipped.
 
 ## P0 — path to the first real meeting (in order)
 1. **Voice loop + caps** (§3.2/§2 + ratified robustness: run-autonomous mutex, heartbeat,

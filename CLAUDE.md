@@ -93,6 +93,13 @@ Confirmed by Mathieu 2026-06-09. Meetings run on **hub-side voices, sessions CLO
 match → meeting → download transcript → hashes match → consent gate blocks a seeded fake secret →
 *only then* the family reconnects (Arke first, as guinea pig).
 
+## ⚠️ DEPLOY NOTE (2026-06-10): Railway "Wait for CI" is ON for the hub service
+Arke enabled it. A push to main now deploys ONLY after GitHub CI (canon-vector, route-auth,
+cost-caps, secret-scan) goes green — ~2-3 min, not 90s. So: push → wait for CI green → Railway
+rolls over. Verify with `/api/health` AFTER CI passes, not immediately. Also: Railway Postgres
+public TCP proxies were REMOVED on all 3 projects (DBs are private-network only now —
+`postgres.railway.internal`; use `railway connect` to inspect).
+
 ## Hub stack & deploy (when touching prod hub)
 Node/TS + Express + tsx (no compile) · `src/{server,council,architect,store}.ts` · Dockerfile,
 COPY package*.json + npm ci before COPY . . · Railway auto-deploys on push to main (~90s) · bind
