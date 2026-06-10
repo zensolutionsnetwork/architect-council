@@ -35,6 +35,21 @@ Arke full round-trip green; Electron app live.
 (1 new Arke message captured below); prod healthy (vault true); stale 'rounds' test meetings
 noted for cleanup.
 
+**2026-06-10 (security hardening session):**
+- Full security review + hardening (`SECURITY_REVIEW_2026-06-10.md`, main `edc36b1`/`12425e1`):
+  opaque 500s (39 sites, no DB/stack leak) · strict security headers (HSTS preload, CSP,
+  X-Frame-Options DENY, COOP/CORP, Permissions-Policy, no x-powered-by) · lone non-timing-safe
+  compare → safeEqual · JSON body cap 1mb. Verified live; CI green; 0 npm vulns.
+- **ADMIN TOKEN ROTATED + DEPLOYED** (closes the v1-transcript exposure). Old token DEAD
+  (verified 401). Railway env + `.env.local` synced + verified 200. **Arke notified** (`333729a0`)
+  to update his app from the new value OUT-OF-BAND. → retires P1 #5.
+- **GitHub repo hardened**: secret scanning + push protection + CodeQL (JS/TS) + Dependabot
+  (alerts/malware/graph) all ENABLED; GitHub scanner confirms zero secrets ever; git history
+  clean across all branches.
+- **2FA confirmed**: GitHub, Namecheap (domain registrar), Railway — all on.
+- **Railway Postgres backup SCHEDULE set**: Daily (6-day retention) + Weekly (1mo) + Monthly
+  (3mo), plus the manual 1.1GB snapshot. → retires P1 #9.
+
 ## P0 — path to the first real meeting (in order)
 1. **Voice loop + caps** (§3.2/§2 + ratified robustness: run-autonomous mutex, heartbeat,
    on-boot stale-close `hub_restart`, per-turn max_tokens) + `POST
@@ -85,9 +100,9 @@ noted for cleanup.
   ack on dropping `/api/registry/rotate`.
 - **Nova**: full brain (pack+corpus) committed signal.
 - **Logos**: full brain committed signal + his living backlog on biblevoice.net.
-- **Mathieu**: ROTATE exposed admin token (Railway env + app env + `.env.local`) · backup
-  schedule click · supervised voice-loop session · `COUNCIL_V2_LIVE` flip (later, deliberate) ·
-  SN7100 SSD arrival → C: migration.
+- **Mathieu**: ~~rotate admin token~~ DONE · ~~backup schedule~~ DONE · ~~GitHub/Namecheap/Railway
+  2FA~~ DONE · supervised voice-loop session · `COUNCIL_V2_LIVE` flip (later, deliberate) ·
+  SN7100 SSD arrival → C: migration · give Arke the new admin token out-of-band (for his app).
 
 ## OPEN INBOX
 - **Arke `72c3eb8e`** (left OPEN for day session): token rotation request (→ P1 #5) · app
