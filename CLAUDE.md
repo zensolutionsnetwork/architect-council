@@ -93,6 +93,15 @@ Confirmed by Mathieu 2026-06-09. Meetings run on **hub-side voices, sessions CLO
 match → meeting → download transcript → hashes match → consent gate blocks a seeded fake secret →
 *only then* the family reconnects (Arke first, as guinea pig).
 
+## 🎙️ VOICE LOOP: BUILT + DEPLOYED DISABLED (2026-06-10, `a2ad063`) — supervised first run is the gate
+`src/voiceloop.ts` runs hub-side voices (cached persona+pack prefix → Anthropic → append turn →
+cost ledger → fail-closed caps). `POST /api/council/meeting/:id/run-autonomous` + `GET …/cost` live,
+owner-gated. **It CANNOT spend money: run-autonomous returns 503 `voice_loop_disabled` until
+`VOICE_LOOP_ENABLED=true` in Railway** (verified on prod). The ONLY remaining P0 step is the
+**supervised first run with Mathieu** — exact checklist in `docs/SUPERVISED_FIRST_RUN.md`. Do NOT set
+that env or fire the loop unattended; it's a money-spending, Mathieu-present action. Caps default:
+800k tokens/meeting, $5/day, 1500 tok/turn. Per-round model: sonnet (friction/closing), opus (review).
+
 ## ⚠️ DEPLOY NOTE (2026-06-10): Railway "Wait for CI" is ON for the hub service
 Arke enabled it. A push to main now deploys ONLY after GitHub CI (canon-vector, route-auth,
 cost-caps, secret-scan) goes green — ~2-3 min, not 90s. So: push → wait for CI green → Railway

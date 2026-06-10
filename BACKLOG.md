@@ -63,11 +63,16 @@ noted for cleanup.
   hub-code asks (HSTS, x-powered-by, X-Frame/CSP, token) all = what Kairos shipped.
 
 ## P0 — path to the first real meeting (in order)
-1. **Voice loop + caps** (§3.2/§2 + ratified robustness: run-autonomous mutex, heartbeat,
-   on-boot stale-close `hub_restart`, per-turn max_tokens) + `POST
-   /api/council/meeting/:id/run-autonomous` + `GET .../cost` (camelCase ledger; charge
-   owner-report synthesis to it). **Build + FIRST RUN SUPERVISED with Mathieu — it spends money.**
-   (NB: the on-boot stale-close lands here also fixes the stale-'rounds' accumulation below.)
+1. **Voice loop + caps** — **BUILT + DEPLOYED DISABLED 2026-06-10 (`a2ad063`)**. `src/voiceloop.ts`:
+   per-turn cached persona+pack prefix → Anthropic → append turn → fold usage into per-meeting
+   `cost_ledger` → fail-closed caps (token ceiling, daily USD budget, per-turn max_tokens). Per-round
+   model (sonnet friction/closing, opus review). Mutex + on-boot stale-close (`hub_restart`). Logos
+   guardrail appended inviolably. `POST /council/meeting/:id/run-autonomous` (owner) + `GET …/cost`
+   (camelCase) live. **MONEY-SAFE: run-autonomous 503s `voice_loop_disabled` until `VOICE_LOOP_ENABLED=true`
+   — verified on prod (dummy + real meeting both 503; /cost empty ledger, owner-gated).**
+   **REMAINING: the SUPERVISED first run with Mathieu** — set the env, open a meeting, fire, watch the
+   ledger, close. Full checklist: `docs/SUPERVISED_FIRST_RUN.md`. (Optional polish: charge the
+   owner-report synthesis call to the ledger too — currently uncounted, ~$0.01.)
 2. ~~**Owner-auth brain upload** (§11.1)~~ **DONE 2026-06-10 (`00fb979`)** — `/api/bridge/brain/init|chunk|probe|commit`
    accept `x-admin-token` on behalf of `body.actor` (verified member), attributed to that actor;
    consent.actor must match the upload target; member path unchanged. Smoke-verified incl. negatives
