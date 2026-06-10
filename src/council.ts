@@ -7,6 +7,8 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import crypto from 'node:crypto';
 import { architectReply, reviewProposal, councilBrain, summarize, extractTakeaways, synthesizeOwnerReport } from './architect.js';
+import { runVoiceLoop, isVoiceRunning } from './voiceloop.js';
+import { capsFromEnv, dailyBudgetExhausted, emptyTotals } from './cost.js';
 import { projectTranscript, transcriptSha256Hex } from './protocol.js';
 import {
   upsertMember, listMembers, getMember, getBrain, setBrain,
@@ -16,6 +18,7 @@ import {
   getBacklog, setBacklog, setAgentBacklog, getAgentBacklogs, setConvoArchived, setConvoV2Meta, getRegistryVersion,
   queueEnvTask, listEnvTasks, getEnvTask, claimEnvTask, reportEnvTask, sweepEnvTasks,
   createMeeting, getMeeting, updateMeeting, listMeetings, listMeetingsForActor, setMeetingOwnerReport,
+  setVoiceRunning, closeStaleVoiceMeetings, usdSpentTodayUtc,
   createBrainUpload, getBrainUpload, putBrainChunk, brainReceived, assembleBrain,
   commitBrainV2, getBrainV2Meta, getBrainV2Content, sweepBrainUploads,
 } from './store.js';
@@ -673,6 +676,36 @@ councilRouter.get('/council/meeting/:id/owner-report', async (req, res) => {
     res.json({ id: m.id, agenda: m.agenda, closedAt: m.closed_at || null, raw: m.owner_report, ...splitOwnerReport(m.owner_report) });
   } catch (e) { internalError(res, e); }
 });
+
+// ===== AUTONOMOUS VOICE LOOP (HUB_AUTONOMOUS_VOICE_SPEC §4) — owner-gated, FAIL-CLOSED money gate =====
+// run-autonomous fires the hub-side voice loop for an open meeting. It SPENDS API tokens, so it is
+// disabled by default: VOICE_LOOP_ENABLED must be exactly 'true' in Railway env (set it only for a
+// SUPERVISED run). Caps (cost.ts) are fail-closed; the loop runs in the background, client polls /state.
+councilRouter.post('/council/meeting/:id/run-autonomous', requireOwner, async (req, res) => {
+  try {
+    if (process.env.VOICE_LOOP_ENABLED !== 'true') return res.status(503).json({ error: 'voice_loop_disabled', message: 'set VOICE_LOOP_ENABLED=true (supervised) to enable the autonomous voice loop' });
+    if (!process.env.CHAT_API_KEY) return res.status(503).json({ error: 'no_api_key', message: 'CHAT_API_KEY is not configured' });
+    const m = await getMeeting(req.params.id); if (!m) return res.status(404).json({ error: 'not_found' });
+    if (m.phase !== 'rounds') return res.status(409).json({ error: 'not_in_rounds', phase: m.phase });
+    if (m.dry_run) return res.status(400).json({ error: 'dry_run_meeting', message: 'use owner-drive for dryRun tests; run-autonomous is for real meetings' });
+    if (isVoiceRunning(m.id) || m.voice_running) return res.status(409).json({ error: 'already_running' });
+    const caps = capsFromEnv(process.env);
+    const spent = await usdSpentTodayUtc();
+    if (dailyBudgetExhausted(spent, caps)) return res.status(503).json({ error: 'budget_exhausted', spentUsd: spent, dailyBudgetUsd: caps.dailyBudgetUsd });
+    runVoiceLoop(m.id).catch(() => { setVoiceRunning(m.id, false, 'loop_error').catch(() => {}); }); // fire-and-forget
+    res.status(202).json({ ok: true, started: true, meetingId: m.id, model: process.env.CHAT_MODEL || 'claude-opus-4-8', caps });
+  } catch (e) { internalError(res, e); }
+});
+// Cost ledger for the cost panel (camelCase, contract-ratified shape).
+councilRouter.get('/council/meeting/:id/cost', requireOwner, async (req, res) => {
+  try {
+    const m = await getMeeting(req.params.id); if (!m) return res.status(404).json({ error: 'not_found' });
+    const led = (m.cost_ledger && m.cost_ledger.total) ? m.cost_ledger : { total: emptyTotals(), perAgent: {} };
+    const t = led.total;
+    const perAgent = Object.entries(led.perAgent || {}).map(([actor, v]: any) => ({ actor, usd: v.usd, inputTokens: v.inputTokens, outputTokens: v.outputTokens, cacheReadTokens: v.cacheReadTokens, totalTokens: v.totalTokens }));
+    res.json({ id: m.id, totalUsd: t.usd, inputTokens: t.inputTokens, outputTokens: t.outputTokens, cacheReadTokens: t.cacheReadTokens, totalTokens: t.totalTokens, perAgent, endedReason: m.ended_reason || null, voiceRunning: !!m.voice_running });
+  } catch (e) { internalError(res, e); }
+});
 // Per-agent living backlog (contract answer 4, ratified 2026-06-09): a write replaces ONLY the writer's
 // own row; read composes all rows. Old single-row /council/admin/backlog stays until Arke's panel switches.
 councilRouter.get('/council/backlogs', async (req, res) => {
@@ -849,6 +882,9 @@ councilRouter.get('/bridge/brain-content/:actor', async (req, res) => {
 });
 
 export function startScheduler(): void {
+  // On-boot stale-close (§3 robustness): any meeting still marked voice_running died with a prior
+  // process (Railway redeploy/crash mid-loop). Mark them endedReason hub_restart so they never zombie.
+  closeStaleVoiceMeetings().then((n) => { if (n) console.log(`✓ closed ${n} stale voice meeting(s) on boot (hub_restart)`); }).catch(() => {});
   setInterval(async () => {
     try {
       const { date, hhmm } = torontoParts();

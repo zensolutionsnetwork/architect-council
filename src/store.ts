@@ -105,6 +105,11 @@ export async function initDb(): Promise<void> {
   await q.query(`ALTER TABLE meetings ADD COLUMN IF NOT EXISTS brain_versions jsonb`);
   // Owner report (ROADMAP Layer 0 / Fable review 2.2): 4-point synthesis to Mathieu at meeting close.
   await q.query(`ALTER TABLE meetings ADD COLUMN IF NOT EXISTS owner_report text`);
+  // Autonomous voice loop (HUB_AUTONOMOUS_VOICE_SPEC §2/§3): per-meeting cost ledger + caps + robustness.
+  await q.query(`ALTER TABLE meetings ADD COLUMN IF NOT EXISTS cost_ledger jsonb`);
+  await q.query(`ALTER TABLE meetings ADD COLUMN IF NOT EXISTS ended_reason text`);
+  await q.query(`ALTER TABLE meetings ADD COLUMN IF NOT EXISTS voice_running boolean NOT NULL DEFAULT false`);
+  await q.query(`ALTER TABLE meetings ADD COLUMN IF NOT EXISTS voice_heartbeat timestamptz`);
   // Brain-upload pipeline (docs/CONTRACT_DELTAS_2.0.md a/e): resumable content-addressed chunk upload.
   await q.query(`CREATE TABLE IF NOT EXISTS brain_uploads (
     upload_id text PRIMARY KEY, actor text NOT NULL, brain_id text, total_bytes bigint, chunk_size int,
@@ -358,7 +363,8 @@ export async function createMeeting(id: string, agenda: string, participants: st
     [id, String(agenda || '').slice(0, 8000), JSON.stringify(participants), turnCap, phase, openedBy, turnTimeoutSec > 0 ? turnTimeoutSec : 600, JSON.stringify(roles || {}), !!dryRun, JSON.stringify(brainVersions || {})]);
 }
 export async function getMeeting(id: string): Promise<any | null> {
-  const { rows } = await db().query<any>(`SELECT id, agenda, participants, turn_cap, phase, turn_index, round, turns_used, transcript, report, opened_by, turn_timeout_sec, roles, dry_run, brain_versions, owner_report,
+  const { rows } = await db().query<any>(`SELECT id, agenda, participants, turn_cap, phase, turn_index, round, turns_used, transcript, report, opened_by, turn_timeout_sec, roles, dry_run, brain_versions, owner_report, cost_ledger, ended_reason, voice_running,
+    to_char(voice_heartbeat at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS voice_heartbeat,
     to_char(turn_started_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS turn_started_at,
     to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
     to_char(updated_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS updated_at,
@@ -379,6 +385,28 @@ export async function updateMeeting(id: string, patch: { phase?: string; turn_in
 }
 export async function setMeetingOwnerReport(id: string, report: string): Promise<void> {
   await db().query(`UPDATE meetings SET owner_report=$2, updated_at=now() WHERE id=$1`, [id, report]);
+}
+// ---- Autonomous voice loop: ledger + run-state (HUB_AUTONOMOUS_VOICE_SPEC §2/§3) ----
+export async function setMeetingLedger(id: string, ledger: any): Promise<void> {
+  await db().query(`UPDATE meetings SET cost_ledger=$2::jsonb, voice_heartbeat=now(), updated_at=now() WHERE id=$1`, [id, JSON.stringify(ledger ?? {})]);
+}
+export async function setVoiceRunning(id: string, running: boolean, endedReason?: string | null): Promise<void> {
+  await db().query(`UPDATE meetings SET voice_running=$2, ended_reason=COALESCE($3,ended_reason), voice_heartbeat=now(), updated_at=now() WHERE id=$1`,
+    [id, running, endedReason ?? null]);
+}
+/** On-boot stale-close (§3 robustness): any meeting left voice_running=true died with a prior process. */
+export async function closeStaleVoiceMeetings(): Promise<number> {
+  const { rowCount } = await db().query(
+    `UPDATE meetings SET voice_running=false, phase='report', ended_reason='hub_restart', updated_at=now()
+     WHERE voice_running=true`);
+  return rowCount || 0;
+}
+/** Sum of USD spent across meetings created today (UTC) — for the DAILY_MEETING_BUDGET_USD gate. */
+export async function usdSpentTodayUtc(): Promise<number> {
+  const { rows } = await db().query<any>(
+    `SELECT COALESCE(SUM((cost_ledger->>'usd')::numeric),0) AS usd
+     FROM meetings WHERE cost_ledger IS NOT NULL AND (created_at at time zone 'UTC')::date = (now() at time zone 'UTC')::date`);
+  return Number(rows[0]?.usd || 0);
 }
 export async function listMeetings(limit = 20): Promise<any[]> {
   const { rows } = await db().query<any>(`SELECT id, agenda, phase, participants, turns_used, turn_cap,

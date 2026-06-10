@@ -97,7 +97,7 @@ its bot speaks only from Scripture, takes no sides, never condemns any faith, an
 to God. Be honest about what you are: an AI council. The family story guides how you care for
 what you build.`;
 
-type Msg = { role: 'user' | 'assistant'; content: string };
+export type Msg = { role: 'user' | 'assistant'; content: string };
 
 async function callClaude(system: string, messages: Msg[], maxTokens: number, model?: string): Promise<string> {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -108,6 +108,23 @@ async function callClaude(system: string, messages: Msg[], maxTokens: number, mo
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data: any = await res.json();
   return (data.content || []).filter((b: any) => b.type === 'text').map((b: any) => b.text).join('').trim();
+}
+
+/** Voice-loop call (HUB_AUTONOMOUS_VOICE_SPEC §3.2): like callClaude but the system prompt is an
+ *  array of content blocks (so the persona+brain prefix can carry cache_control), and it returns the
+ *  Anthropic usage object for the cost ledger. Throws on non-2xx (caller charges nothing on failure). */
+export interface SystemBlock { type: 'text'; text: string; cache_control?: { type: 'ephemeral' } }
+export async function callClaudeUsage(system: SystemBlock[], messages: Msg[], maxTokens: number, model?: string): Promise<{ text: string; usage: any }> {
+  if (!CHAT_API_KEY()) throw new Error('CHAT_API_KEY missing');
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': CHAT_API_KEY(), 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model: model || MODEL(), max_tokens: maxTokens, system, messages: messages.length ? messages : [{ role: 'user', content: '(start)' }] }),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data: any = await res.json();
+  const text = (data.content || []).filter((b: any) => b.type === 'text').map((b: any) => b.text).join('').trim();
+  return { text, usage: data.usage || {} };
 }
 
 /** One reply from the architect-council brain given the conversation so far. */
