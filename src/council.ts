@@ -26,6 +26,12 @@ function safeEqual(given: unknown, expected: string): boolean {
   const a = Buffer.from(String(given ?? ''), 'utf8'), b = Buffer.from(expected, 'utf8');
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
+/** Generic 500: log the real reason server-side (Railway logs, owner-only), return an opaque body.
+ *  Never leak internal/DB/stack detail to the client (security hardening 2026-06-10). */
+function internalError(res: Response, e: unknown): void {
+  try { console.error('[hub:error]', (e as Error)?.message || String(e)); } catch { /* noop */ }
+  if (!res.headersSent) res.status(500).json({ error: 'internal_error' });
+}
 const SELF = 'architect-council';
 const DISPLAY_NAME = 'Arke'; // chosen name (council canon 2026-06-06); ping contract field
 const CONTRACT_VERSION = '1.2'; // displayName required in ping (council 2026-06-06)
@@ -58,11 +64,11 @@ bridgeRouter.post('/bridge/ask', requireMemberSecret, async (req, res) => {
     if (message && (!last || last.role !== 'user' || last.content !== String(message))) merged.push({ role: 'user', content: clip(message, 4000) });
     const r = await architectReply(merged, clip(from || 'peer', 60));
     res.json(r);
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 bridgeRouter.get('/bridge/brain', requireMemberSecret, (_req, res) => res.json({ project: SELF, brain: councilBrain(), updatedAt: new Date().toISOString() }));
 bridgeRouter.post('/bridge/review', requireMemberSecret, async (req, res) => {
-  try { res.json(await reviewProposal(req.body || {})); } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  try { res.json(await reviewProposal(req.body || {})); } catch (e) { internalError(res, e); }
 });
 
 // ---------- Broker side -----------------------------------------------------
@@ -112,12 +118,12 @@ councilRouter.post('/council/register', async (req, res) => {
     const reachable = await pingMember(String(base_url), String(secret));
     await upsertMember({ name: clip(name, 60), base_url: String(base_url), owner_email, rules: clip(rules, 4000), capabilities: Array.isArray(capabilities) ? capabilities : [] }, String(secret));
     res.json({ ok: true, member_id: clip(name, 60), reachable });
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 
 councilRouter.post('/council/join-token', requireAdmin, async (req, res) => {
   try { const token = await issueJoinToken(clip((req.body || {}).label, 80) || 'invite', Number((req.body || {}).ttlHours) || 24); res.json({ ok: true, token }); }
-  catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  catch (e) { internalError(res, e); }
 });
 
 /** True if x-bridge-secret matches ANY active member's vault secret (cheap at N=3). */
@@ -140,7 +146,7 @@ councilRouter.get('/council/members', async (req, res) => {
     if (!(await anyMemberOk(req))) return res.status(401).json({ error: 'unauthorized' });
     const members = (await listMembers()).map((m: any) => ({ project: m.name, displayName: m.display_name || null }));
     res.json({ version, members });
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 /** Cheap "did the registry change?" probe (council 2026-06-06). Same auth as the directory. */
 councilRouter.get('/council/registry-version', async (req, res) => {
@@ -148,7 +154,7 @@ councilRouter.get('/council/registry-version', async (req, res) => {
     const adminOk = !!process.env.COUNCIL_ADMIN_TOKEN && safeEqual(req.headers['x-admin-token'], process.env.COUNCIL_ADMIN_TOKEN);
     if (!adminOk && !(await anyMemberOk(req))) return res.status(401).json({ error: 'unauthorized' });
     res.json({ version: await getRegistryVersion() });
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 
 councilRouter.get('/council/member/:name/brain', requireAdmin, async (req, res) => {
@@ -161,7 +167,7 @@ councilRouter.get('/council/member/:name/brain', requireAdmin, async (req, res) 
     } catch { /* fall back to cache */ }
     const cached = await getBrain(m.name);
     res.json({ project: m.name, brain: cached.content, updatedAt: cached.updatedAt, cached: true });
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 
 // ---------- Orchestrator: N-member round-robin relay (hub has no opinion; it brokers) ----------
@@ -241,14 +247,14 @@ councilRouter.post('/council/converse/start', requireAdmin, async (req, res) => 
     await createConvo(id, String(topic), names);
     runCouncil(id, String(topic), names, Number(maxRounds) || 10).catch(() => updateConvo(id, { status: 'error' }).catch(() => {}));
     res.json({ ok: true, id });
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 councilRouter.get('/council/convo/:id', requireAdmin, async (req, res) => {
   try { const c = await getConvo(req.params.id); if (!c) return res.status(404).json({ error: 'not_found' }); res.json(c); }
-  catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  catch (e) { internalError(res, e); }
 });
 councilRouter.get('/council/convos', requireAdmin, async (_req, res) => {
-  try { res.json({ convos: await listConvos() }); } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  try { res.json({ convos: await listConvos() }); } catch (e) { internalError(res, e); }
 });
 /** Archive / unarchive a conversation (console housekeeping — owner's request 2026-06-06). */
 councilRouter.post('/council/convo/:id/archive', requireAdmin, async (req, res) => {
@@ -256,7 +262,7 @@ councilRouter.post('/council/convo/:id/archive', requireAdmin, async (req, res) 
     const ok = await setConvoArchived(req.params.id, (req.body || {}).archived !== false);
     if (!ok) return res.status(404).json({ error: 'not_found' });
     res.json({ ok: true });
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 
 // ---------- V2 meeting transcript (contract §4: RAW, hashed, participants-only) ----------
@@ -293,7 +299,7 @@ councilRouter.get('/council/meeting/:id/transcript', async (req, res) => {
       },
       turns,
     });
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 
 /** Each member downloads its own homework, machine-to-machine, with its OWN bridge secret (or the admin token). */
@@ -303,10 +309,10 @@ councilRouter.get('/council/takeaways/:member', async (req, res) => {
     const adminOk = !!process.env.COUNCIL_ADMIN_TOKEN && safeEqual(req.headers['x-admin-token'], process.env.COUNCIL_ADMIN_TOKEN);
     if (!adminOk) {
       const m = await getMember(name);
-      if (!m || (req.headers['x-bridge-secret'] as string) !== m.secret) return res.status(401).json({ error: 'unauthorized' });
+      if (!m || !safeEqual(req.headers['x-bridge-secret'], m.secret)) return res.status(401).json({ error: 'unauthorized' });
     }
     res.json({ member: name, takeaways: await getLatestTakeaways(name), brain: await getBrain(name) });
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 
 // ---------- Outbox (machine-to-machine notes; delivered at council open, cleared after ack) ----------
@@ -326,7 +332,7 @@ councilRouter.post('/council/outbox', async (req, res) => {
     const id = await queueOutbox(clip(from, 60), clip(to, 60), clip(topic, 300), clip(note, 4000),
       ['low', 'normal', 'high', 'directive'].includes(String(priority)) ? String(priority) : 'normal');
     res.json({ ok: true, id });
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 /** A member reads its own queued notes (does not clear them). Auth: own secret or admin. */
 councilRouter.get('/council/outbox/:member', async (req, res) => {
@@ -334,7 +340,7 @@ councilRouter.get('/council/outbox/:member', async (req, res) => {
     const name = req.params.member;
     if (!(await memberOrAdminOk(req, name))) return res.status(401).json({ error: 'unauthorized' });
     res.json({ member: name, queued: await pendingOutbox(name) });
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 /** A member acks (clears) its notes — all of them, or specific ids. Auth: own secret or admin. */
 councilRouter.post('/council/outbox/:member/ack', async (req, res) => {
@@ -343,7 +349,7 @@ councilRouter.post('/council/outbox/:member/ack', async (req, res) => {
     if (!(await memberOrAdminOk(req, name))) return res.status(401).json({ error: 'unauthorized' });
     const ids = Array.isArray((req.body || {}).ids) ? (req.body.ids as any[]).map(String) : undefined;
     res.json({ ok: true, cleared: await ackOutbox(name, ids) });
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 
 // ---------- Environment channel (Cowork ↔ 3080; BRIDGE_APP_SPEC §3) ----------
@@ -371,7 +377,7 @@ councilRouter.post('/env/task', async (req, res) => {
     const id = await queueEnvTask(actor.actor, clip(to, 60), clip(kind, 40) || 'task', clip(title, 300),
       payload ?? {}, ['low', 'normal', 'high'].includes(String(priority)) ? String(priority) : 'normal');
     res.json({ ok: true, id });
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 /** The recipient polls its inbox. Auth: that agent's secret (or admin). */
 councilRouter.get('/env/tasks', async (req, res) => {
@@ -380,7 +386,7 @@ councilRouter.get('/env/tasks', async (req, res) => {
     if (!forA) return res.status(400).json({ error: 'for is required' });
     if (!(await memberOrAdminOk(req, forA))) return res.status(401).json({ error: 'unauthorized' });
     res.json({ for: forA, tasks: await listEnvTasks(forA) });
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 /** Optimistic claim — first poller to flip queued→claimed wins, so a task runs at most once. */
 councilRouter.post('/env/task/:id/claim', async (req, res) => {
@@ -389,7 +395,7 @@ councilRouter.post('/env/task/:id/claim', async (req, res) => {
     if (!t) return res.status(404).json({ error: 'not_found' });
     if (!(await memberOrAdminOk(req, t.to_actor))) return res.status(401).json({ error: 'unauthorized' });
     res.json({ ok: true, claimed: await claimEnvTask(t.id, t.to_actor) });
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 /** Completion report from the recipient. */
 councilRouter.post('/env/task/:id/report', async (req, res) => {
@@ -399,7 +405,7 @@ councilRouter.post('/env/task/:id/report', async (req, res) => {
     if (!(await memberOrAdminOk(req, t.to_actor))) return res.status(401).json({ error: 'unauthorized' });
     const status = (req.body || {}).status === 'error' ? 'error' : 'done';
     res.json({ ok: true, updated: await reportEnvTask(t.id, t.to_actor, status, clip((req.body || {}).result, 16000)) });
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 /** Read one task + its result. Auth: either involved actor, or admin. */
 councilRouter.get('/env/task/:id', async (req, res) => {
@@ -409,7 +415,7 @@ councilRouter.get('/env/task/:id', async (req, res) => {
     const actor = await resolveActor(req);
     if (!actor || (!actor.admin && actor.actor !== t.from_actor && actor.actor !== t.to_actor)) return res.status(401).json({ error: 'unauthorized' });
     res.json(t);
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 
 // ---------- Living backlog + owner sign-in (Arke's super-admin; mirrors Nova's model) ----------
@@ -436,14 +442,14 @@ async function requireOwner(req: Request, res: Response, next: NextFunction): Pr
   res.status(401).json({ error: 'unauthorized' });
 }
 councilRouter.get('/council/admin/backlog', requireOwner, async (_req, res) => {
-  try { res.json(await getBacklog()); } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  try { res.json(await getBacklog()); } catch (e) { internalError(res, e); }
 });
 councilRouter.post('/council/admin/backlog', requireOwner, async (req, res) => {
   try {
     const content = String((req.body || {}).content ?? '').trim();
     if (!content) return res.status(400).json({ error: 'empty_content' });
     res.json({ ok: true, updatedAt: await setBacklog(content, String((req.body || {}).updatedBy || 'session')) });
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 councilRouter.get('/council/admin/config', (_req, res) =>
   res.json({ googleClientId: process.env.GOOGLE_CLIENT_ID || null, ownerEmail: OWNER_GOOGLE_EMAIL() }));
@@ -553,7 +559,7 @@ councilRouter.post('/meeting/open', async (req, res) => {
     const id = crypto.randomUUID();
     await createMeeting(id, clip(b.agenda, 8000), participants, cap, a.actor, 'rounds', tto, roles, dryRun, brainVersions);
     res.json({ ok: true, meetingId: id, ...meetingView(await getMeeting(id), a.actor) });
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 councilRouter.get('/meeting/:id/state', async (req, res) => {
   try {
@@ -561,7 +567,7 @@ councilRouter.get('/meeting/:id/state', async (req, res) => {
     const m = await getMeeting(req.params.id); if (!m) return res.status(404).json({ error: 'not_found' });
     if (!a.admin && !m.participants.includes(a.actor)) return res.status(403).json({ error: 'not_a_participant' });
     res.json(meetingView(await autoExpire(m), a.actor));
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 councilRouter.post('/meeting/:id/say', async (req, res) => {
   try {
@@ -604,7 +610,7 @@ councilRouter.post('/meeting/:id/say', async (req, res) => {
     if (lastRound.length === m.participants.length && lastRound.every((t: any) => t.kind === 'pass')) phase = 'report';
     await updateMeeting(m.id, { transcript: turns, turn_index: ti, round, turns_used: used, phase, touchTurn: true });
     res.json({ ok: true, nextActor: m.participants[ti], phase, round });
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 councilRouter.post('/meeting/:id/close', async (req, res) => {
   try {
@@ -639,7 +645,7 @@ councilRouter.post('/meeting/:id/close', async (req, res) => {
       }
     }
     res.json({ ok: true, dryRun: !!m.dry_run, storyUpdatesRouted: storyCount, ownerReport: ownerReportGenerated });
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 // Owner report readback — owner-gated (it is Mathieu's report; members read the transcript instead).
 councilRouter.get('/meeting/:id/report', async (req, res) => {
@@ -647,7 +653,7 @@ councilRouter.get('/meeting/:id/report', async (req, res) => {
     const a = await resolveActor(req); if (!a || !a.admin) return res.status(401).json({ error: 'unauthorized' });
     const m = await getMeeting(req.params.id); if (!m) return res.status(404).json({ error: 'not_found' });
     res.json({ id: m.id, agenda: m.agenda, closedAt: m.closed_at || null, ownerReport: m.owner_report || null });
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 // Structured owner report for Arke's app (ratified 2026-06-09): camelCase 4-field split, mounted under
 // /api/council/meeting/:id/* alongside the future run-autonomous + /cost (other meeting routes stay /api/meeting/*).
@@ -665,7 +671,7 @@ councilRouter.get('/council/meeting/:id/owner-report', async (req, res) => {
     const m = await getMeeting(req.params.id); if (!m) return res.status(404).json({ error: 'not_found' });
     if (!m.owner_report) return res.status(404).json({ error: 'no_owner_report' });
     res.json({ id: m.id, agenda: m.agenda, closedAt: m.closed_at || null, raw: m.owner_report, ...splitOwnerReport(m.owner_report) });
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 // Per-agent living backlog (contract answer 4, ratified 2026-06-09): a write replaces ONLY the writer's
 // own row; read composes all rows. Old single-row /council/admin/backlog stays until Arke's panel switches.
@@ -673,7 +679,7 @@ councilRouter.get('/council/backlogs', async (req, res) => {
   try {
     const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
     res.json({ backlogs: await getAgentBacklogs() });
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 councilRouter.post('/council/backlog/agent', async (req, res) => {
   try {
@@ -684,7 +690,7 @@ councilRouter.post('/council/backlog/agent', async (req, res) => {
     if (!a.admin && b.actor && b.actor !== a.actor) return res.status(403).json({ error: 'not_your_row' });
     const updatedAt = await setAgentBacklog(actor, b.content ?? {}, a.admin ? 'owner' : a.actor);
     res.json({ ok: true, actor, updatedAt });
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 councilRouter.get('/meeting/:id/transcript', async (req, res) => {
   try {
@@ -695,11 +701,11 @@ councilRouter.get('/meeting/:id/transcript', async (req, res) => {
     res.json({ id: m.id, agenda: m.agenda, participants: m.participants, phase: m.phase, turnsUsed: m.turns_used,
       transcript: m.transcript, report: m.report || null,
       projection, transcriptSha256: transcriptSha256Hex(projection), canon: 'council-jcs-1.0' });
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 councilRouter.get('/meetings', async (req, res) => {
   try { const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' }); res.json({ meetings: await listMeetings(20) }); }
-  catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  catch (e) { internalError(res, e); }
 });
 // Per-actor meeting history (Arke 2026-06-09): app History view + per-agent "Download knowledge".
 // Auth: the actor's own bridge secret, or the owner token. A member may only list its own meetings.
@@ -710,7 +716,7 @@ councilRouter.get('/council/meetings', async (req, res) => {
     if (!actor) return res.status(400).json({ error: 'actor_required', message: 'query param ?actor=<name> required' });
     if (!a.admin && a.actor !== actor) return res.status(403).json({ error: 'forbidden', message: 'a member may only list its own meetings' });
     res.json({ actor, meetings: await listMeetingsForActor(actor) });
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 
 // ---------- Brain-upload pipeline (docs/CONTRACT_DELTAS_2.0.md a/d/e, 2026-06-08) ----------
@@ -741,7 +747,7 @@ councilRouter.post('/bridge/brain/init', requireContract2, async (req, res) => {
     const uploadId = crypto.randomUUID();
     await createBrainUpload(uploadId, a.actor, String(brainId || ''), Number(totalBytes) || 0, Number(chunkSize) || 0, String(sha256), manifest, k);
     res.json({ uploadId, kind: k, received: [] });
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 councilRouter.put('/bridge/brain/:uploadId/chunk/:idx', requireContract2, async (req, res) => {
   try {
@@ -760,7 +766,7 @@ councilRouter.put('/bridge/brain/:uploadId/chunk/:idx', requireContract2, async 
     res.json({ received, remaining: remainingIdx(up.manifest || [], received) });
   } catch (e) {
     if ((e as Error).message === 'chunk_too_large') return res.status(413).json({ error: 'chunk_too_large' });
-    res.status(500).json({ error: (e as Error).message });
+    internalError(res, e);
   }
 });
 async function brainProbe(req: Request, res: Response) {
@@ -796,14 +802,14 @@ councilRouter.post('/bridge/brain/:uploadId/commit', requireContract2, async (re
     const brainVersion = `${a.actor}@sha256:${whole}`;
     await commitBrainV2(a.actor, String(up.brain_id || ''), brainVersion, whole, buf.length, buf, c, up.kind || 'corpus');
     res.json({ brainVersion, kind: up.kind || 'corpus', sha256: whole, bytes: buf.length });
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 councilRouter.get('/bridge/brain-meta/:actor', async (req, res) => {
   try {
     const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
     const meta = await getBrainV2Meta(req.params.actor, String(req.query.kind || 'corpus')); if (!meta) return res.status(404).json({ error: 'no_brain' });
     res.json(meta);
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 // Cross-read. ?kind=pack|corpus, default corpus (documented for Arke 2026-06-09; contract answer 3).
 councilRouter.get('/bridge/brain-content/:actor', async (req, res) => {
@@ -814,7 +820,7 @@ councilRouter.get('/bridge/brain-content/:actor', async (req, res) => {
     if (!a.admin && a.actor !== req.params.actor && !scope.includes('code')) return res.status(403).json({ error: 'consent_scope_denied' });
     res.setHeader('x-brain-version', got.meta.brain_version || '');
     res.json({ ...got.meta, contentBase64: got.content.toString('base64') });
-  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  } catch (e) { internalError(res, e); }
 });
 
 export function startScheduler(): void {

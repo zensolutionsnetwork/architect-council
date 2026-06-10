@@ -10,13 +10,27 @@ import { bridgeRouter, councilRouter, selfRegister, startScheduler } from './cou
 import { rateLimit } from './ratelimit.js';
 
 const app = express();
+app.disable('x-powered-by'); // never advertise the framework/version (fingerprinting).
 app.set('trust proxy', 1); // Railway terminates TLS upstream; trust one proxy hop so req.ip is the client.
+// Security headers on every response (defence in depth; cheap and unconditional). The API serves
+// JSON only and the site is same-origin + SITE_LIVE-gated, so the policy is deliberately strict.
 app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('X-Frame-Options', 'DENY'); // no embedding anywhere -> clickjacking impossible.
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-origin'); // no cross-origin reads of our responses.
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()');
+  // HSTS: force HTTPS for 2y incl. subdomains + preload (Railway serves TLS; site is HTTPS-only).
+  res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+  // CSP: lock the document surface. The console/admin pages are self-contained (no third-party CDNs).
+  res.setHeader('Content-Security-Policy',
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; " +
+    "connect-src 'self' https://oauth2.googleapis.com https://accounts.google.com; " +
+    "frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'");
   next();
 });
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '1mb' })); // JSON cap (backlog writes can be ~200KB); brain chunks are raw octet-stream, capped separately.
 // Per-IP rate limit on the API surface (contract §7); health probe exempt so Railway never trips it.
 app.use('/api', rateLimit({ windowMs: 60_000, max: 240, skip: (req) => req.path === '/health' }));
 
@@ -34,12 +48,21 @@ app.use('/api', councilRouter);
 // Set SITE_LIVE=true in Railway env to open the site. Until then every HTML route
 // returns 404 so the concept stays off the public web.
 const siteLive = process.env.SITE_LIVE === 'true';
-app.get('/', (_req, res) =>
-  siteLive ? res.sendFile(path.join(publicDir, 'index.html')) : res.status(404).end());
-app.get('/console', (_req, res) =>
-  siteLive ? res.sendFile(path.join(publicDir, 'console.html')) : res.status(404).end());
-app.get('/admin', (_req, res) =>
-  siteLive ? res.sendFile(path.join(publicDir, 'admin.html')) : res.status(404).end());
+// console.html / admin.html ship self-contained inline scripts, so their CSP must permit
+// 'unsafe-inline' for script. These are OWNER-ONLY dashboards behind auth (no untrusted input is
+// rendered into them), so the residual risk is low. FOLLOW-UP before public launch: externalize the
+// inline scripts to .js files and drop 'unsafe-inline' so every page gets the strict API-grade CSP.
+const PAGE_CSP =
+  "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; " +
+  "connect-src 'self' https://oauth2.googleapis.com https://accounts.google.com; " +
+  "frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'";
+const sendPage = (res: express.Response, file: string) => {
+  res.setHeader('Content-Security-Policy', PAGE_CSP);
+  res.sendFile(path.join(publicDir, file));
+};
+app.get('/', (_req, res) => siteLive ? sendPage(res, 'index.html') : res.status(404).end());
+app.get('/console', (_req, res) => siteLive ? sendPage(res, 'console.html') : res.status(404).end());
+app.get('/admin', (_req, res) => siteLive ? sendPage(res, 'admin.html') : res.status(404).end());
 
 const port = Number(process.env.PORT) || 8080;
 app.listen(port, async () => {
