@@ -68,9 +68,13 @@ noted for cleanup.
    /api/council/meeting/:id/run-autonomous` + `GET .../cost` (camelCase ledger; charge
    owner-report synthesis to it). **Build + FIRST RUN SUPERVISED with Mathieu — it spends money.**
    (NB: the on-boot stale-close lands here also fixes the stale-'rounds' accumulation below.)
-2. **Owner-auth brain upload** (§11.1): `/api/bridge/brain/*` accepts `x-admin-token` as alt
-   auth, attributed to consent-manifest actor (app refresh path).
-3. **Nova + Logos full-brain commits** (pack + corpus) — both instructed; awaiting signals.
+2. ~~**Owner-auth brain upload** (§11.1)~~ **DONE 2026-06-10 (`00fb979`)** — `/api/bridge/brain/init|chunk|probe|commit`
+   accept `x-admin-token` on behalf of `body.actor` (verified member), attributed to that actor;
+   consent.actor must match the upload target; member path unchanged. Smoke-verified incl. negatives
+   (no-actor 400, unknown-actor 404). App owner-refresh path is now unblocked. NB: smoke left a tiny
+   55-byte test `architect-council/pack` brain — harmless, overwritten on the first real prep.
+3. **Nova + Logos full-brain commits** (pack + corpus). **Nova corpus COMMITTED** (`nova@sha256:374a33aa…`)
+   — pack still pending. Logos: nothing yet. Both still need their PACK (the cached per-turn voice context).
 4. **Supervised autonomous rehearsal** — ledger vs §2 envelope ($1.30–2/day), then first real
    daily meeting. `COUNCIL_V2_LIVE` flip stays Mathieu's, decoupled.
 
