@@ -99,11 +99,11 @@ what you build.`;
 
 type Msg = { role: 'user' | 'assistant'; content: string };
 
-async function callClaude(system: string, messages: Msg[], maxTokens: number): Promise<string> {
+async function callClaude(system: string, messages: Msg[], maxTokens: number, model?: string): Promise<string> {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': CHAT_API_KEY(), 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: MODEL(), max_tokens: maxTokens, system, messages: messages.length ? messages : [{ role: 'user', content: '(start)' }] }),
+    body: JSON.stringify({ model: model || MODEL(), max_tokens: maxTokens, system, messages: messages.length ? messages : [{ role: 'user', content: '(start)' }] }),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data: any = await res.json();
@@ -157,6 +157,22 @@ export async function extractTakeaways(transcript: { speaker: string; text: stri
   const convo = transcript.map((t) => `[${t.speaker}] ${t.text}`).join('\n').slice(-24000);
   try { return (await callClaude(sys, [{ role: 'user', content: convo }], 900)) || '(no takeaways)'; }
   catch (e) { return `(takeaways error: ${(e as Error).message})`; }
+}
+
+/** Owner report at meeting close (ROADMAP Layer 0; Fable review 2.2; seed of the Layer-1 Manager).
+ *  One bounded Sonnet call — the cheap synthesis turn, never the meeting's voice model. */
+export async function synthesizeOwnerReport(agenda: string, turns: { actor: string; text: string }[]): Promise<string> {
+  if (!CHAT_API_KEY() || !turns.length) return '';
+  const sys = 'You write the OWNER REPORT of a daily Architects Council meeting for Mathieu, the human owner. '
+    + 'Exactly four sections, tight markdown, no preamble: '
+    + '"## 1. Code review" — what was improved, incl. cross-suggestions made/adopted between agents; '
+    + '"## 2. Direction" — consensus on company direction vs the owner’s instructions to each project (flag any divergence plainly); '
+    + '"## 3. Friction" — friction encountered + how it was resolved, and which fixes the other agents should adopt; '
+    + '"## 4. Flags" — anything else worth the owner’s attention (cost, security, ethics, risks, opportunities). '
+    + 'Be concrete and faithful to the transcript; if a section has nothing, say "Nothing to report." Keep the whole report under 400 words.';
+  const convo = `Agenda: ${agenda || '(none)'}\n\n` + turns.map((t) => `[${t.actor}] ${t.text}`).join('\n').slice(-24000);
+  try { return (await callClaude(sys, [{ role: 'user', content: convo }], 1200, 'claude-sonnet-4-6')) || ''; }
+  catch (e) { return `(owner-report error: ${(e as Error).message})`; }
 }
 
 /** The architect-council brain/handoff snapshot it shares with peers. */

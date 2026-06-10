@@ -6,7 +6,7 @@
  */
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import crypto from 'node:crypto';
-import { architectReply, reviewProposal, councilBrain, summarize, extractTakeaways } from './architect.js';
+import { architectReply, reviewProposal, councilBrain, summarize, extractTakeaways, synthesizeOwnerReport } from './architect.js';
 import { projectTranscript, transcriptSha256Hex } from './protocol.js';
 import {
   upsertMember, listMembers, getMember, getBrain, setBrain,
@@ -15,7 +15,7 @@ import {
   queueOutbox, pendingOutbox, markOutboxDelivered, ackOutbox, sweepOutbox,
   getBacklog, setBacklog, setConvoArchived, setConvoV2Meta, getRegistryVersion,
   queueEnvTask, listEnvTasks, getEnvTask, claimEnvTask, reportEnvTask, sweepEnvTasks,
-  createMeeting, getMeeting, updateMeeting, listMeetings, listMeetingsForActor,
+  createMeeting, getMeeting, updateMeeting, listMeetings, listMeetingsForActor, setMeetingOwnerReport,
   createBrainUpload, getBrainUpload, putBrainChunk, brainReceived, assembleBrain,
   commitBrainV2, getBrainV2Meta, getBrainV2Content, sweepBrainUploads,
 } from './store.js';
@@ -620,7 +620,33 @@ councilRouter.post('/meeting/:id/close', async (req, res) => {
         if (su) { storyCount++; try { await queueEnvTask('hub', 'logos', 'story', clip('storyUpdate from ' + t.actor + ' (meeting ' + m.id + ')', 300), { text: String(su), actor: t.actor, meetingId: m.id }, 'normal'); } catch { /* best effort */ } }
       }
     }
-    res.json({ ok: true, dryRun: !!m.dry_run, storyUpdatesRouted: storyCount });
+    // OWNER REPORT (ROADMAP Layer 0 / Fable review 2.2): on every REAL close, synthesize the 4-point
+    // report for Mathieu (code review, direction, friction, flags) with one bounded Sonnet call.
+    // Best-effort: a synthesis failure never fails the close. Dry-run rooms never spend.
+    let ownerReportGenerated = false;
+    if (!m.dry_run) {
+      const spoken = (m.transcript || [])
+        .filter((t: any) => t && t.kind === 'speak' && t.payload)
+        .map((t: any) => ({ actor: String(t.actor), text: clip(JSON.stringify(t.payload), 4000) }));
+      if (spoken.length) {
+        try {
+          const report = await synthesizeOwnerReport(m.agenda || '', spoken);
+          if (report && !report.startsWith('(owner-report error')) {
+            await setMeetingOwnerReport(m.id, clip(report, 16000));
+            ownerReportGenerated = true;
+          }
+        } catch { /* best effort */ }
+      }
+    }
+    res.json({ ok: true, dryRun: !!m.dry_run, storyUpdatesRouted: storyCount, ownerReport: ownerReportGenerated });
+  } catch (e) { res.status(500).json({ error: (e as Error).message }); }
+});
+// Owner report readback — owner-gated (it is Mathieu's report; members read the transcript instead).
+councilRouter.get('/meeting/:id/report', async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a || !a.admin) return res.status(401).json({ error: 'unauthorized' });
+    const m = await getMeeting(req.params.id); if (!m) return res.status(404).json({ error: 'not_found' });
+    res.json({ id: m.id, agenda: m.agenda, closedAt: m.closed_at || null, ownerReport: m.owner_report || null });
   } catch (e) { res.status(500).json({ error: (e as Error).message }); }
 });
 councilRouter.get('/meeting/:id/transcript', async (req, res) => {

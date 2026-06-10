@@ -103,6 +103,8 @@ export async function initDb(): Promise<void> {
   await q.query(`ALTER TABLE meetings ADD COLUMN IF NOT EXISTS roles jsonb`);
   await q.query(`ALTER TABLE meetings ADD COLUMN IF NOT EXISTS dry_run boolean NOT NULL DEFAULT false`);
   await q.query(`ALTER TABLE meetings ADD COLUMN IF NOT EXISTS brain_versions jsonb`);
+  // Owner report (ROADMAP Layer 0 / Fable review 2.2): 4-point synthesis to Mathieu at meeting close.
+  await q.query(`ALTER TABLE meetings ADD COLUMN IF NOT EXISTS owner_report text`);
   // Brain-upload pipeline (docs/CONTRACT_DELTAS_2.0.md a/e): resumable content-addressed chunk upload.
   await q.query(`CREATE TABLE IF NOT EXISTS brain_uploads (
     upload_id text PRIMARY KEY, actor text NOT NULL, brain_id text, total_bytes bigint, chunk_size int,
@@ -323,10 +325,11 @@ export async function createMeeting(id: string, agenda: string, participants: st
     [id, String(agenda || '').slice(0, 8000), JSON.stringify(participants), turnCap, phase, openedBy, turnTimeoutSec > 0 ? turnTimeoutSec : 600, JSON.stringify(roles || {}), !!dryRun, JSON.stringify(brainVersions || {})]);
 }
 export async function getMeeting(id: string): Promise<any | null> {
-  const { rows } = await db().query<any>(`SELECT id, agenda, participants, turn_cap, phase, turn_index, round, turns_used, transcript, report, opened_by, turn_timeout_sec, roles, dry_run, brain_versions,
+  const { rows } = await db().query<any>(`SELECT id, agenda, participants, turn_cap, phase, turn_index, round, turns_used, transcript, report, opened_by, turn_timeout_sec, roles, dry_run, brain_versions, owner_report,
     to_char(turn_started_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS turn_started_at,
     to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
-    to_char(updated_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS updated_at FROM meetings WHERE id=$1`, [id]);
+    to_char(updated_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS updated_at,
+    to_char(closed_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS closed_at FROM meetings WHERE id=$1`, [id]);
   if (!rows[0]) return null;
   const r = rows[0];
   return { ...r, participants: Array.isArray(r.participants) ? r.participants : [], transcript: Array.isArray(r.transcript) ? r.transcript : [],
@@ -340,6 +343,9 @@ export async function updateMeeting(id: string, patch: { phase?: string; turn_in
     turn_started_at=CASE WHEN $9 THEN now() ELSE turn_started_at END, updated_at=now() WHERE id=$1`,
     [id, patch.phase ?? null, patch.turn_index ?? null, patch.round ?? null, patch.turns_used ?? null,
      patch.transcript ? JSON.stringify(patch.transcript) : null, patch.report ?? null, patch.closed === true, patch.touchTurn === true]);
+}
+export async function setMeetingOwnerReport(id: string, report: string): Promise<void> {
+  await db().query(`UPDATE meetings SET owner_report=$2, updated_at=now() WHERE id=$1`, [id, report]);
 }
 export async function listMeetings(limit = 20): Promise<any[]> {
   const { rows } = await db().query<any>(`SELECT id, agenda, phase, participants, turns_used, turn_cap,
