@@ -681,6 +681,24 @@ councilRouter.get('/council/backlogs', async (req, res) => {
     res.json({ backlogs: await getAgentBacklogs() });
   } catch (e) { internalError(res, e); }
 });
+// Singular composed alias for Arke's app panel (P1 #6, 2026-06-10): owner-gated, returns
+// { sections:[{ actor, done[], planned[], updatedAt }] }. Each agent row's content jsonb is
+// tolerant — done/planned default to [], and a legacy single-text blob surfaces as one note line.
+councilRouter.get('/council/backlog', requireOwner, async (_req, res) => {
+  try {
+    const rows = await getAgentBacklogs();
+    const arr = (v: any) => (Array.isArray(v) ? v.map((x) => (typeof x === 'string' ? x : JSON.stringify(x))) : []);
+    const sections = rows.map((r: any) => {
+      const c = (r.content && typeof r.content === 'object') ? r.content : {};
+      const done = arr(c.done);
+      const planned = arr(c.planned);
+      // Legacy/fallback: a row that only carried free text (e.g. migrated single-row) → expose it as one done line.
+      if (!done.length && !planned.length && typeof c.text === 'string' && c.text.trim()) done.push(c.text.trim().slice(0, 4000));
+      return { actor: r.actor, done, planned, updatedAt: r.updatedAt, updatedBy: r.updatedBy };
+    });
+    res.json({ sections });
+  } catch (e) { internalError(res, e); }
+});
 councilRouter.post('/council/backlog/agent', async (req, res) => {
   try {
     const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
