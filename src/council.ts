@@ -6,9 +6,9 @@
  */
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import crypto from 'node:crypto';
-import { architectReply, reviewProposal, councilBrain, summarize, extractTakeaways, synthesizeOwnerReport } from './architect.js';
+import { architectReply, reviewProposal, councilBrain, summarize, extractTakeaways, synthesizeOwnerReport, OWNER_REPORT_MODEL } from './architect.js';
 import { runVoiceLoop, isVoiceRunning } from './voiceloop.js';
-import { capsFromEnv, dailyBudgetExhausted, emptyTotals } from './cost.js';
+import { capsFromEnv, dailyBudgetExhausted, emptyTotals, addUsage } from './cost.js';
 import { projectTranscript, transcriptSha256Hex } from './protocol.js';
 import {
   upsertMember, listMembers, getMember, getBrain, setBrain,
@@ -639,10 +639,17 @@ councilRouter.post('/meeting/:id/close', async (req, res) => {
         .map((t: any) => ({ actor: String(t.actor), text: clip(JSON.stringify(t.payload), 4000) }));
       if (spoken.length) {
         try {
-          const report = await synthesizeOwnerReport(m.agenda || '', spoken);
+          const { report, usage } = await synthesizeOwnerReport(m.agenda || '', spoken);
           if (report && !report.startsWith('(owner-report error')) {
             await setMeetingOwnerReport(m.id, clip(report, 16000));
             ownerReportGenerated = true;
+          }
+          // Charge the synthesis call to the meeting cost ledger (ledger accuracy for the §2 envelope).
+          if (usage && (usage.input_tokens || usage.output_tokens)) {
+            const led = (m.cost_ledger && m.cost_ledger.total) ? m.cost_ledger : { total: emptyTotals(), perAgent: {} };
+            led.total = addUsage(led.total, OWNER_REPORT_MODEL, usage);
+            led.perAgent['owner-report'] = addUsage(led.perAgent['owner-report'] || emptyTotals(), OWNER_REPORT_MODEL, usage);
+            await setMeetingLedger(m.id, led);
           }
         } catch { /* best effort */ }
       }

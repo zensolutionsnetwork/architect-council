@@ -178,8 +178,9 @@ export async function extractTakeaways(transcript: { speaker: string; text: stri
 
 /** Owner report at meeting close (ROADMAP Layer 0; Fable review 2.2; seed of the Layer-1 Manager).
  *  One bounded Sonnet call — the cheap synthesis turn, never the meeting's voice model. */
-export async function synthesizeOwnerReport(agenda: string, turns: { actor: string; text: string }[]): Promise<string> {
-  if (!CHAT_API_KEY() || !turns.length) return '';
+export const OWNER_REPORT_MODEL = 'claude-sonnet-4-6';
+export async function synthesizeOwnerReport(agenda: string, turns: { actor: string; text: string }[]): Promise<{ report: string; usage: any }> {
+  if (!CHAT_API_KEY() || !turns.length) return { report: '', usage: {} };
   const sys = 'You write the OWNER REPORT of a daily Architects Council meeting for Mathieu, the human owner. '
     + 'Exactly four sections, tight markdown, no preamble: '
     + '"## 1. Code review" — what was improved, incl. cross-suggestions made/adopted between agents; '
@@ -188,8 +189,9 @@ export async function synthesizeOwnerReport(agenda: string, turns: { actor: stri
     + '"## 4. Flags" — anything else worth the owner’s attention (cost, security, ethics, risks, opportunities). '
     + 'Be concrete and faithful to the transcript; if a section has nothing, say "Nothing to report." Keep the whole report under 400 words.';
   const convo = `Agenda: ${agenda || '(none)'}\n\n` + turns.map((t) => `[${t.actor}] ${t.text}`).join('\n').slice(-24000);
-  try { return (await callClaude(sys, [{ role: 'user', content: convo }], 1200, 'claude-sonnet-4-6')) || ''; }
-  catch (e) { return `(owner-report error: ${(e as Error).message})`; }
+  // Charge this synthesis call to the meeting ledger (caller folds usage). One bounded Sonnet call.
+  try { const out = await callClaudeUsage([{ type: 'text', text: sys }], [{ role: 'user', content: convo }], 1200, OWNER_REPORT_MODEL); return { report: out.text || '', usage: out.usage || {} }; }
+  catch (e) { return { report: `(owner-report error: ${(e as Error).message})`, usage: {} }; }
 }
 
 /** The architect-council brain/handoff snapshot it shares with peers. */
