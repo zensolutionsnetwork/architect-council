@@ -696,10 +696,12 @@ councilRouter.post('/council/meeting/:id/run-autonomous', requireOwner, async (r
     if (m.dry_run) return res.status(400).json({ error: 'dry_run_meeting', message: 'use owner-drive for dryRun tests; run-autonomous is for real meetings' });
     if (isVoiceRunning(m.id) || m.voice_running) return res.status(409).json({ error: 'already_running' });
     const caps = capsFromEnv(process.env);
+    // Owner directive 2026-06-11: the daily USD budget is REPORT-ONLY, never a blocker. Spend is
+    // surfaced here and on /cost; the per-meeting token ceiling + turn cap remain the runaway rails.
     const spent = await usdSpentTodayUtc();
-    if (dailyBudgetExhausted(spent, caps)) return res.status(503).json({ error: 'budget_exhausted', spentUsd: spent, dailyBudgetUsd: caps.dailyBudgetUsd });
+    const budgetNote = dailyBudgetExhausted(spent, caps) ? 'daily_budget_passed_reporting_only' : null;
     runVoiceLoop(m.id).catch(() => { setVoiceRunning(m.id, false, 'loop_error').catch(() => {}); }); // fire-and-forget
-    res.status(202).json({ ok: true, started: true, meetingId: m.id, model: process.env.CHAT_MODEL || 'claude-opus-4-8', caps });
+    res.status(202).json({ ok: true, started: true, meetingId: m.id, model: process.env.CHAT_MODEL || 'claude-opus-4-8', caps, spentTodayUsd: spent, budgetNote });
   } catch (e) { internalError(res, e); }
 });
 // Cost ledger for the cost panel (camelCase, contract-ratified shape).
@@ -709,7 +711,8 @@ councilRouter.get('/council/meeting/:id/cost', requireOwner, async (req, res) =>
     const led = (m.cost_ledger && m.cost_ledger.total) ? m.cost_ledger : { total: emptyTotals(), perAgent: {} };
     const t = led.total;
     const perAgent = Object.entries(led.perAgent || {}).map(([actor, v]: any) => ({ actor, usd: v.usd, inputTokens: v.inputTokens, outputTokens: v.outputTokens, cacheReadTokens: v.cacheReadTokens, totalTokens: v.totalTokens }));
-    res.json({ id: m.id, totalUsd: t.usd, inputTokens: t.inputTokens, outputTokens: t.outputTokens, cacheReadTokens: t.cacheReadTokens, totalTokens: t.totalTokens, perAgent, endedReason: m.ended_reason || null, voiceRunning: !!m.voice_running });
+    const spentTodayUsd = await usdSpentTodayUtc(); // owner directive 2026-06-11: always REPORT total spend
+    res.json({ id: m.id, totalUsd: t.usd, spentTodayUsd, inputTokens: t.inputTokens, outputTokens: t.outputTokens, cacheReadTokens: t.cacheReadTokens, totalTokens: t.totalTokens, perAgent, endedReason: m.ended_reason || null, voiceRunning: !!m.voice_running });
   } catch (e) { internalError(res, e); }
 });
 // Per-agent living backlog (contract answer 4, ratified 2026-06-09): a write replaces ONLY the writer's
