@@ -84,8 +84,11 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
    Primitives + tests already built (`46d9b16`). Then first acting node = daily code-review agent.
 8. Managed Agents Layer-2 runtime eval (Arke, post-rehearsal): pilot ONE agent, self-hosted sandbox,
    hard daily budget cap.
-9. Layer-1 Manager AI design (grows from the owner report). Layers 2–3 captured.
-10. Hygiene tail: agenda-in-hub proposal · directive-channel shape ratification · UTC-budget note.
+9. Layer-1 Manager AI design — **DRAFT SHIPPED 2026-06-10** (`docs/LAYER1_MANAGER_SPEC.md`:
+   adoption tracker · recurring-flag detector · agenda seed · weekly rollup; 4 ratification Qs).
+   Implement after ratification + first real reports. Layers 2–3 captured.
+10. Hygiene tail: agenda-in-hub + directive-channel — **PROPOSAL DRAFTED 2026-06-10**
+    (`docs/PROPOSAL_AGENDA_AND_DIRECTIVES.md`, ratify then Kairos implements). UTC-budget note open.
 
 ## WAITING ON
 - **Mathieu**: supervised voice-loop run · give Arke the new admin token out-of-band (his app's owner

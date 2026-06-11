@@ -45,10 +45,13 @@ Triage 2026-06-09 (Fable review): v1-era items archived below; live items kept o
 - [ ] **Key-rotation architecture** (`/api/registry/rotate`) — owed since session 1; now urgent-
       adjacent: member secrets were relayed in plaintext during onboarding and should rotate
       once Nova + Logos confirm their env storage (Fable review 2.4).
-- [ ] **Shared agenda in the hub** — POST /api/council/agenda + table so members queue topics
-      machine-to-machine instead of local files (this file becomes a mirror). Still wanted.
-- [ ] **Directive channel** — now specified as env-task kind `directive` (voice spec §15);
-      ratify the payload shape with all four.
+- [ ] **Shared agenda in the hub + directive channel — RATIFY** — concrete shapes drafted in
+      `docs/PROPOSAL_AGENDA_AND_DIRECTIVES.md` (agenda table + routes; env-task kind `directive`
+      owner-only with ack lifecycle). Approve as contract 2.x additive minors; Kairos implements.
+- [ ] **Layer-1 Manager design v0 — RATIFY** — `docs/LAYER1_MANAGER_SPEC.md`: adoption tracker,
+      recurring-flag detector, agenda seed, weekly owner rollup; bounded calls on the existing
+      ledger; 4 open questions at the end (agenda-seed shape · corpora vs backlog reads · digest
+      cadence · stale-dispute handling).
 - [ ] **"What is the hub causing its members?"** — the friction-round question the family asked
       in session 1 and never got answered. Ask it in the first real meeting.
 - [ ] **Logos's living backlog** on biblevoice.net (same GET/POST model) — still owed by Logos.
