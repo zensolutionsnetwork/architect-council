@@ -37,8 +37,8 @@ or ask Mathieu first.
   card + corpus-contract implemented against the canonical doc (byte-exact, sha verified) +
   real silent-swallow audit done. My follow-ups: `turnCap` alias in meeting state (`2dc8d35`)
   so his `st.turnCap` works as-is; board descope live (`832658c`, BOARD_ACTORS = arke+kairos);
-  gzip stays OFF (ratified). **Mathieu pending: set `COUNCIL_AGENT_ID` on Arke's machine**
-  (his packager granted_by fail-closes without it). Replied `bb33f06f`; inbox 0 open.
+  gzip stays OFF (ratified). `COUNCIL_AGENT_ID` set on Arke's machine by Mathieu (confirmed
+  this session; Arke told to restart to pick it up, `d5678544`). Replied `bb33f06f`; inbox 0 open.
 - **TERMINATION FIXES SHIPPED (`761c4e2`, CI green on `8e401c7`, prod healthy)** — all three
   agreed fixes in `src/voiceloop.ts`: (1) TURN PROTOCOL block in the cached persona ("done =
   your TURN, not your homework" + "propose, never claim execution" + "never assume sibling
