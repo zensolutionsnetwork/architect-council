@@ -542,7 +542,11 @@ councilRouter.post('/meeting/open', async (req, res) => {
     const a = await resolveActor(req); if (!a || !a.admin) return res.status(401).json({ error: 'unauthorized' });
     const b = req.body || {};
     const participants = Array.isArray(b.participants) && b.participants.length ? Array.from(new Set(b.participants.map((x: any) => clip(x, 60)))) : MEETING_DEFAULT.slice();
-    const cap = Number(b.turnCap) > 0 ? Math.min(Number(b.turnCap), 1000) : 150;
+    // Default hard cap 50 turns (owner directive 2026-06-11) — overridable per meeting from the
+    // app via body.turnCap, or globally via MEETING_TURN_CAP_DEFAULT (read at call time, not module top).
+    const envDefault = Number(process.env.MEETING_TURN_CAP_DEFAULT);
+    const capDefault = Number.isFinite(envDefault) && envDefault > 0 ? Math.min(envDefault, 1000) : 50;
+    const cap = Number(b.turnCap) > 0 ? Math.min(Number(b.turnCap), 1000) : capDefault;
     const tto = Number(b.turnTimeoutSec) > 0 ? Math.min(Number(b.turnTimeoutSec), 86400) : 600;
     // Rooms (Arke 2026-06-09): per-actor roles; validate against participants, at most one facilitator.
     const ROLE_SET = ['listen', 'facilitate', 'speak', 'teach', 'learn', 'review'];

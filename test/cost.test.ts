@@ -3,7 +3,7 @@ import {
   PRICES, worstPrice, priceFor, usdForUsage, totalTokens, addUsage, emptyTotals,
   capsFromEnv, DEFAULT_CAPS, meetingTokenCeilingHit, dailyBudgetExhausted, utcDayKey,
 } from '../src/cost.js';
-import { nearIdentical } from '../src/voiceloop.js';
+import { nearIdentical, turnBudgetNote } from '../src/voiceloop.js';
 
 let fail = false;
 const bad = (m: string) => { fail = true; console.error('FAIL: ' + m); };
@@ -68,6 +68,18 @@ isFalse('repeat: different content not flagged', nearIdentical(
   'Round one friction: the chunked writer truncated three files at the 4k boundary.',
   'Closing: tomorrow I propose wiring the hierarchy module into a consent-gated endpoint.'));
 isFalse('repeat: empty never flagged', nearIdentical('', 'anything'));
+
+// 11. Turn budget note (owner directive 2026-06-11): every voice sees the hard cap + remaining
+//     on every turn, and gets an escalating wrap-up order as the budget nears exhaustion.
+const n1 = turnBudgetNote(50, 10, 4);
+isTrue('budget: states cap', n1.includes('HARD CAP of 50'));
+isTrue('budget: states remaining', n1.includes('40 remaining'));
+isFalse('budget: no early wrap-up', n1.includes('WRAP UP') || n1.includes('FINAL TURN'));
+const n2 = turnBudgetNote(50, 43, 4); // 7 remaining <= 2 rounds
+isTrue('budget: wrap-up zone', n2.includes('WRAP UP'));
+const n3 = turnBudgetNote(50, 47, 4); // 3 remaining <= 1 round
+isTrue('budget: final-turn zone', n3.includes('FINAL TURN'));
+isTrue('budget: remaining never negative', turnBudgetNote(50, 60, 4).includes('0 remaining'));
 
 if (fail) { console.error('cost/caps: FAIL'); process.exit(1); }
 console.log('autonomous-voice cost/caps: PASS');

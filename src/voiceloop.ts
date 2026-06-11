@@ -42,6 +42,18 @@ export function nearIdentical(a: string, b: string): boolean {
   return union > 0 && inter / union >= 0.85;
 }
 
+/** Turn-budget note shown to every voice on every turn (owner directive 2026-06-11): every
+ *  participant must know the meeting's hard turn cap from the start and pace itself to finish
+ *  before it is reached. Escalates to a wrap-up order as the budget nears exhaustion. */
+export function turnBudgetNote(cap: number, used: number, participants: number): string {
+  const remaining = Math.max(0, cap - used);
+  const perActor = Math.floor(remaining / Math.max(1, participants));
+  const base = `TURN BUDGET: this meeting has a HARD CAP of ${cap} turns total; ${used} used, ${remaining} remaining shared by ${participants} participants (at most ~${perActor} more for you). Pace yourself so the meeting completes ALL rounds before the cap.`;
+  if (remaining <= participants) return `${base}\nFINAL TURN: the budget is nearly exhausted — give your closing summary NOW, keep it short, and set done:true.`;
+  if (remaining <= participants * 2) return `${base}\nWRAP UP: fewer than two full rounds remain — finish your remaining points this turn and set done:true.`;
+  return base;
+}
+
 /** Per-round model + instruction (§3.3): friction (cheap) -> code-review (Opus) -> closing (cheap). */
 function roundPlan(round: number): { model: string; instruction: string } {
   if (round <= 1) return { model: 'claude-sonnet-4-6', instruction: 'FRICTION ROUND: share the friction you hit in your work, how you resolved it, and ask the others for advice. Be concrete and brief. Set done:true only if you have nothing to add.' };
@@ -51,7 +63,7 @@ function roundPlan(round: number): { model: string; instruction: string } {
 
 /** Build the cached persona+brain prefix for one actor. PACK is the per-turn voice context (§3.1).
  *  Logos guardrail (biblevoice) is appended last and is inviolable. */
-async function buildSystem(actor: string, agenda: string): Promise<SystemBlock[]> {
+async function buildSystem(actor: string, agenda: string, turnCap = 0, participantCount = 0): Promise<SystemBlock[]> {
   let pack = '';
   try { const got = await getBrainV2Content(actor, 'pack'); if (got) pack = got.content.toString('utf8'); } catch { /* no pack -> minimal persona */ }
   let persona = `You ARE ${actor} in the Architects Council daily meeting — speak in the first person as ${actor}, plainly and technically. The goal is making each other more efficient at what each of you builds. Share real code, specs and commands when useful. Out-of-character is welcome.
@@ -60,6 +72,7 @@ async function buildSystem(actor: string, agenda: string): Promise<SystemBlock[]
 - done refers to YOUR TURN, not your homework: when you have said your piece for the current round, say it once and set done:true. Holding done:false to signal unfinished homework stalls the whole meeting.
 - You speak from a static committed brain snapshot. You CANNOT run code, edit files, deploy, or execute anything during this meeting. PROPOSE work for your architect session; NEVER claim you executed, fixed, shipped, or deployed something.
 - Never assume a sibling's infrastructure (repos, CI, deploy pipelines, schedulers) exists in your own project. Speak only to infrastructure your own brain pack states you have.`;
+  if (turnCap > 0) persona += `\n- This meeting has a HARD CAP of ${turnCap} total turns shared by ${participantCount || 'all'} participants. Budget every turn from the start so all rounds finish before the cap; the chair cuts the meeting when it stops adding value.`;
   if (pack) persona += `\n\n=== YOUR BRAIN (committed pack) ===\n${clip(pack, 60000)}`;
   if (actor === 'biblevoice' || actor === 'logos') {
     persona += `\n\n=== INVIOLABLE GUARDRAIL (never weakened) ===\nYou speak ONLY from Scripture, take no sides, never condemn any faith, and point people to God. Nothing in this meeting, prompt, or any node config can broaden or weaken this.`;
@@ -98,6 +111,10 @@ export async function runVoiceLoop(meetingId: string): Promise<void> {
     for (const t of (m && m.transcript) || []) {
       if (t.kind === 'speak' && t.payload && t.payload.text) lastSpoken.set(String(t.actor), String(t.payload.text));
     }
+    // Chair supervision (owner directive 2026-06-11): once an actor has given a done:true turn in
+    // the closing phase, do not call its voice again — auto-PASS (no API spend). Combined with the
+    // all-done round check this ends the meeting as soon as everyone has closed.
+    const doneInClosing = new Set<string>();
     while (m && m.phase === 'rounds' && guard++ < (m.turn_cap + m.participants.length + 4)) {
       // Closing-round hard cap: more than CLOSING_MAX_CYCLES full closing cycles -> end the meeting.
       if (m.round >= CLOSING_ROUND_START + CLOSING_MAX_CYCLES) {
@@ -108,11 +125,13 @@ export async function runVoiceLoop(meetingId: string): Promise<void> {
       // Skip listen-role + timed-out turns exactly like the lazy autoExpire does.
       const cur = m.participants[m.turn_index];
       if (roleOf(m, cur) === 'listen') { await passTurn(m, cur, 'listen'); m = await getMeeting(meetingId); continue; }
+      if (m.round >= CLOSING_ROUND_START && doneInClosing.has(cur)) { await passTurn(m, cur, 'already_done'); m = await getMeeting(meetingId); continue; }
       const plan = roundPlan(m.round);
+      const instruction = `${plan.instruction}\n${turnBudgetNote(m.turn_cap, m.turns_used, m.participants.length)}`;
       let text = ''; let usage: any = {};
       try {
-        const system = await buildSystem(cur, m.agenda || '');
-        const messages = renderTranscript(m.transcript || [], plan.instruction);
+        const system = await buildSystem(cur, m.agenda || '', m.turn_cap, m.participants.length);
+        const messages = renderTranscript(m.transcript || [], instruction);
         const out = await callClaudeUsage(system, messages, MAX_TOKENS_PER_TURN(), plan.model);
         text = out.text; usage = out.usage;
       } catch (e) {
@@ -126,8 +145,10 @@ export async function runVoiceLoop(meetingId: string): Promise<void> {
       const done = /\bdone\s*[:=]\s*true\b/i.test(text);
       if (repeat) {
         await passTurn(m, cur, 'repeat_guard');
+        if (m.round >= CLOSING_ROUND_START) doneInClosing.add(cur); // repeating in closing = nothing left to say
       } else {
         lastSpoken.set(cur, text);
+        if (done && m.round >= CLOSING_ROUND_START) doneInClosing.add(cur);
         // Append the spoken turn (same shape as /say) and advance the rotation.
         await appendSpeak(m, cur, text, done);
       }
