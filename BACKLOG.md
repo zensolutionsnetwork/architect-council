@@ -2,18 +2,18 @@
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to the first real meeting. Last refresh: 2026-06-11 (nightly ritual).
+> Priorities: P0 = path to the first real meeting. Last refresh: 2026-06-11 (nightly ritual, late).
 
 ## STATE AT A GLANCE
-- Remote main `ba026b1`; prod healthy (`/api/health` ok, vault true); working tree clean + in sync.
-- CI: **green** (run #45, 5 gates: secret-scan, route-auth, canon-vector, cost-caps, hierarchy).
-- Inbox: **2 open** (Arke `6a0ad501` COOP-blocks-Google-signin bug; Arke `1a405574` token-closed +
-  retire-single-row-endpoints) — both left for the day session. FYI `a64850fc` report-closed.
+- Remote main `a543559`; prod healthy (`/api/health` ok, vault true); working tree clean + in sync.
+- CI: **green** on `a543559` (5 gates: secret-scan, route-auth, canon-vector, cost-caps, hierarchy).
+- Inbox: **1 open** (Arke `1a405574` token-closed FYI + actionable retire-single-row-endpoints, P1 #6).
+  COOP bug `6a0ad501` **report-closed** (fix shipped — see below).
 - Both P0 hub builds DONE: **voice loop** (deployed DISABLED, money-safe) + **owner-auth brain upload**.
 - **Admin-token chapter CLOSED**: Mathieu installed the rotated value himself; Arke's app verified live
   (ownerConfigured=true, `/api/rooms/backlog` 200, panels lit) — `1a405574`.
-- **`/backlog` live owner board shipped** (`609a1fd`); Google sign-in still blocked by COOP (one-line
-  fix queued, P1 #5 below).
+- **`/backlog` board fully working**: COOP one-liner shipped today (`a543559`) so Google sign-in popup
+  can return the credential; CORP unchanged, page-scoped. Header re-probe + button retry on Arke/Mathieu.
 - Daily rituals armed: `kairos-midnight-backlog-handoff` (00:04) + `kairos-morning-prep` (06:05).
 
 ## DONE (shipped + verified on prod)
@@ -74,6 +74,10 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
 - **Layer-1 Manager spec v0 + agenda-in-hub & directive-channel proposal** (`ba026b1`,
   `docs/LAYER1_MANAGER_SPEC.md`) — both queued for ratification at the first real meeting (also tracked
   P2 #9/#10).
+- **COOP one-liner SHIPPED** (`a543559`, closes Arke `6a0ad501`) — `/backlog` now serves
+  `Cross-Origin-Opener-Policy: same-origin-allow-popups` so the GIS popup can postMessage the Google
+  credential back; CORP `same-origin` unchanged, page-scoped only. CI green; Railway rolled. Header
+  re-probe + Mathieu button retry pending on Arke's side. (Was P1 #5.)
 
 ## P0 — path to the first real meeting (in order)
 1. **Voice loop** — built + deployed DISABLED. **REMAINING: SUPERVISED first run with Mathieu** —
@@ -91,16 +95,12 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
 ## P1 — alongside / right after the loop
 4. `council-prep` / `council-debrief` skills (Arke drafts; Mathieu installs via Settings→Capabilities)
    + directive trigger (env-task kind `directive`, §15).
-5. **COOP one-liner so Google sign-in completes on `/backlog`** (Arke `6a0ad501`, NEW 2026-06-11) —
-   `/backlog` serves `Cross-Origin-Opener-Policy: same-origin` (today's header pass), which severs
-   `window.opener` so the GIS popup can't postMessage the credential back. Fix: serve
-   `Cross-Origin-Opener-Policy: same-origin-allow-popups` (Helmet `crossOriginOpenerPolicy:{policy:
-   'same-origin-allow-popups'}`); leave CORP `same-origin`. Small + safe; verify headers after deploy
-   (Arke re-probes). OAuth client already created (GOOGLE_CLIENT_ID set, button renders).
-6. **Retire legacy single-row backlog endpoints** — **UNBLOCKED 2026-06-11**: Arke confirmed
-   (`1a405574`) his app renders live off owner auth (`/api/rooms/backlog` 200, panels lit). Retire the
-   old single-row `GET/POST /api/council/backlog` path when convenient (per-agent rows are canonical).
-7. Rotate Nova + Logos member secrets once both confirm env storage (transited chat at onboarding).
+5. **Retire legacy single-row backlog endpoints** — **UNBLOCKED** (Arke `1a405574`): his app renders
+   live off owner auth (`/api/rooms/backlog` 200, panels lit). Retire the old single-row
+   `GET/POST /api/council/backlog` path when convenient (per-agent rows are canonical). Safe solo
+   advance — top P1 now that COOP is shipped. NOTE: the `/backlog` board reads the per-agent composed
+   backlog, confirm it doesn't depend on the single-row alias before removing.
+6. Rotate Nova + Logos member secrets once both confirm env storage (transited chat at onboarding).
 
 ## P2 — product arc + hygiene
 0. **Process standardization (STANDING GOAL, owner directive 2026-06-10)** — every member adopts
@@ -121,8 +121,9 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
 ## WAITING ON
 - **Mathieu**: supervised voice-loop run · Nova/Logos pack pushes if doing it from the cockpit ·
   `COUNCIL_V2_LIVE` flip (later) · SN7100 SSD → C: migration. (Admin-token install: ✅ DONE himself.)
-- **Arke**: retire-endpoints one-liner ✅ RECEIVED (`1a405574`, P1 #6 unblocked) · prep/debrief skill
-  drafts · canonical 2.1 schema for hierarchy wiring · Layer-2 eval (post-rehearsal).
+- **Arke**: COOP fix shipped (`a543559`) — Arke to re-probe `/backlog` headers + have Mathieu retry
+  the Google button · retire-endpoints unblocked (`1a405574`, P1 #5) · prep/debrief skill drafts ·
+  canonical 2.1 schema for hierarchy wiring · Layer-2 eval (post-rehearsal).
 - **Nova**: pack brain commit. **Logos**: pack + corpus brain commit + living backlog on biblevoice.net.
 
 ## NOTE FOR THE NEXT SESSION
