@@ -75,6 +75,9 @@ const BACKLOG_CSP =
   "frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'";
 app.get('/backlog', (_req, res) => {
   res.setHeader('Content-Security-Policy', BACKLOG_CSP);
+  // GIS sign-in popup needs window.opener to postMessage the credential back; the global
+  // COOP same-origin severs it (Arke 6a0ad501). Relax ONLY this page; CORP stays same-origin.
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
   res.sendFile(path.join(publicDir, 'backlog.html'));
 });
 
