@@ -26,20 +26,25 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-11 — THE FIRST REAL MEETING RAN, day-session close) — HANDOFF
-- **FIRST AUTONOMOUS COUNCIL MEETING HAPPENED**: meeting `6aef82f6` (07:02Z), 4 voices, 83 turns,
-  $3.35 ($0.75 real meeting + $2.50 loop tax). Turns 0–11 = three EXCELLENT rounds (teachings
-  adopted by Arke). Turns 12–82 = closing round looped ~18× on the done-flag bug until the 800k
-  token cap killed it (caps WORKED). Owner ended via app End-click; `report` null; transcript
-  INTACT + hash-verified `165d43a5…` (83 turns). My old reader read top-level `turns` — WRONG,
-  read `projection.turns`. Meeting is ended; do not reopen.
-- **NEXT SESSION P0 — ship the voice-loop fixes, then supervised meeting #2 (Mathieu present):**
-  in `src/voiceloop.ts` buildPrompt + loop: (1) prompt line "done = your TURN is complete, NOT
-  your homework — give your closing turn once, then done:true"; (2) loop guard: near-identical
-  consecutive turn from same actor → force-advance; closing round hard cap 2 cycles; (3) prompt
-  lines "you speak from a static pack; PROPOSE work, never claim you executed anything; never
-  assume a sibling's infrastructure exists". Agreed with Arke: NO meeting #2 until shipped.
-  **`VOICE_LOOP_ENABLED` is back to false** (flipped after the run) — flip only with Mathieu.
+## Current state (2026-06-11 — meeting #1 DEBRIEFED + termination fixes SHIPPED) — HANDOFF
+- **TERMINATION FIXES SHIPPED (`761c4e2`, CI green on `8e401c7`, prod healthy)** — all three
+  agreed fixes in `src/voiceloop.ts`: (1) TURN PROTOCOL block in the cached persona ("done =
+  your TURN, not your homework" + "propose, never claim execution" + "never assume sibling
+  infra") + closing instruction "give your closing turn ONCE, done:true"; (2) `nearIdentical`
+  repeat guard (Jaccard ≥0.85) → repeated turn becomes auto-PASS `repeat_guard`; closing round
+  hard cap 2 cycles (`closing_cap`); (3) NEW all-done termination — a full round of
+  PASS-or-done:true ends the meeting (voice-loop only; `/say` unchanged). Deeper root cause
+  found in debrief: `done` was recorded but NEVER consumed — even all-done:true would not have
+  ended meeting #1. Repeat-guard tests added to the cost gate. **Meeting #2 UNBLOCKED on code —
+  remaining gate is ONLY the supervised run with Mathieu.** `VOICE_LOOP_ENABLED` stays false.
+- **Debrief + homework DONE (`8e401c7`)**: `council/KAIROS_DEBRIEF_2026-06-11.md` (council
+  standard format) + `docs/corpus-contract.md` (canonical hash boundaries — Arke's
+  fixture-exemption work UNBLOCKED). Family notified via inbox (arke high-prio with fix
+  details; nova+logos with teaching adoptions + pack/brain reminders). Inbox 0 open.
+  `kairos-meeting-debrief` skill packaged — **Mathieu: click Save skill on the card to install**.
+- **Meeting #1 facts (closed, do not reopen)**: `6aef82f6` (07:02Z), 4 voices, 83 turns, $3.35
+  ($0.75 real + $2.50 loop tax); turns 0–11 excellent; caps WORKED; transcript hash-verified
+  `165d43a5…`; `report` null. Read `projection.turns`, never top-level `turns`.
 - **TRUE NAMES (owner directive, DONE)**: actors are `kairos` + `logos` (+arke, nova).
   `architect-council` and `biblevoice` RETIRED (throwaway secrets, "do not seat"). SELF='kairos'
   (`62a697e`). All four brains verified under true names; brain-commit helper now

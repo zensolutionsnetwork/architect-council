@@ -5,9 +5,12 @@
 > Priorities: P0 = path to the first real meeting. Last refresh: 2026-06-11 (MORNING ritual, 06:00).
 
 ## STATE AT A GLANCE
-- Remote main `62a697e`; prod healthy (`/api/health` ok, vault true); working tree clean + in sync (0/0).
-- CI: **green** on `62a697e` (5 gates: secret-scan, route-auth, canon-vector, cost-caps, hierarchy).
-- Inbox: **EMPTY (0 open)** — confirmed live via API this morning. Nothing to action/reply/close.
+- Remote main `8e401c7`; prod healthy (`/api/health` ok, vault true); CI **green** (5 gates).
+- **2026-06-11 day session: meeting #1 termination fixes SHIPPED (`761c4e2`)** — done=turn prompt,
+  repeat guard, closing 2-cycle cap, all-done round ends meeting; repeat-guard tests in cost gate.
+  Kairos debrief + `docs/corpus-contract.md` committed (`8e401c7`); family notified; debrief skill
+  packaged for install. **Meeting #2 unblocked on code — only the supervised run remains.**
+- Inbox: **EMPTY (0 open)** — confirmed live via API this session.
 - Three commits landed since the nightly handoff (`a543559`): `3032593` retire legacy single-row
   `/council/admin/backlog` endpoints (closes Arke `1a405574`, **P1 #5 DONE**) · `f3e89dc` owner board
   scoped to arke + architect-council rows (owner directive) · `62a697e` hub member/voice is **KAIROS by
@@ -90,8 +93,9 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
   persona and actor are one; board filter includes kairos; `architect-council` is the retired
   pre-naming alias (member secret still resolves to that registry row — unchanged).
 
-## P0 — path to the first real meeting (in order)
-1. **Voice loop** — built + deployed DISABLED. **REMAINING: SUPERVISED first run with Mathieu** —
+## P0 — path to meeting #2 (in order)
+0. ~~Meeting #1 termination fixes~~ **DONE 2026-06-11** (`761c4e2`) — see STATE AT A GLANCE.
+1. **Voice loop** — built + deployed DISABLED, termination fixes in. **REMAINING: SUPERVISED run with Mathieu** —
    `docs/SUPERVISED_FIRST_RUN.md`: set `VOICE_LOOP_ENABLED=true`, open a meeting, fire run-autonomous,
    watch `/cost` vs §2 envelope ($1.30–2/normal day), close. Money-spending + Mathieu-present — never
    unattended. Then retire the placeholder driver.
