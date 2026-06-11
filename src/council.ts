@@ -508,7 +508,7 @@ const MEETING_DEFAULT = ['kairos', 'arke', 'nova', 'logos'];
 function meetingView(m: any, actor: string | null) {
   const cur = m.participants[m.turn_index] || null;
   return { id: m.id, phase: m.phase, round: m.round, turnIndex: m.turn_index, currentActor: cur,
-    cap: m.turn_cap, turnsUsed: m.turns_used, participants: m.participants, agenda: m.agenda,
+    cap: m.turn_cap, turnCap: m.turn_cap /* alias for the app (Arke 03eb0537) */, turnsUsed: m.turns_used, participants: m.participants, agenda: m.agenda,
     roles: m.roles || {}, dryRun: !!m.dry_run, brainVersions: m.brain_versions || {},
     turnTimeoutSec: m.turn_timeout_sec, turnStartedAt: m.turn_started_at,
     transcript: m.transcript, report: m.report || null, yourTurn: !!actor && actor === cur };
