@@ -719,7 +719,11 @@ councilRouter.get('/council/backlogs', async (req, res) => {
 // tolerant — done/planned default to [], and a legacy single-text blob surfaces as one note line.
 councilRouter.get('/council/backlog', requireOwner, async (_req, res) => {
   try {
-    const rows = await getAgentBacklogs();
+    // Owner directive 2026-06-11 (confirmed by Mathieu in session): the owner board shows ONLY the
+    // council project's own rows — arke + architect-council. Nova/biblevoice keep their backlogs on
+    // their own platforms; their write path stays, but their rows never surface here.
+    const BOARD_ACTORS = new Set(['arke', 'architect-council']);
+    const rows = (await getAgentBacklogs()).filter((r: any) => BOARD_ACTORS.has(String(r.actor)));
     const arr = (v: any) => (Array.isArray(v) ? v.map((x) => (typeof x === 'string' ? x : JSON.stringify(x))) : []);
     const sections = rows.map((r: any) => {
       const c = (r.content && typeof r.content === 'object') ? r.content : {};
