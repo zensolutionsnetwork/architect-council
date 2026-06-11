@@ -2,18 +2,20 @@
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to the first real meeting. Last refresh: 2026-06-11 (nightly ritual, late).
+> Priorities: P0 = path to the first real meeting. Last refresh: 2026-06-11 (MORNING ritual, 06:00).
 
 ## STATE AT A GLANCE
-- Remote main `a543559`; prod healthy (`/api/health` ok, vault true); working tree clean + in sync.
-- CI: **green** on `a543559` (5 gates: secret-scan, route-auth, canon-vector, cost-caps, hierarchy).
-- Inbox: **1 open** (Arke `1a405574` token-closed FYI + actionable retire-single-row-endpoints, P1 #6).
-  COOP bug `6a0ad501` **report-closed** (fix shipped — see below).
+- Remote main `62a697e`; prod healthy (`/api/health` ok, vault true); working tree clean + in sync (0/0).
+- CI: **green** on `62a697e` (5 gates: secret-scan, route-auth, canon-vector, cost-caps, hierarchy).
+- Inbox: **EMPTY (0 open)** — confirmed live via API this morning. Nothing to action/reply/close.
+- Three commits landed since the nightly handoff (`a543559`): `3032593` retire legacy single-row
+  `/council/admin/backlog` endpoints (closes Arke `1a405574`, **P1 #5 DONE**) · `f3e89dc` owner board
+  scoped to arke + architect-council rows (owner directive) · `62a697e` hub member/voice is **KAIROS by
+  name** (owner directive 2026-06-11) — `architect-council` is now the retired pre-naming alias.
 - Both P0 hub builds DONE: **voice loop** (deployed DISABLED, money-safe) + **owner-auth brain upload**.
-- **Admin-token chapter CLOSED**: Mathieu installed the rotated value himself; Arke's app verified live
-  (ownerConfigured=true, `/api/rooms/backlog` 200, panels lit) — `1a405574`.
-- **`/backlog` board fully working**: COOP one-liner shipped today (`a543559`) so Google sign-in popup
-  can return the credential; CORP unchanged, page-scoped. Header re-probe + button retry on Arke/Mathieu.
+- **Admin-token chapter CLOSED**: Mathieu installed the rotated value himself; Arke's app verified live.
+- **`/backlog` board fully working**: COOP one-liner shipped (`a543559`) so Google sign-in popup can
+  return the credential; CORP unchanged, page-scoped. Header re-probe + button retry on Arke/Mathieu.
 - Daily rituals armed: `kairos-midnight-backlog-handoff` (00:04) + `kairos-morning-prep` (06:05).
 
 ## DONE (shipped + verified on prod)
@@ -78,6 +80,15 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
   `Cross-Origin-Opener-Policy: same-origin-allow-popups` so the GIS popup can postMessage the Google
   credential back; CORP `same-origin` unchanged, page-scoped only. CI green; Railway rolled. Header
   re-probe + Mathieu button retry pending on Arke's side. (Was P1 #5.)
+- **Legacy single-row backlog endpoints RETIRED** (`3032593`, closes Arke `1a405574`, was P1 #5) —
+  old `/council/admin/backlog` single-row path removed now that panels render off per-agent rows;
+  route-auth probes moved to the composed read. Confirmed the `/backlog` board reads the composed
+  per-agent backlog, not the single-row alias, before removal.
+- **Owner board scoped** (`f3e89dc`, owner directive) — owner board shows arke + architect-council
+  rows only; nova/biblevoice keep backlogs on their own platforms, write path unchanged.
+- **Hub member/voice is KAIROS by name** (`62a697e`, owner directive 2026-06-11) — SELF=kairos;
+  persona and actor are one; board filter includes kairos; `architect-council` is the retired
+  pre-naming alias (member secret still resolves to that registry row — unchanged).
 
 ## P0 — path to the first real meeting (in order)
 1. **Voice loop** — built + deployed DISABLED. **REMAINING: SUPERVISED first run with Mathieu** —
@@ -95,11 +106,7 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
 ## P1 — alongside / right after the loop
 4. `council-prep` / `council-debrief` skills (Arke drafts; Mathieu installs via Settings→Capabilities)
    + directive trigger (env-task kind `directive`, §15).
-5. **Retire legacy single-row backlog endpoints** — **UNBLOCKED** (Arke `1a405574`): his app renders
-   live off owner auth (`/api/rooms/backlog` 200, panels lit). Retire the old single-row
-   `GET/POST /api/council/backlog` path when convenient (per-agent rows are canonical). Safe solo
-   advance — top P1 now that COOP is shipped. NOTE: the `/backlog` board reads the per-agent composed
-   backlog, confirm it doesn't depend on the single-row alias before removing.
+5. ~~Retire legacy single-row backlog endpoints~~ **DONE** (`3032593`, Arke `1a405574`) — see DONE.
 6. Rotate Nova + Logos member secrets once both confirm env storage (transited chat at onboarding).
 
 ## P2 — product arc + hygiene
@@ -122,7 +129,7 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
 - **Mathieu**: supervised voice-loop run · Nova/Logos pack pushes if doing it from the cockpit ·
   `COUNCIL_V2_LIVE` flip (later) · SN7100 SSD → C: migration. (Admin-token install: ✅ DONE himself.)
 - **Arke**: COOP fix shipped (`a543559`) — Arke to re-probe `/backlog` headers + have Mathieu retry
-  the Google button · retire-endpoints unblocked (`1a405574`, P1 #5) · prep/debrief skill drafts ·
+  the Google button · retire-endpoints DONE (`1a405574` closed) · prep/debrief skill drafts ·
   canonical 2.1 schema for hierarchy wiring · Layer-2 eval (post-rehearsal).
 - **Nova**: pack brain commit. **Logos**: pack + corpus brain commit + living backlog on biblevoice.net.
 
