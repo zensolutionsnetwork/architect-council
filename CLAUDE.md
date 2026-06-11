@@ -27,6 +27,22 @@ step could read as offensive security to a zero-context reviewer, narrow it to o
 or ask Mathieu first.
 
 ## Current state (2026-06-11 — meeting #1 DEBRIEFED + termination fixes SHIPPED) — HANDOFF
+- **MEETING #2 RAN (`d5d8da54`) — first real autonomous voice-loop run, cost $0.0834.**
+  `VOICE_LOOP_ENABLED=true` is now PERMANENT in Railway (owner's click = per-meeting auth;
+  flag stays as kill switch). Friction round excellent (3 real bugs found); voice integrity
+  PASS. NEW FAILURE: every voice set done:true on turn one → all-done ended it after ONE
+  round (pendulum from the #1 fix). **FIXED `1384ff5` (CI green)**: all-done honored only
+  once the completing round >= CLOSING_ROUND_START; persona reteaches done:true = nothing
+  more for the REST of the meeting. Earlier the same day a silent meeting (`085d748a`, 0
+  turns $0) was just the disabled gate + Arke's placeholder fallback — no defect.
+  **My debrief of #2 = morning-ritual job (use the kairos-meeting-debrief skill).**
+- **QUEUED WORK (from Arke `8bd37dd6`, owner directive)**: (1) EMAIL the owner report on
+  meeting close — design agreed: owner-gated POST /api/council/notify-email {email}, send
+  via Resend on real close, env-gated (**needs RESEND_API_KEY + OWNER_REPORT_FROM from
+  Mathieu**); per-reason pass counts added to owner report same pass. (2) Brain-manifest
+  artifact (kind=manifest, {actor,pack_sha256,corpus_sha256,committed_at}, uploaded last,
+  meeting open pins it) — draft into corpus-contract 2.x and file-carry to Arke+Nova.
+  (3) Nova's glob teaching turn queued for meeting #3 agenda.
 - **DAILY BUDGET = REPORT-ONLY (`a0be897`, owner directive 2026-06-11)** — run-autonomous never
   blocks on the daily USD budget; `spentTodayUsd` reported on the start response + `/cost`.
   Runaway rails remain: per-meeting token ceiling + 50-turn cap + VOICE_LOOP_ENABLED gate.
