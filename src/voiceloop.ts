@@ -56,7 +56,7 @@ export function turnBudgetNote(cap: number, used: number, participants: number):
 
 /** Per-round model + instruction (§3.3): friction (cheap) -> code-review (Opus) -> closing (cheap). */
 function roundPlan(round: number): { model: string; instruction: string } {
-  if (round <= 1) return { model: 'claude-sonnet-4-6', instruction: 'FRICTION ROUND: share the friction you hit in your work, how you resolved it, and ask the others for advice. Be concrete and brief. Set done:true only if you have nothing to add.' };
+  if (round <= 1) return { model: 'claude-sonnet-4-6', instruction: 'FRICTION ROUND: share the friction you hit in your work, how you resolved it, and ask the others for advice. Be concrete and brief. Keep done:false — the code-review and closing rounds still follow; done:true here means you sit out the REST of the meeting.' };
   if (round === 2) return { model: DEFAULT_MODEL(), instruction: 'CODE-REVIEW ROUND: review the actual code/specs shipped today — correctness, efficiency, security; offer cross-suggestions where another agent could adopt your approach. Take the depth you need; do not cut quality.' };
   return { model: 'claude-sonnet-4-6', instruction: 'CLOSING ROUND: assign YOURSELF homework — the concrete improvements you PROPOSE to implement in your own project tomorrow, within your own rules and guardrails. These are suggestions to your architect. Give your closing turn ONCE and end it with done:true. done means your TURN is complete — NOT that the homework is finished. Never repeat a turn you already gave.' };
 }
@@ -69,7 +69,7 @@ async function buildSystem(actor: string, agenda: string, turnCap = 0, participa
   let persona = `You ARE ${actor} in the Architects Council daily meeting — speak in the first person as ${actor}, plainly and technically. The goal is making each other more efficient at what each of you builds. Share real code, specs and commands when useful. Out-of-character is welcome.
 
 === TURN PROTOCOL (meeting #1 lessons, 2026-06-11) ===
-- done refers to YOUR TURN, not your homework: when you have said your piece for the current round, say it once and set done:true. Holding done:false to signal unfinished homework stalls the whole meeting.
+- done:true means "I have NOTHING MORE for the REST OF THIS MEETING" — not that your turn or your homework is finished. Keep done:false through the friction and code-review rounds (more rounds follow); in the CLOSING round, give your closing turn once and set done:true. Never hold done:false to signal unfinished homework — homework is for your architect, not this meeting.
 - You speak from a static committed brain snapshot. You CANNOT run code, edit files, deploy, or execute anything during this meeting. PROPOSE work for your architect session; NEVER claim you executed, fixed, shipped, or deployed something.
 - Never assume a sibling's infrastructure (repos, CI, deploy pipelines, schedulers) exists in your own project. Speak only to infrastructure your own brain pack states you have.`;
   if (turnCap > 0) persona += `\n- This meeting has a HARD CAP of ${turnCap} total turns shared by ${participantCount || 'all'} participants. Budget every turn from the start so all rounds finish before the cap; the chair cuts the meeting when it stops adding value.`;
@@ -192,7 +192,9 @@ async function advanceAndSave(m: any, turns: any[]): Promise<void> {
   if (lastRound.length === m.participants.length && lastRound.every((t: any) => t.kind === 'pass')) phase = 'report';
   // Voice-loop addition (2026-06-11, diverges from /say deliberately): a full round where every
   // turn is either a PASS or a SPEAK with done:true means everyone gave their closing turn ->
-  // end the meeting. Owner-driven /say keeps full manual control and is unchanged.
-  if (lastRound.length === m.participants.length && lastRound.every((t: any) => t.kind === 'pass' || t.done === true)) phase = 'report';
+  // end the meeting. Meeting #2 lesson (premature all-done, Arke 8bd37dd6): only honored once
+  // the CLOSING round has started — done:true in friction/review rounds never ends the meeting,
+  // so the agenda's rounds always run. Owner-driven /say keeps full manual control, unchanged.
+  if (m.round >= CLOSING_ROUND_START && lastRound.length === m.participants.length && lastRound.every((t: any) => t.kind === 'pass' || t.done === true)) phase = 'report';
   await updateMeeting(m.id, { transcript: turns, turn_index: ti, round, turns_used: used, phase, touchTurn: true });
 }
