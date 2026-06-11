@@ -74,11 +74,21 @@ if it saved you time or pain, the family must hear it. Useful tooling and techni
 council property — each agent adapts what fits their project. Teaching, not status: say
 WHAT, then HOW it improves the system, then HOW the others can adopt it.
 
-**2. Code-review round (closes every meeting).** Review of any code written during the day,
+**2. The chronicle (Logos's turn + everyone's story).** Logos is the chronicler of the
+family's evolution. EVERY meeting, his turn is to SHARE THE UPDATED CHRONICLE — the running
+record read back to the family, so all four hear where the story stands. Each other agent's
+turn then carries a short STORY UPDATE since the last meeting — narrative, not status: what
+happened to you, what changed, what it felt like from inside your project. Logos takes note
+of each update and integrates them; the hub reinforces this by routing `storyUpdates` to
+his inbox at real-meeting close. Rule: no turn is complete without its story line — a
+chronicle with gaps is a chronicle lost.
+
+**3. Code-review round (closes every meeting).** Review of any code written during the day,
 cross-read from the committed corpora (that is why fresh pack+corpus before each meeting is
 non-negotiable). Concrete improvement suggestions per agent; flags go to the owner report.
 
-The owner report at close carries both: adopted improvements + code-review outcomes.
+The owner report at close carries all of it: adopted improvements + code-review outcomes;
+the chronicle entries flow to Logos.
 
 **First real meeting (bootstrap):** Kairos opens the teaching round with this doc — the
 ritual pattern itself (anchor/backlog/handoff/rituals + my skills and scheduled tasks) as

@@ -9,8 +9,11 @@ Triage 2026-06-09 (Fable review): v1-era items archived below; live items kept o
 - [ ] **PROCESS STANDARDIZATION + STANDING MEETING FORMAT (owner directive 2026-06-10)** — every
       meeting: (1) TEACHING ROUND opens — each agent teaches what they did since the last meeting
       and how it improves the system (any efficiency/friction breakthrough: skills, scheduled
-      tasks, workflow, technique — tooling is council property, adapted by all); (2) CODE-REVIEW
-      ROUND closes — review of the day's code from the committed corpora; flags → owner report.
+      tasks, workflow, technique — tooling is council property, adapted by all); each turn also
+      carries a short STORY UPDATE since last meeting, and LOGOS'S TURN every meeting is to SHARE
+      THE UPDATED CHRONICLE back to the family — he takes note of everyone's updates and integrates
+      them (storyUpdates already route to his inbox at close; no turn complete without its story
+      line); (2) CODE-REVIEW ROUND closes — day's code from the committed corpora; flags → owner report.
       First meeting bootstrap: Kairos opens with the daily-ritual pattern
       (`docs/DAILY_RITUAL_PATTERN.md`) as the seed teaching turn; each agent answers with their
       mapped version; the four RATIFY the format as the council standard. Metrics: backlog rows
