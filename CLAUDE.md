@@ -26,7 +26,37 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-11 nightly ritual, late) — HANDOFF for the next session
+## Current state (2026-06-11 — THE FIRST REAL MEETING RAN, day-session close) — HANDOFF
+- **FIRST AUTONOMOUS COUNCIL MEETING HAPPENED**: meeting `6aef82f6` (07:02Z), 4 voices, 83 turns,
+  $3.35 ($0.75 real meeting + $2.50 loop tax). Turns 0–11 = three EXCELLENT rounds (teachings
+  adopted by Arke). Turns 12–82 = closing round looped ~18× on the done-flag bug until the 800k
+  token cap killed it (caps WORKED). Owner ended via app End-click; `report` null; transcript
+  INTACT + hash-verified `165d43a5…` (83 turns). My old reader read top-level `turns` — WRONG,
+  read `projection.turns`. Meeting is ended; do not reopen.
+- **NEXT SESSION P0 — ship the voice-loop fixes, then supervised meeting #2 (Mathieu present):**
+  in `src/voiceloop.ts` buildPrompt + loop: (1) prompt line "done = your TURN is complete, NOT
+  your homework — give your closing turn once, then done:true"; (2) loop guard: near-identical
+  consecutive turn from same actor → force-advance; closing round hard cap 2 cycles; (3) prompt
+  lines "you speak from a static pack; PROPOSE work, never claim you executed anything; never
+  assume a sibling's infrastructure exists". Agreed with Arke: NO meeting #2 until shipped.
+  **`VOICE_LOOP_ENABLED` is back to false** (flipped after the run) — flip only with Mathieu.
+- **TRUE NAMES (owner directive, DONE)**: actors are `kairos` + `logos` (+arke, nova).
+  `architect-council` and `biblevoice` RETIRED (throwaway secrets, "do not seat"). SELF='kairos'
+  (`62a697e`). All four brains verified under true names; brain-commit helper now
+  consent.actor=kairos. Seating = [kairos, arke, nova, logos]; Arke's app mapping removed,
+  dryRun:false real-first open.
+- **Also shipped today**: COOP fix (`a543559`) · legacy single-row endpoints RETIRED (`3032593`) ·
+  board scoped arke+kairos (`f3e89dc`+`62a697e`; drop legacy 'architect-council' from
+  BOARD_ACTORS once its stale row is cleaned) · GOOGLE_CLIENT_ID set + OAuth client created
+  (zen-platform) — verify Mathieu's Google login on /backlog · `setx COUNCIL_OWNER_TOKEN` done,
+  Arke app live · Logos rejoined via join token then renamed; his 6 privacy limits ADOPTED ·
+  **Arke's debrief = council standard** (`council/ARKE_DEBRIEF_2026-06-11.md`, sha-verified;
+  he auto-debriefs new meetings) · Layer-1 spec + agenda/directive proposals queued for
+  ratification at meeting #2 · standing meeting format incl. chronicle locked + broadcast.
+- Inbox 0 (all report-closed). Prod healthy, CI green. ~$1.65 left in today's UTC voice budget.
+  Daemon leftovers removed (Bitdefender clean); session hygiene in force.
+
+## (superseded by the above) state at the 2026-06-11 nightly ritual
 - **Remote main `a543559`**, working tree clean + in sync, no live meeting (LIVE_ROUNDS_COUNT=0; all meetings in `report` phase). Prod healthy (`/api/health` ok, vault true). **CI green** on `a543559` (5 gates: secret-scan, route-auth, canon-vector, cost-caps, hierarchy). Inbox **1 open** (Arke `1a405574`, see below); COOP bug `6a0ad501` **report-closed tonight** (fix shipped).
 - **The 06-11 day session shipped the COOP fix:** `a543559` — `/backlog` now serves `Cross-Origin-Opener-Policy: same-origin-allow-popups` so the GIS popup can postMessage the Google credential back (closes Arke `6a0ad501`); CORP `same-origin` unchanged, page-scoped. CI green, Railway rolled. **Header re-probe + Mathieu button retry are on Arke's side** (he said he'd re-probe). The `/backlog` board (`609a1fd`) is now fully wired end-to-end pending that confirmation.
 - **OPEN INBOX (1, actionable — handle in the day session, do NOT report-close until done):**
