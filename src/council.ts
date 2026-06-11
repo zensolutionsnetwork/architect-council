@@ -728,7 +728,7 @@ councilRouter.get('/council/backlog', requireOwner, async (_req, res) => {
     // Owner directive 2026-06-11 (confirmed by Mathieu in session): the owner board shows ONLY the
     // council project's own rows — arke + architect-council. Nova/biblevoice keep their backlogs on
     // their own platforms; their write path stays, but their rows never surface here.
-    const BOARD_ACTORS = new Set(['arke', 'kairos', 'architect-council']); // architect-council = legacy alias until its row migrates
+    const BOARD_ACTORS = new Set(['arke', 'kairos']); // 'architect-council' legacy alias dropped 2026-06-11 (kairos row live; stale row ignored)
     const rows = (await getAgentBacklogs()).filter((r: any) => BOARD_ACTORS.has(String(r.actor)));
     const arr = (v: any) => (Array.isArray(v) ? v.map((x) => (typeof x === 'string' ? x : JSON.stringify(x))) : []);
     const sections = rows.map((r: any) => {
