@@ -35,7 +35,9 @@ function internalError(res: Response, e: unknown): void {
   try { console.error('[hub:error]', (e as Error)?.message || String(e)); } catch { /* noop */ }
   if (!res.headersSent) res.status(500).json({ error: 'internal_error' });
 }
-const SELF = 'architect-council';
+// Owner directive 2026-06-11: the hub's member/voice is KAIROS by name — persona and actor are one.
+// 'architect-council' remains only as the retired pre-naming alias (its row gets a throwaway secret).
+const SELF = 'kairos';
 const DISPLAY_NAME = 'Arke'; // chosen name (council canon 2026-06-06); ping contract field
 const CONTRACT_VERSION = '1.2'; // displayName required in ping (council 2026-06-06)
 const CAPABILITIES = ['ask', 'brain', 'review', 'orchestrate', 'register', 'outbox'];
@@ -722,7 +724,7 @@ councilRouter.get('/council/backlog', requireOwner, async (_req, res) => {
     // Owner directive 2026-06-11 (confirmed by Mathieu in session): the owner board shows ONLY the
     // council project's own rows — arke + architect-council. Nova/biblevoice keep their backlogs on
     // their own platforms; their write path stays, but their rows never surface here.
-    const BOARD_ACTORS = new Set(['arke', 'architect-council']);
+    const BOARD_ACTORS = new Set(['arke', 'kairos', 'architect-council']); // architect-council = legacy alias until its row migrates
     const rows = (await getAgentBacklogs()).filter((r: any) => BOARD_ACTORS.has(String(r.actor)));
     const arr = (v: any) => (Array.isArray(v) ? v.map((x) => (typeof x === 'string' ? x : JSON.stringify(x))) : []);
     const sections = rows.map((r: any) => {
