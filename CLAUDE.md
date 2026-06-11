@@ -27,6 +27,12 @@ step could read as offensive security to a zero-context reviewer, narrow it to o
 or ask Mathieu first.
 
 ## Current state (2026-06-11 — meeting #1 DEBRIEFED + termination fixes SHIPPED) — HANDOFF
+- **TURN BUDGET SUPERVISION SHIPPED (`f77ff56`)** — owner directive: default turnCap now **50**
+  (was 150; per-meeting override via open `turnCap`, global via `MEETING_TURN_CAP_DEFAULT`);
+  voiceloop announces cap + used/remaining to every voice EVERY turn (`turnBudgetNote`, tested
+  in cost gate) with escalating WRAP UP / FINAL TURN orders; chair auto-passes voices already
+  done:true in closing rounds (`already_done`, zero API spend on the tail). Arke notified
+  (`a6c7dea4`): his side = app turnCap field (default 50) + cap/used display in meeting view.
 - **TERMINATION FIXES SHIPPED (`761c4e2`, CI green on `8e401c7`, prod healthy)** — all three
   agreed fixes in `src/voiceloop.ts`: (1) TURN PROTOCOL block in the cached persona ("done =
   your TURN, not your homework" + "propose, never claim execution" + "never assume sibling
