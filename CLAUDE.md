@@ -27,6 +27,9 @@ step could read as offensive security to a zero-context reviewer, narrow it to o
 or ask Mathieu first.
 
 ## Current state (2026-06-11 — meeting #1 DEBRIEFED + termination fixes SHIPPED) — HANDOFF
+- **DAILY BUDGET = REPORT-ONLY (`a0be897`, owner directive 2026-06-11)** — run-autonomous never
+  blocks on the daily USD budget; `spentTodayUsd` reported on the start response + `/cost`.
+  Runaway rails remain: per-meeting token ceiling + 50-turn cap + VOICE_LOOP_ENABLED gate.
 - **TURN BUDGET SUPERVISION SHIPPED (`f77ff56`)** — owner directive: default turnCap now **50**
   (was 150; per-meeting override via open `turnCap`, global via `MEETING_TURN_CAP_DEFAULT`);
   voiceloop announces cap + used/remaining to every voice EVERY turn (`turnBudgetNote`, tested
