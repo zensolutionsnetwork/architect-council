@@ -36,10 +36,14 @@ or ask Mathieu first.
   more for the REST of the meeting. Earlier the same day a silent meeting (`085d748a`, 0
   turns $0) was just the disabled gate + Arke's placeholder fallback — no defect.
   **My debrief of #2 = morning-ritual job (use the kairos-meeting-debrief skill).**
-- **QUEUED WORK (from Arke `8bd37dd6`, owner directive)**: (1) EMAIL the owner report on
-  meeting close — design agreed: owner-gated POST /api/council/notify-email {email}, send
-  via Resend on real close, env-gated (**needs RESEND_API_KEY + OWNER_REPORT_FROM from
-  Mathieu**); per-reason pass counts added to owner report same pass. (2) Brain-manifest
+- **EMAIL THE OWNER REPORT — SHIPPED + VERIFIED (`49a0d12`, CI green)**: `src/mailer.ts`
+  (Resend HTTP, env-gated, fail-soft) + `app_settings` table + owner-gated
+  GET/POST `/api/council/notify-email` + POST `.../test`; on real close the hub synthesizes
+  the report, appends per-reason auto-pass counts (Arke ask), stores + emails it best-effort
+  (close response returns emailSent/emailReason). `RESEND_API_KEY` + `OWNER_REPORT_FROM`
+  (onboarding@resend.dev) set in Railway by Mathieu; owner email `matpay@zen-solutions.net`
+  registered; **test email received + confirmed**. Arke notified (`f217e417`) to wire his panel.
+- **STILL QUEUED (from Arke `8bd37dd6`)**: (1) Brain-manifest
   artifact (kind=manifest, {actor,pack_sha256,corpus_sha256,committed_at}, uploaded last,
   meeting open pins it) — draft into corpus-contract 2.x and file-carry to Arke+Nova.
   (3) Nova's glob teaching turn queued for meeting #3 agenda.
