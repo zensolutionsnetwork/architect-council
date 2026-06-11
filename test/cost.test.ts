@@ -3,6 +3,7 @@ import {
   PRICES, worstPrice, priceFor, usdForUsage, totalTokens, addUsage, emptyTotals,
   capsFromEnv, DEFAULT_CAPS, meetingTokenCeilingHit, dailyBudgetExhausted, utcDayKey,
 } from '../src/cost.js';
+import { nearIdentical } from '../src/voiceloop.js';
 
 let fail = false;
 const bad = (m: string) => { fail = true; console.error('FAIL: ' + m); };
@@ -55,6 +56,18 @@ eq('env budget fallback', c.dailyBudgetUsd, DEFAULT_CAPS.dailyBudgetUsd);
 // 9. utcDayKey shape.
 if (!/^\d{4}-\d{2}-\d{2}$/.test(utcDayKey(new Date('2026-06-09T23:59:00Z')))) bad('utcDayKey format');
 else console.log('  utcDayKey: PASS');
+
+// 10. Voice-loop repeat guard (2026-06-11 termination fix): near-identical consecutive turns
+//     from the same actor must be detected — that detection is what stops runaway loop spend.
+isTrue('repeat: exact match', nearIdentical('My homework: fix the parser. done:false', 'My homework: fix the parser. done:false'));
+isTrue('repeat: whitespace/case only', nearIdentical('My HOMEWORK:  fix the parser.', 'my homework: fix the parser.'));
+isTrue('repeat: tiny variation (high Jaccard)', nearIdentical(
+  'My homework remains: implement the fixture exemption contract in consent.ts and packageFolder, then audit the silent swallows in server.ts. done:false',
+  'My homework still remains: implement the fixture exemption contract in consent.ts and packageFolder, then audit the silent swallows in server.ts. done:false'));
+isFalse('repeat: different content not flagged', nearIdentical(
+  'Round one friction: the chunked writer truncated three files at the 4k boundary.',
+  'Closing: tomorrow I propose wiring the hierarchy module into a consent-gated endpoint.'));
+isFalse('repeat: empty never flagged', nearIdentical('', 'anything'));
 
 if (fail) { console.error('cost/caps: FAIL'); process.exit(1); }
 console.log('autonomous-voice cost/caps: PASS');

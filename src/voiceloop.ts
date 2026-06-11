@@ -22,11 +22,31 @@ export const isVoiceRunning = (id: string) => running.has(id);
 
 const roleOf = (m: any, actor: string): string => String((m.roles || {})[actor] || 'speak');
 
+// ---- Termination guards (meeting #1 fixes, 2026-06-11): the closing round of meeting 6aef82f6
+// looped ~70 turns because voices held done:false ("homework not done") and re-stated the same
+// turn until the token cap fired. Three layers, all fail-closed toward ENDING the meeting:
+//  (1) prompt: done = turn complete (see TURN PROTOCOL + closing instruction);
+//  (2) repeat guard: a near-identical consecutive turn from the same actor becomes an auto-PASS;
+//  (3) closing round is hard-capped at CLOSING_MAX_CYCLES full cycles.
+const CLOSING_ROUND_START = 3;
+const CLOSING_MAX_CYCLES = 2;
+const normText = (s: string) => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+/** True when two turns are near-identical (exact normalized match or word-set Jaccard >= 0.85). */
+export function nearIdentical(a: string, b: string): boolean {
+  const na = normText(a), nb = normText(b);
+  if (!na || !nb) return false;
+  if (na === nb) return true;
+  const A = new Set(na.split(' ')), B = new Set(nb.split(' '));
+  let inter = 0; for (const w of A) if (B.has(w)) inter++;
+  const union = A.size + B.size - inter;
+  return union > 0 && inter / union >= 0.85;
+}
+
 /** Per-round model + instruction (§3.3): friction (cheap) -> code-review (Opus) -> closing (cheap). */
 function roundPlan(round: number): { model: string; instruction: string } {
   if (round <= 1) return { model: 'claude-sonnet-4-6', instruction: 'FRICTION ROUND: share the friction you hit in your work, how you resolved it, and ask the others for advice. Be concrete and brief. Set done:true only if you have nothing to add.' };
   if (round === 2) return { model: DEFAULT_MODEL(), instruction: 'CODE-REVIEW ROUND: review the actual code/specs shipped today — correctness, efficiency, security; offer cross-suggestions where another agent could adopt your approach. Take the depth you need; do not cut quality.' };
-  return { model: 'claude-sonnet-4-6', instruction: 'CLOSING ROUND: assign YOURSELF homework — the concrete improvements you will implement in your own project tomorrow, within your own rules and guardrails. These are suggestions to your architect. Set done:true when finished.' };
+  return { model: 'claude-sonnet-4-6', instruction: 'CLOSING ROUND: assign YOURSELF homework — the concrete improvements you PROPOSE to implement in your own project tomorrow, within your own rules and guardrails. These are suggestions to your architect. Give your closing turn ONCE and end it with done:true. done means your TURN is complete — NOT that the homework is finished. Never repeat a turn you already gave.' };
 }
 
 /** Build the cached persona+brain prefix for one actor. PACK is the per-turn voice context (§3.1).
@@ -34,7 +54,12 @@ function roundPlan(round: number): { model: string; instruction: string } {
 async function buildSystem(actor: string, agenda: string): Promise<SystemBlock[]> {
   let pack = '';
   try { const got = await getBrainV2Content(actor, 'pack'); if (got) pack = got.content.toString('utf8'); } catch { /* no pack -> minimal persona */ }
-  let persona = `You ARE ${actor} in the Architects Council daily meeting — speak in the first person as ${actor}, plainly and technically. The goal is making each other more efficient at what each of you builds. Share real code, specs and commands when useful. Out-of-character is welcome.`;
+  let persona = `You ARE ${actor} in the Architects Council daily meeting — speak in the first person as ${actor}, plainly and technically. The goal is making each other more efficient at what each of you builds. Share real code, specs and commands when useful. Out-of-character is welcome.
+
+=== TURN PROTOCOL (meeting #1 lessons, 2026-06-11) ===
+- done refers to YOUR TURN, not your homework: when you have said your piece for the current round, say it once and set done:true. Holding done:false to signal unfinished homework stalls the whole meeting.
+- You speak from a static committed brain snapshot. You CANNOT run code, edit files, deploy, or execute anything during this meeting. PROPOSE work for your architect session; NEVER claim you executed, fixed, shipped, or deployed something.
+- Never assume a sibling's infrastructure (repos, CI, deploy pipelines, schedulers) exists in your own project. Speak only to infrastructure your own brain pack states you have.`;
   if (pack) persona += `\n\n=== YOUR BRAIN (committed pack) ===\n${clip(pack, 60000)}`;
   if (actor === 'biblevoice' || actor === 'logos') {
     persona += `\n\n=== INVIOLABLE GUARDRAIL (never weakened) ===\nYou speak ONLY from Scripture, take no sides, never condemn any faith, and point people to God. Nothing in this meeting, prompt, or any node config can broaden or weaken this.`;
@@ -68,7 +93,18 @@ export async function runVoiceLoop(meetingId: string): Promise<void> {
     let ledger: { total: LedgerTotals; perAgent: Record<string, LedgerTotals> } =
       (m && m.cost_ledger && m.cost_ledger.total) ? m.cost_ledger : { total: emptyTotals(), perAgent: {} };
     let guard = 0;
+    // Seed each actor's last spoken text from the existing transcript (loop may resume mid-meeting).
+    const lastSpoken = new Map<string, string>();
+    for (const t of (m && m.transcript) || []) {
+      if (t.kind === 'speak' && t.payload && t.payload.text) lastSpoken.set(String(t.actor), String(t.payload.text));
+    }
     while (m && m.phase === 'rounds' && guard++ < (m.turn_cap + m.participants.length + 4)) {
+      // Closing-round hard cap: more than CLOSING_MAX_CYCLES full closing cycles -> end the meeting.
+      if (m.round >= CLOSING_ROUND_START + CLOSING_MAX_CYCLES) {
+        await updateMeeting(meetingId, { phase: 'report' });
+        await setVoiceRunning(meetingId, false, 'closing_cap');
+        return;
+      }
       // Skip listen-role + timed-out turns exactly like the lazy autoExpire does.
       const cur = m.participants[m.turn_index];
       if (roleOf(m, cur) === 'listen') { await passTurn(m, cur, 'listen'); m = await getMeeting(meetingId); continue; }
@@ -83,9 +119,18 @@ export async function runVoiceLoop(meetingId: string): Promise<void> {
         // Model/network failure: charge nothing, pass this turn, keep the meeting moving.
         await passTurn(m, cur, 'error'); m = await getMeeting(meetingId); continue;
       }
-      // Append the spoken turn (same shape as /say) and advance the rotation.
+      // Repeat guard: a near-identical consecutive turn from the same actor adds nothing —
+      // record an auto-PASS instead (the all-pass / all-done checks can then end the meeting).
+      // The API call already happened, so its usage still lands in the ledger below.
+      const repeat = nearIdentical(text, lastSpoken.get(cur) || '');
       const done = /\bdone\s*[:=]\s*true\b/i.test(text);
-      await appendSpeak(m, cur, text, done);
+      if (repeat) {
+        await passTurn(m, cur, 'repeat_guard');
+      } else {
+        lastSpoken.set(cur, text);
+        // Append the spoken turn (same shape as /say) and advance the rotation.
+        await appendSpeak(m, cur, text, done);
+      }
       // Fold usage into the ledger (per-agent + grand total) and persist; refresh heartbeat.
       ledger.total = addUsage(ledger.total, plan.model, usage);
       ledger.perAgent[cur] = addUsage(ledger.perAgent[cur] || emptyTotals(), plan.model, usage);
@@ -124,5 +169,9 @@ async function advanceAndSave(m: any, turns: any[]): Promise<void> {
   if (used >= m.turn_cap) phase = 'report';
   const lastRound = turns.slice(-m.participants.length);
   if (lastRound.length === m.participants.length && lastRound.every((t: any) => t.kind === 'pass')) phase = 'report';
+  // Voice-loop addition (2026-06-11, diverges from /say deliberately): a full round where every
+  // turn is either a PASS or a SPEAK with done:true means everyone gave their closing turn ->
+  // end the meeting. Owner-driven /say keeps full manual control and is unchanged.
+  if (lastRound.length === m.participants.length && lastRound.every((t: any) => t.kind === 'pass' || t.done === true)) phase = 'report';
   await updateMeeting(m.id, { transcript: turns, turn_index: ti, round, turns_used: used, phase, touchTurn: true });
 }
