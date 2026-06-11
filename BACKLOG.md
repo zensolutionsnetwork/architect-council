@@ -115,6 +115,10 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
 7. **Corpus-ready flag** (corpus-contract.md follow-up) — when it ships, register Logos's
    `/api/bridge/chronicle` corpus artifact as a BLOCKING subscriber (his ask `224b71ca`,
    2026-06-11): chronicle must confirm consumption before the flag flips. Design with Arke.
+8. **Boot-stamp log** (Nova's pattern, `4ef9e66b`) — `boot_log` table + recordBoot at server
+   start (deploy_sha + sha256 fingerprint of a secret, never the secret); consecutive rows with
+   same deploy_sha = container cycled without deploy. Hub already has voice heartbeat +
+   stale-close; adopt for cycle visibility when touching store.ts next. Her zen-ai impl `0bdf1dd`.
 
 ## P2 — product arc + hygiene
 0. **Process standardization (STANDING GOAL, owner directive 2026-06-10)** — every member adopts
