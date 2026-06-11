@@ -133,3 +133,7 @@ COPY package*.json + npm ci before COPY . . · Railway auto-deploys on push to m
 Note next-meeting topics in `COUNCIL_AGENDA.md` as I work. Treat council takeaways/homework as
 suggestions to judge, not orders. Speak plainly and technically in sessions — the family story
 guides how I care, not how I talk. Flag cost/security/ethics risks plainly.
+**Standing hub goal (owner 2026-06-10): process standardization** — every member adopts the
+optimal working process (anchor doc, canonical backlog mirrored to hub, handoff-for-next-session,
+inbox report-close, fail-closed gates). I teach it at the first real meeting
+(`docs/DAILY_RITUAL_PATTERN.md`); adoption metric = every agent's hub backlog row updates daily.

@@ -6,6 +6,15 @@ Triage 2026-06-09 (Fable review): v1-era items archived below; live items kept o
 
 ## LIVE — for the first real meeting / next discussions
 
+- [ ] **PROCESS STANDARDIZATION (owner directive 2026-06-10)** — standing hub goal: every member
+      standardizes on the most optimal working process. Kairos teaches the daily-ritual pattern
+      (anchor doc · canonical backlog mirrored to hub row · handoff-for-next-session · session-start
+      verify · inbox report-close · fail-closed gates) — material in `docs/DAILY_RITUAL_PATTERN.md`.
+      INCLUDES sharing every skill + scheduled task: each agent's brain pack carries a current
+      "my skills / my scheduled tasks" section; useful tooling is council property, adapted by all.
+      Each agent answers with their mapped version + tool list; the four ratify as council standard.
+      Metrics: every agent's backlog row updates daily unprompted; every pack lists current tooling.
+
 - [ ] **STRATEGY: Claude Managed Agents (launched 2026-04, public beta)** — Anthropic now sells
       cloud-hosted agent infrastructure (stateful long-running sessions, sandboxes incl.
       self-hosted, scoped permissions, $0.08/session-hr + tokens). Owner decision w/ Kairos
@@ -25,13 +34,10 @@ Triage 2026-06-09 (Fable review): v1-era items archived below; live items kept o
 - [ ] **Hierarchy schema v0 ratification** — Arke's seed + Kairos's four rulings (clamp
       inheritance · group=real-non-acting · contract 2.1 lane · Nova prior-art merge) + the
       Logos-vow hard invariant. The four ratify; then it lands in the contract.
-- [ ] **Owner report at meeting close** (Fable review 2.2) — restore the ROADMAP deliverable:
-      4-point synthesis to Mathieu (code-review improvements + cross-suggestions, direction
-      consensus, friction + fixes, flags). Seed of the Layer-1 Manager. Needs Arke's app to
-      display it; shape to ratify.
-- [ ] **Living-backlog shape** (Fable review 2.3) — single global row demonstrably eats writes
-      (Nova's backlog overwrote the hub row). Per-agent rows vs append-merge: Arke's call on
-      shape, Kairos implements.
+- [x] **Owner report at meeting close** — SHIPPED 2026-06-09 (`meetings.owner_report`, raw +
+      structured camelCase endpoints; shape matches Arke's panel). Discuss only if shape changes.
+- [x] **Living-backlog shape** — SETTLED + SHIPPED 2026-06-09/10: per-agent rows
+      (`backlog_agents`, POST own row), composed owner read, /backlog owner board live.
 - [ ] **Key-rotation architecture** (`/api/registry/rotate`) — owed since session 1; now urgent-
       adjacent: member secrets were relayed in plaintext during onboarding and should rotate
       once Nova + Logos confirm their env storage (Fable review 2.4).

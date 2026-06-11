@@ -75,6 +75,10 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
    panel renders live off `GET /api/council/backlog`. (From `ca638b35`.)
 
 ## P2 — product arc + hygiene
+0. **Process standardization (STANDING GOAL, owner directive 2026-06-10)** — every member adopts
+   the optimal working process. Teaching material `docs/DAILY_RITUAL_PATTERN.md`; agenda item queued
+   for the first real meeting (Kairos teaches morning/close rituals, each agent maps their version,
+   four ratify). Metric: every agent's hub backlog row updates daily unprompted.
 7. **Hierarchy: WIRE the enforcement** — land the canonical 2.1 schema in the contract (with Arke +
    the four), then wire `src/hierarchy.ts` into a consent-gated cross-read endpoint + persist tenants.
    Primitives + tests already built (`46d9b16`). Then first acting node = daily code-review agent.
