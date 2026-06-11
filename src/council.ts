@@ -15,7 +15,7 @@ import {
   createConvo, updateConvo, getConvo, listConvos, consumeJoinToken, issueJoinToken,
   setTakeaways, getLatestTakeaways, recentConvoActivity, type Turn,
   queueOutbox, pendingOutbox, markOutboxDelivered, ackOutbox, sweepOutbox,
-  getBacklog, setBacklog, setAgentBacklog, getAgentBacklogs, setConvoArchived, setConvoV2Meta, getRegistryVersion,
+  setAgentBacklog, getAgentBacklogs, setConvoArchived, setConvoV2Meta, getRegistryVersion,
   queueEnvTask, listEnvTasks, getEnvTask, claimEnvTask, reportEnvTask, sweepEnvTasks,
   createMeeting, getMeeting, updateMeeting, listMeetings, listMeetingsForActor, setMeetingOwnerReport,
   setVoiceRunning, closeStaleVoiceMeetings, usdSpentTodayUtc,
@@ -444,16 +444,9 @@ async function requireOwner(req: Request, res: Response, next: NextFunction): Pr
   if (await googleOwnerOk(req)) return next();
   res.status(401).json({ error: 'unauthorized' });
 }
-councilRouter.get('/council/admin/backlog', requireOwner, async (_req, res) => {
-  try { res.json(await getBacklog()); } catch (e) { internalError(res, e); }
-});
-councilRouter.post('/council/admin/backlog', requireOwner, async (req, res) => {
-  try {
-    const content = String((req.body || {}).content ?? '').trim();
-    if (!content) return res.status(400).json({ error: 'empty_content' });
-    res.json({ ok: true, updatedAt: await setBacklog(content, String((req.body || {}).updatedBy || 'session')) });
-  } catch (e) { internalError(res, e); }
-});
+// RETIRED 2026-06-11 (Arke 1a405574): the single-row /council/admin/backlog GET/POST pair.
+// Per-agent rows (POST /council/backlog/agent) + the composed read (GET /council/backlog) replaced
+// them; Arke's panel and the /backlog board both confirmed live on the new endpoints.
 councilRouter.get('/council/admin/config', (_req, res) =>
   res.json({ googleClientId: process.env.GOOGLE_CLIENT_ID || null, ownerEmail: OWNER_GOOGLE_EMAIL() }));
 

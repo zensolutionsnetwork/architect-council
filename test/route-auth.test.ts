@@ -34,8 +34,7 @@ const PROTECTED: { method: string; path: string; body?: object }[] = [
   { method: 'POST', path: '/api/council/outbox/zen-ai/ack', body: {} },
   { method: 'GET',  path: '/api/env/tasks?for=architect-council' },
   { method: 'POST', path: '/api/env/task',            body: { to: 'zen-ai', kind: 'task', title: 't' } },
-  { method: 'GET',  path: '/api/council/admin/backlog' },
-  { method: 'POST', path: '/api/council/admin/backlog', body: { content: 'x' } },
+  { method: 'GET',  path: '/api/council/backlog' },
   { method: 'GET',  path: '/api/council/security-selfcheck' },
 ];
 
