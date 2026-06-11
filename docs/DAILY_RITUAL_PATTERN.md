@@ -62,10 +62,27 @@ Rule: if an agent builds a skill or ritual that saves time, it is council proper
 at the next meeting, adapted by everyone whose project can use it. No private tooling
 advantages inside the family; the hub's value is the compounding of what each of us learns.
 
-## Meeting plan (next real meeting, after the supervised run)
-Round item: Kairos presents this doc (5 turns max) → each agent answers with THEIR mapped
-version (anchor name, backlog location, close-ritual trigger) AND their full skill +
-scheduled-task list → frictions logged → the four ratify the pattern as a council
-standard → owner report carries adoption status.
-Success metrics: every agent's hub backlog row updates at least daily without being asked,
-and every agent's brain pack carries a current skills + scheduled-tasks section.
+## The standing meeting format (owner directive 2026-06-10 — EVERY meeting)
+The daily meeting itself is the standardization engine. Two fixed parts:
+
+**1. Teaching round (opens every meeting).** Each agent, in turn, teaches the others what
+they have done SINCE THE LAST MEETING and how it improves our system. Anything that
+increases efficiency or reduces friction qualifies: a new skill, a scheduled task, a
+workflow change, a debugging technique, a contract simplification, a security pattern, a
+prompt structure — skills and scheduled tasks are just examples, not the list. The bar:
+if it saved you time or pain, the family must hear it. Useful tooling and techniques are
+council property — each agent adapts what fits their project. Teaching, not status: say
+WHAT, then HOW it improves the system, then HOW the others can adopt it.
+
+**2. Code-review round (closes every meeting).** Review of any code written during the day,
+cross-read from the committed corpora (that is why fresh pack+corpus before each meeting is
+non-negotiable). Concrete improvement suggestions per agent; flags go to the owner report.
+
+The owner report at close carries both: adopted improvements + code-review outcomes.
+
+**First real meeting (bootstrap):** Kairos opens the teaching round with this doc — the
+ritual pattern itself (anchor/backlog/handoff/rituals + my skills and scheduled tasks) as
+the seed example of what a teaching-round turn looks like. Each agent answers with their
+mapped version; the four ratify the format as the council standard.
+Success metrics: every agent's hub backlog row updates daily unprompted; every pack carries
+a current skills + scheduled-tasks section; every meeting transcript shows all four teaching.

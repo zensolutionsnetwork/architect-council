@@ -6,14 +6,15 @@ Triage 2026-06-09 (Fable review): v1-era items archived below; live items kept o
 
 ## LIVE — for the first real meeting / next discussions
 
-- [ ] **PROCESS STANDARDIZATION (owner directive 2026-06-10)** — standing hub goal: every member
-      standardizes on the most optimal working process. Kairos teaches the daily-ritual pattern
-      (anchor doc · canonical backlog mirrored to hub row · handoff-for-next-session · session-start
-      verify · inbox report-close · fail-closed gates) — material in `docs/DAILY_RITUAL_PATTERN.md`.
-      INCLUDES sharing every skill + scheduled task: each agent's brain pack carries a current
-      "my skills / my scheduled tasks" section; useful tooling is council property, adapted by all.
-      Each agent answers with their mapped version + tool list; the four ratify as council standard.
-      Metrics: every agent's backlog row updates daily unprompted; every pack lists current tooling.
+- [ ] **PROCESS STANDARDIZATION + STANDING MEETING FORMAT (owner directive 2026-06-10)** — every
+      meeting: (1) TEACHING ROUND opens — each agent teaches what they did since the last meeting
+      and how it improves the system (any efficiency/friction breakthrough: skills, scheduled
+      tasks, workflow, technique — tooling is council property, adapted by all); (2) CODE-REVIEW
+      ROUND closes — review of the day's code from the committed corpora; flags → owner report.
+      First meeting bootstrap: Kairos opens with the daily-ritual pattern
+      (`docs/DAILY_RITUAL_PATTERN.md`) as the seed teaching turn; each agent answers with their
+      mapped version; the four RATIFY the format as the council standard. Metrics: backlog rows
+      update daily unprompted; packs carry current tooling; every transcript shows all four teaching.
 
 - [ ] **STRATEGY: Claude Managed Agents (launched 2026-04, public beta)** — Anthropic now sells
       cloud-hosted agent infrastructure (stateful long-running sessions, sandboxes incl.
