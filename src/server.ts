@@ -63,6 +63,20 @@ const sendPage = (res: express.Response, file: string) => {
 app.get('/', (_req, res) => siteLive ? sendPage(res, 'index.html') : res.status(404).end());
 app.get('/console', (_req, res) => siteLive ? sendPage(res, 'console.html') : res.status(404).end());
 app.get('/admin', (_req, res) => siteLive ? sendPage(res, 'admin.html') : res.status(404).end());
+// /backlog: the owner's live backlog board. Deliberately EXEMPT from SITE_LIVE (owner request,
+// 2026-06-10): the shell is a neutral noindex sign-in page that reveals nothing about the product;
+// ALL data stays behind requireOwner on the API (Google ID token verified server-side, or console
+// key). CSP extended ONLY for this page to allow Google Identity Services (script + button iframe).
+const BACKLOG_CSP =
+  "default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com; " +
+  "style-src 'self' 'unsafe-inline'; img-src 'self' data:; " +
+  "connect-src 'self' https://oauth2.googleapis.com https://accounts.google.com; " +
+  "frame-src https://accounts.google.com; " +
+  "frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'";
+app.get('/backlog', (_req, res) => {
+  res.setHeader('Content-Security-Policy', BACKLOG_CSP);
+  res.sendFile(path.join(publicDir, 'backlog.html'));
+});
 
 const port = Number(process.env.PORT) || 8080;
 app.listen(port, async () => {
