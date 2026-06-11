@@ -36,6 +36,9 @@ const PROTECTED: { method: string; path: string; body?: object }[] = [
   { method: 'POST', path: '/api/env/task',            body: { to: 'zen-ai', kind: 'task', title: 't' } },
   { method: 'GET',  path: '/api/council/backlog' },
   { method: 'GET',  path: '/api/council/security-selfcheck' },
+  { method: 'GET',  path: '/api/council/notify-email' },
+  { method: 'POST', path: '/api/council/notify-email', body: { email: 'x@y.com' } },
+  { method: 'POST', path: '/api/council/notify-email/test', body: {} },
 ];
 
 async function request(method: string, path: string, body?: object): Promise<number> {

@@ -10,6 +10,7 @@ import { architectReply, reviewProposal, councilBrain, summarize, extractTakeawa
 import { runVoiceLoop, isVoiceRunning } from './voiceloop.js';
 import { capsFromEnv, dailyBudgetExhausted, emptyTotals, addUsage } from './cost.js';
 import { projectTranscript, transcriptSha256Hex } from './protocol.js';
+import { sendOwnerReportEmail } from './mailer.js';
 import {
   upsertMember, listMembers, getMember, getBrain, setBrain,
   createConvo, updateConvo, getConvo, listConvos, consumeJoinToken, issueJoinToken,
@@ -21,6 +22,7 @@ import {
   setVoiceRunning, closeStaleVoiceMeetings, usdSpentTodayUtc,
   createBrainUpload, getBrainUpload, putBrainChunk, brainReceived, assembleBrain,
   commitBrainV2, getBrainV2Meta, getBrainV2Content, sweepBrainUploads,
+  getSetting, setSetting,
 } from './store.js';
 
 const clip = (s: any, n: number) => String(s ?? '').slice(0, n);
@@ -632,16 +634,30 @@ councilRouter.post('/meeting/:id/close', async (req, res) => {
     // report for Mathieu (code review, direction, friction, flags) with one bounded Sonnet call.
     // Best-effort: a synthesis failure never fails the close. Dry-run rooms never spend.
     let ownerReportGenerated = false;
+    let emailResult: any = { sent: false, reason: 'not_attempted' };
     if (!m.dry_run) {
       const spoken = (m.transcript || [])
         .filter((t: any) => t && t.kind === 'speak' && t.payload)
         .map((t: any) => ({ actor: String(t.actor), text: clip(JSON.stringify(t.payload), 4000) }));
+      // Per-reason auto-PASS counts (Arke 8bd37dd6): make an error-heavy or stalled meeting visible
+      // at a glance in the owner report. error = a voice call failed and fell back to a pass.
+      const passCounts: Record<string, number> = {};
+      for (const t of (m.transcript || [])) if (t && t.kind === 'pass' && t.auto) { const r = String(t.reason || 'unknown'); passCounts[r] = (passCounts[r] || 0) + 1; }
       if (spoken.length) {
         try {
           const { report, usage } = await synthesizeOwnerReport(m.agenda || '', spoken);
           if (report && !report.startsWith('(owner-report error')) {
-            await setMeetingOwnerReport(m.id, clip(report, 16000));
+            const passLine = Object.keys(passCounts).length ? `\n\n---\nAuto-passes this meeting: ${Object.entries(passCounts).map(([r, n]) => `${r}=${n}`).join(', ')}` : '';
+            const full = clip(report + passLine, 16000);
+            await setMeetingOwnerReport(m.id, full);
             ownerReportGenerated = true;
+            // EMAIL the report (owner directive 2026-06-11). Env-gated + fail-soft: a send failure
+            // (or no key / no registered email) never fails the close — it is reported in the response.
+            try {
+              const to = await getSetting('owner_notify_email');
+              if (to) emailResult = await sendOwnerReportEmail(to, `Architects Council — meeting report (${new Date().toISOString().slice(0, 10)})`, full);
+              else emailResult = { sent: false, reason: 'no_registered_email' };
+            } catch (e) { emailResult = { sent: false, reason: 'email_threw:' + (e as Error).message.slice(0, 80) }; }
           }
           // Charge the synthesis call to the meeting cost ledger (ledger accuracy for the §2 envelope).
           if (usage && (usage.input_tokens || usage.output_tokens)) {
@@ -653,7 +669,7 @@ councilRouter.post('/meeting/:id/close', async (req, res) => {
         } catch { /* best effort */ }
       }
     }
-    res.json({ ok: true, dryRun: !!m.dry_run, storyUpdatesRouted: storyCount, ownerReport: ownerReportGenerated });
+    res.json({ ok: true, dryRun: !!m.dry_run, storyUpdatesRouted: storyCount, ownerReport: ownerReportGenerated, emailSent: !!emailResult.sent, emailReason: emailResult.reason || null });
   } catch (e) { internalError(res, e); }
 });
 // Owner report readback — owner-gated (it is Mathieu's report; members read the transcript instead).
@@ -713,6 +729,33 @@ councilRouter.get('/council/meeting/:id/cost', requireOwner, async (req, res) =>
     const perAgent = Object.entries(led.perAgent || {}).map(([actor, v]: any) => ({ actor, usd: v.usd, inputTokens: v.inputTokens, outputTokens: v.outputTokens, cacheReadTokens: v.cacheReadTokens, totalTokens: v.totalTokens }));
     const spentTodayUsd = await usdSpentTodayUtc(); // owner directive 2026-06-11: always REPORT total spend
     res.json({ id: m.id, totalUsd: t.usd, spentTodayUsd, inputTokens: t.inputTokens, outputTokens: t.outputTokens, cacheReadTokens: t.cacheReadTokens, totalTokens: t.totalTokens, perAgent, endedReason: m.ended_reason || null, voiceRunning: !!m.voice_running });
+  } catch (e) { internalError(res, e); }
+});
+// Owner notify-email (owner directive 2026-06-11): register the address the meeting-close report is
+// emailed to. Owner-gated. GET returns current + whether the transport is configured; POST {email}
+// registers (or {email:null}/"" clears); POST .../test sends a one-off test to the registered address.
+councilRouter.get('/council/notify-email', requireOwner, async (_req, res) => {
+  try {
+    const email = await getSetting('owner_notify_email');
+    res.json({ email: email || null, transportConfigured: !!process.env.RESEND_API_KEY, from: process.env.OWNER_REPORT_FROM || 'onboarding@resend.dev' });
+  } catch (e) { internalError(res, e); }
+});
+councilRouter.post('/council/notify-email', requireOwner, async (req, res) => {
+  try {
+    const raw = (req.body || {}).email;
+    if (raw === null || raw === '') { await setSetting('owner_notify_email', null); return res.json({ ok: true, email: null }); }
+    const email = String(raw || '').trim().slice(0, 200);
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return res.status(400).json({ error: 'invalid_email' });
+    await setSetting('owner_notify_email', email);
+    res.json({ ok: true, email });
+  } catch (e) { internalError(res, e); }
+});
+councilRouter.post('/council/notify-email/test', requireOwner, async (_req, res) => {
+  try {
+    const to = await getSetting('owner_notify_email');
+    if (!to) return res.status(400).json({ error: 'no_registered_email' });
+    const r = await sendOwnerReportEmail(to, 'Architects Council — test email', 'This is a test of the Architects Council owner-report email. If you received this, the meeting-close report will be delivered here.');
+    res.json({ ok: r.sent, ...r, to });
   } catch (e) { internalError(res, e); }
 });
 // Per-agent living backlog (contract answer 4, ratified 2026-06-09): a write replaces ONLY the writer's

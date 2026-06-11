@@ -141,6 +141,10 @@ export async function initDb(): Promise<void> {
     SELECT 'nova', jsonb_build_object('text', b.content), 'migration-from-single-row'
     FROM backlog b WHERE b.id=1 AND b.content LIKE '# Zen AI%'
       AND NOT EXISTS (SELECT 1 FROM backlog_agents WHERE actor='nova')`);
+  // App settings (owner directive 2026-06-11): simple owner-scoped key/value, e.g. the owner
+  // notify email for the meeting-close report. Owner-gated at the route layer.
+  await q.query(`CREATE TABLE IF NOT EXISTS app_settings (
+    key text PRIMARY KEY, value text, updated_at timestamptz NOT NULL DEFAULT now())`);
 }
 
 // ---- Living backlog (Arke's super-admin panel; mirrors Nova's model) --------
@@ -153,6 +157,16 @@ export async function setBacklog(content: string, updatedBy: string): Promise<st
     ON CONFLICT (id) DO UPDATE SET content=EXCLUDED.content, updated_at=now(), updated_by=EXCLUDED.updated_by
     RETURNING to_char(updated_at,'YYYY-MM-DD HH24:MI') AS updated_at`, [String(content).slice(0, 200000), String(updatedBy || 'session').slice(0, 120)]);
   return rows[0]?.updated_at || '';
+}
+// App settings (owner directive 2026-06-11): owner-scoped key/value (e.g. owner notify email).
+export async function getSetting(key: string): Promise<string | null> {
+  const { rows } = await db().query<any>(`SELECT value FROM app_settings WHERE key=$1`, [String(key).slice(0, 120)]);
+  return rows[0] ? rows[0].value : null;
+}
+export async function setSetting(key: string, value: string | null): Promise<void> {
+  await db().query(`INSERT INTO app_settings (key, value, updated_at) VALUES ($1,$2,now())
+    ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=now()`,
+    [String(key).slice(0, 120), value == null ? null : String(value).slice(0, 500)]);
 }
 // Per-agent backlog (contract answer 2026-06-09): write replaces ONLY the writer's row; read returns all.
 export async function setAgentBacklog(actor: string, content: any, updatedBy: string): Promise<string> {
