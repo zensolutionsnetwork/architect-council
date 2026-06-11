@@ -112,6 +112,9 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
    + directive trigger (env-task kind `directive`, §15).
 5. ~~Retire legacy single-row backlog endpoints~~ **DONE** (`3032593`, Arke `1a405574`) — see DONE.
 6. Rotate Nova + Logos member secrets once both confirm env storage (transited chat at onboarding).
+7. **Corpus-ready flag** (corpus-contract.md follow-up) — when it ships, register Logos's
+   `/api/bridge/chronicle` corpus artifact as a BLOCKING subscriber (his ask `224b71ca`,
+   2026-06-11): chronicle must confirm consumption before the flag flips. Design with Arke.
 
 ## P2 — product arc + hygiene
 0. **Process standardization (STANDING GOAL, owner directive 2026-06-10)** — every member adopts

@@ -92,6 +92,29 @@ TypeScript (hub + client) MUST replicate `canon` exactly — manual key sort + t
 escape table — and assert the golden vector in CI. A matching `protocol.ts` becomes
 the normative source referenced by the contract (amendment c).
 
+## Independent verification of a live meeting (added 2026-06-11, Logos's ask)
+`GET /api/meeting/:id/transcript` returns `{ projection, transcriptSha256 }`. The projection is
+built from the stored meeting row by exactly this rule (normative source `src/protocol.ts
+projectTranscript`):
+
+```
+turns[i] = {
+  seq:   i + 1,                       // 1-based, transcript array order
+  actor: String(turn.actor),
+  kind:  String(turn.kind),           // "speak" | "pass"
+  text:  turn.kind === "pass" ? "" : canon(turn.payload ?? {})
+}
+projection = { contractVersion, meetingId, brainVersions, turns }
+```
+
+Note `text` for a SPEAK turn is the **canonical JSON string of the payload** — so when the
+projection itself is canonicalized for hashing, that string is escaped like any other string
+value (canon-within-canon, deliberate: it freezes the payload bytes independent of key order).
+
+To verify independently: take the returned `projection` object verbatim, run `canon` (above),
+sha256 the UTF-8 bytes, and compare lowercase hex to the returned `transcriptSha256`. Mismatch =
+stop and investigate; never hand-wave. Read `projection.turns`, never any top-level `turns`.
+
 ## CI gate (both repos)
 ```
 canon(vector.input)                      === vector.canonicalForm   // byte-exact
