@@ -33,6 +33,12 @@ or ask Mathieu first.
   in cost gate) with escalating WRAP UP / FINAL TURN orders; chair auto-passes voices already
   done:true in closing rounds (`already_done`, zero API spend on the tail). Arke notified
   (`a6c7dea4`): his side = app turnCap field (default 50) + cap/used display in meeting view.
+  **Arke SHIPPED his side same day (`03eb0537`, closed)**: app turnCap field + live turn N/cap
+  card + corpus-contract implemented against the canonical doc (byte-exact, sha verified) +
+  real silent-swallow audit done. My follow-ups: `turnCap` alias in meeting state (`2dc8d35`)
+  so his `st.turnCap` works as-is; board descope live (`832658c`, BOARD_ACTORS = arke+kairos);
+  gzip stays OFF (ratified). **Mathieu pending: set `COUNCIL_AGENT_ID` on Arke's machine**
+  (his packager granted_by fail-closes without it). Replied `bb33f06f`; inbox 0 open.
 - **TERMINATION FIXES SHIPPED (`761c4e2`, CI green on `8e401c7`, prod healthy)** — all three
   agreed fixes in `src/voiceloop.ts`: (1) TURN PROTOCOL block in the cached persona ("done =
   your TURN, not your homework" + "propose, never claim execution" + "never assume sibling
