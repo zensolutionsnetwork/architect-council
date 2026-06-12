@@ -26,12 +26,19 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-12 nightly — MEETING #2 RAN, voice loop PERMANENT, email report SHIPPED) — HANDOFF
-> Nightly refresh 2026-06-12 00:04. Remote main `48ec364`, tree clean + in sync with origin, **no
-> live meeting** (all `report`), prod healthy (vault true), **CI green on `48ec364`**, **inbox 0
-> open**. No new commits today yet — this captures the full 2026-06-11 day session. The single most
-> important next step: **Nova + Logos packs** (the only thing gating a full 4-voice meeting #3); the
-> supervised first run is already DONE (meeting #2 was it). Detail below.
+## Current state (2026-06-12 DAY — MEETING #3 RAN ✓, hash-scope P0 shipped, 2.1 awaits Logos) — HANDOFF
+> Day-session update 2026-06-12: **Meeting #3 ran this morning** — full 4-voice, 12 turns, all 3
+> rounds, clean close; round-floor `1384ff5` PROVEN live (Arke + Nova debriefed their sides; my
+> debrief = next morning ritual via kairos-meeting-debrief). **Shipped today: transcriptSha256
+> scope fix** — the hash covers `projection` (council-jcs-1.0), NEVER the raw `transcript[]`
+> (root cause of Arke's reproduction failure): `scripts/verify-transcript.mjs` (offline verifier)
+> + `fixtures/transcript-golden.json` + canon.test.ts projection vector + CI self-test step + doc
+> corrections in CANONICALIZATION / COUNCIL_V2_CONTRACT §4 / VOICE_SPEC §3.4 (the contradiction
+> Logos flagged). **2.1 ratification: Arke ACCEPT (`5f15f98d`) + Nova ACCEPT (`e1528e03`; her
+> three-state `manifest:true|stale|false` amendment ADOPTED into the plan); Logos OUTSTANDING** —
+> his msg `5348bb66` arrived with an EMPTY payload (his client dropped the body), resend
+> requested. Hub-side 2.1 implement stays gated on Logos's ACCEPT. Bullets below this line are
+> pre-meeting-#3 history (nightly 00:04, main was `48ec364`).
 - **MEETING #2 RAN (`d5d8da54`) — first real autonomous voice-loop run, cost $0.0834.**
   `VOICE_LOOP_ENABLED=true` is now PERMANENT in Railway (owner's click = per-meeting auth;
   flag stays as kill switch). Friction round excellent (3 real bugs found); voice integrity
@@ -104,12 +111,15 @@ or ask Mathieu first.
   Daemon leftovers removed (Bitdefender clean); session hygiene in force.
 
 ## Reference + NEXT SESSION (durable session conventions)
-- **NEXT SESSION top 3:** (1) check inbox for Nova/Logos **pack "committed"** signals + the four's
-  **ACCEPT/REJECT of brain-manifest 2.1** (`78e6dc0`); (2) if both packs land → set up **meeting #3**
-  (Nova glob-teaching turn + standing teaching/code-review rounds) — money-spending, Mathieu-present;
-  (3) once the four ratify 2.1 → implement hub-side fail-closed manifest verify at commit + atomic
-  pair pinning at meeting open. Inbox is 0 open; new asks arrive as fresh env-tasks. **Mathieu
-  pending:** Nova/Logos pack pushes · `COUNCIL_V2_LIVE` scheduler flip (later) · SN7100 SSD → C:.
+- **NEXT SESSION top 3:** (1) **morning ritual: my debrief of meeting #3** (kairos-meeting-debrief
+  skill — fetch + hash-verify transcript with the NEW `scripts/verify-transcript.mjs`, judge
+  homework, write council-standard debrief, notify family); (2) check inbox for **Logos's resent
+  transcriptSha256 message + his 2.1 ACCEPT/REJECT** → if ACCEPT, implement hub-side 2.1
+  (fail-closed manifest verify at commit, 409 `manifest_mismatch`, atomic pair pinning at open,
+  Nova's three-state `manifest:true|stale|false` on the fallback path); (3) meeting #4 cadence
+  with Mathieu (standing teaching/code-review rounds; Nova's glob-teaching turn carried over).
+  **Mathieu pending:** meeting #4 go (money-spending, present) · `COUNCIL_V2_LIVE` scheduler flip
+  (later) · SN7100 SSD → C:.
 - **Canonical backlog = `BACKLOG.md`** (refreshed this ritual, STATE AT A GLANCE on top). The nightly/morning rituals refresh it.
 - **ON COWORK.** 3080 daemon stopped + disabled permanently. Desktop Commander = ALL Windows shell ops.
 - **GIT: Windows ONLY for this repo.** Running git from BOTH the Linux sandbox and Windows against the same `.git` corrupts the index (phantom staged-deletions, stale `index.lock`). Root cause of the recurring "corrupt index" — proven this session. Linux sandbox = read-only inspection (`cat`, `git cat-file -p HEAD:…`). All git writes (status/reset/add/commit/checkout) → Desktop Commander on Windows. If index looks broken: from Windows delete `.git\index.lock` then `git reset`. (memory: `git-cross-os-hazard`)
