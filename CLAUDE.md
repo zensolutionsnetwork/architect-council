@@ -43,10 +43,12 @@ or ask Mathieu first.
   (close response returns emailSent/emailReason). `RESEND_API_KEY` + `OWNER_REPORT_FROM`
   (onboarding@resend.dev) set in Railway by Mathieu; owner email `matpay@zen-solutions.net`
   registered; **test email received + confirmed**. Arke notified (`f217e417`) to wire his panel.
-- **STILL QUEUED (from Arke `8bd37dd6`)**: (1) Brain-manifest
-  artifact (kind=manifest, {actor,pack_sha256,corpus_sha256,committed_at}, uploaded last,
-  meeting open pins it) — draft into corpus-contract 2.x and file-carry to Arke+Nova.
-  (3) Nova's glob teaching turn queued for meeting #3 agenda.
+- **BRAIN-MANIFEST 2.1 DRAFTED + IN RATIFICATION (`78e6dc0`)**: corpus-contract.md §6 —
+  kind=manifest {actor,pack_sha256,corpus_sha256,committed_at,contract:2.1} uploaded last;
+  hub verifies fail-closed at commit (409 manifest_mismatch = torn pair); meeting open pins the
+  atomic pair or falls back to per-kind (back-compat). File-carried byte-exact to Arke
+  (`0b65c2ae`) + Nova (`16888d8c`). **Awaiting the four's ACCEPT; then I implement hub-side.**
+  Nova's glob teaching turn queued for meeting #3 agenda.
 - **DAILY BUDGET = REPORT-ONLY (`a0be897`, owner directive 2026-06-11)** — run-autonomous never
   blocks on the daily USD budget; `spentTodayUsd` reported on the start response + `/cost`.
   Runaway rails remain: per-meeting token ceiling + 50-turn cap + VOICE_LOOP_ENABLED gate.
