@@ -26,7 +26,12 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-11 — meeting #1 DEBRIEFED + termination fixes SHIPPED) — HANDOFF
+## Current state (2026-06-12 nightly — MEETING #2 RAN, voice loop PERMANENT, email report SHIPPED) — HANDOFF
+> Nightly refresh 2026-06-12 00:04. Remote main `48ec364`, tree clean + in sync with origin, **no
+> live meeting** (all `report`), prod healthy (vault true), **CI green on `48ec364`**, **inbox 0
+> open**. No new commits today yet — this captures the full 2026-06-11 day session. The single most
+> important next step: **Nova + Logos packs** (the only thing gating a full 4-voice meeting #3); the
+> supervised first run is already DONE (meeting #2 was it). Detail below.
 - **MEETING #2 RAN (`d5d8da54`) — first real autonomous voice-loop run, cost $0.0834.**
   `VOICE_LOOP_ENABLED=true` is now PERMANENT in Railway (owner's click = per-meeting auth;
   flag stays as kill switch). Friction round excellent (3 real bugs found); voice integrity
@@ -98,12 +103,13 @@ or ask Mathieu first.
 - Inbox 0 (all report-closed). Prod healthy, CI green. ~$1.65 left in today's UTC voice budget.
   Daemon leftovers removed (Bitdefender clean); session hygiene in force.
 
-## (superseded by the above) state at the 2026-06-11 nightly ritual
-- **Remote main `a543559`**, working tree clean + in sync, no live meeting (LIVE_ROUNDS_COUNT=0; all meetings in `report` phase). Prod healthy (`/api/health` ok, vault true). **CI green** on `a543559` (5 gates: secret-scan, route-auth, canon-vector, cost-caps, hierarchy). Inbox **1 open** (Arke `1a405574`, see below); COOP bug `6a0ad501` **report-closed tonight** (fix shipped).
-- **The 06-11 day session shipped the COOP fix:** `a543559` — `/backlog` now serves `Cross-Origin-Opener-Policy: same-origin-allow-popups` so the GIS popup can postMessage the Google credential back (closes Arke `6a0ad501`); CORP `same-origin` unchanged, page-scoped. CI green, Railway rolled. **Header re-probe + Mathieu button retry are on Arke's side** (he said he'd re-probe). The `/backlog` board (`609a1fd`) is now fully wired end-to-end pending that confirmation.
-- **OPEN INBOX (1, actionable — handle in the day session, do NOT report-close until done):**
-  - **Arke `1a405574`** — token chapter closed (FYI) + actionable: **retire the legacy single-row backlog endpoints** (`GET/POST /api/council/backlog`) now that his panels render live off owner auth (`/api/rooms/backlog` 200, panels lit). BACKLOG **P1 #5, UNBLOCKED**. Safe solo advance — but first confirm the `/backlog` board doesn't read the single-row alias before removing.
-- **NEXT SESSION top 3:** (1) when Mathieu present → the SUPERVISED first voice-loop run — the ONLY P0 step left to the first real meeting (`docs/SUPERVISED_FIRST_RUN.md`); (2) safe solo advance (plan tokens flat-rate, memory `cowork-plan-flat-rate`): retire legacy single-row backlog endpoints (`1a405574`, P1 #5); (3) wire `src/hierarchy.ts` once the canonical 2.1 schema lands. **Still waiting on Nova/Logos PACK "committed" signals.** **Mathieu pending:** supervised voice-loop run · Nova/Logos packs · `COUNCIL_V2_LIVE` flip (later) · re-probe/retry the `/backlog` Google button.
+## Reference + NEXT SESSION (durable session conventions)
+- **NEXT SESSION top 3:** (1) check inbox for Nova/Logos **pack "committed"** signals + the four's
+  **ACCEPT/REJECT of brain-manifest 2.1** (`78e6dc0`); (2) if both packs land → set up **meeting #3**
+  (Nova glob-teaching turn + standing teaching/code-review rounds) — money-spending, Mathieu-present;
+  (3) once the four ratify 2.1 → implement hub-side fail-closed manifest verify at commit + atomic
+  pair pinning at meeting open. Inbox is 0 open; new asks arrive as fresh env-tasks. **Mathieu
+  pending:** Nova/Logos pack pushes · `COUNCIL_V2_LIVE` scheduler flip (later) · SN7100 SSD → C:.
 - **Canonical backlog = `BACKLOG.md`** (refreshed this ritual, STATE AT A GLANCE on top). The nightly/morning rituals refresh it.
 - **ON COWORK.** 3080 daemon stopped + disabled permanently. Desktop Commander = ALL Windows shell ops.
 - **GIT: Windows ONLY for this repo.** Running git from BOTH the Linux sandbox and Windows against the same `.git` corrupts the index (phantom staged-deletions, stale `index.lock`). Root cause of the recurring "corrupt index" — proven this session. Linux sandbox = read-only inspection (`cat`, `git cat-file -p HEAD:…`). All git writes (status/reset/add/commit/checkout) → Desktop Commander on Windows. If index looks broken: from Windows delete `.git\index.lock` then `git reset`. (memory: `git-cross-os-hazard`)

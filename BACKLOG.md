@@ -2,24 +2,32 @@
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to the first real meeting. Last refresh: 2026-06-11 (MORNING ritual, 06:00).
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-12
+> (NIGHTLY ritual, 00:04).
 
 ## STATE AT A GLANCE
-- Remote main `8e401c7`; prod healthy (`/api/health` ok, vault true); CI **green** (5 gates).
-- **2026-06-11 day session: meeting #1 termination fixes SHIPPED (`761c4e2`)** — done=turn prompt,
-  repeat guard, closing 2-cycle cap, all-done round ends meeting; repeat-guard tests in cost gate.
-  Kairos debrief + `docs/corpus-contract.md` committed (`8e401c7`); family notified; debrief skill
-  packaged for install. **Meeting #2 unblocked on code — only the supervised run remains.**
-- Inbox: **EMPTY (0 open)** — confirmed live via API this session.
-- Three commits landed since the nightly handoff (`a543559`): `3032593` retire legacy single-row
-  `/council/admin/backlog` endpoints (closes Arke `1a405574`, **P1 #5 DONE**) · `f3e89dc` owner board
-  scoped to arke + architect-council rows (owner directive) · `62a697e` hub member/voice is **KAIROS by
-  name** (owner directive 2026-06-11) — `architect-council` is now the retired pre-naming alias.
-- Both P0 hub builds DONE: **voice loop** (deployed DISABLED, money-safe) + **owner-auth brain upload**.
-- **Admin-token chapter CLOSED**: Mathieu installed the rotated value himself; Arke's app verified live.
-- **`/backlog` board fully working**: COOP one-liner shipped (`a543559`) so Google sign-in popup can
-  return the credential; CORP unchanged, page-scoped. Header re-probe + button retry on Arke/Mathieu.
-- Daily rituals armed: `kairos-midnight-backlog-handoff` (00:04) + `kairos-morning-prep` (06:05).
+- Remote main `48ec364`; prod healthy (`/api/health` ok, vault true); CI **green** (run on `48ec364`
+  success). Working tree clean, in sync with `origin/main`. No live meeting (all in `report`).
+- **MEETING #2 RAN (`d5d8da54`, 2026-06-11) — first real autonomous voice-loop run, cost $0.0834.**
+  `VOICE_LOOP_ENABLED=true` is now **PERMANENT** in Railway (owner's click = per-meeting auth; flag
+  stays as the kill switch). Friction round excellent (3 real bugs found); voice-integrity PASS. The
+  one failure — every voice `done:true` on turn one ending the meeting after ONE round — was FIXED
+  (`1384ff5`, CI green): all-done honored only once the completing round ≥ CLOSING_ROUND_START.
+- **The big P0 has cleared**: the supervised first run is DONE (meeting #2 was it). Remaining path to
+  a steady 4-voice cadence = Nova + Logos **packs** still pending + brain-manifest 2.1 ratification.
+- **Owner-report EMAIL shipped + verified** (`49a0d12`): `src/mailer.ts` (Resend HTTP, env-gated,
+  fail-soft), `app_settings` table, owner-gated `/api/council/notify-email` (+`/test`); on real close
+  the hub stores + emails the report best-effort. Test mail received + confirmed by Mathieu.
+- **Brain-manifest 2.1 DRAFTED + in ratification** (`78e6dc0`/`48ec364`, corpus-contract §6) —
+  atomic pack+corpus pinning to kill the two-artifact upload race; file-carried byte-exact to Arke +
+  Nova. Awaiting the four's ACCEPT, then Kairos implements hub-side fail-closed verify at commit.
+- **Daily budget = REPORT-ONLY** (`a0be897`, owner directive) — never blocks a meeting; token ceiling
+  + 50-turn cap + VOICE_LOOP_ENABLED gate remain the runaway rails. **Turn budget supervision**
+  shipped (`f77ff56`): default 50-turn cap, per-turn budget note to every voice, chair auto-passes
+  already-done voices in closing rounds.
+- Inbox: **EMPTY (0 open)** — confirmed live via API this run.
+- Daily rituals armed: `kairos-midnight-backlog-handoff` (00:04) + `kairos-morning-prep` (06:05);
+  Nova's **checksuite-guard** CI adopted (`e00406d`) to catch stuck check suites stalling Wait-for-CI.
 
 ## DONE (shipped + verified on prod)
 
@@ -93,19 +101,44 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
   persona and actor are one; board filter includes kairos; `architect-council` is the retired
   pre-naming alias (member secret still resolves to that registry row — unchanged).
 
-## P0 — path to meeting #2 (in order)
-0. ~~Meeting #1 termination fixes~~ **DONE 2026-06-11** (`761c4e2`) — see STATE AT A GLANCE.
-1. **Voice loop** — built + deployed DISABLED, termination fixes in. **REMAINING: SUPERVISED run with Mathieu** —
-   `docs/SUPERVISED_FIRST_RUN.md`: set `VOICE_LOOP_ENABLED=true`, open a meeting, fire run-autonomous,
-   watch `/cost` vs §2 envelope ($1.30–2/normal day), close. Money-spending + Mathieu-present — never
-   unattended. Then retire the placeholder driver.
-2. **Nova + Logos brains.** Nova CORPUS committed (`nova@sha256:374a33aa…`); **packs still pending**
-   (Nova + Logos) — pack is the cached per-turn voice context the loop reads. Owner can push them
-   from the app via the owner-auth upload path now that it exists. Nudges sent 2026-06-10 (Nova
-   `5fe9d9d9`, Logos `d78a65b7`); Arke flagged on his stub corpus + missing pack (`4090bab2`).
-   **Kairos OWN brain is REAL now (2026-06-10): pack 4.4KB (`683dc723…`) + corpus 280KB full hub
-   source (`4347ac7e…`), both committed + verified — replaced the smoke stubs.**
-3. **Supervised rehearsal → first real daily meeting.** `COUNCIL_V2_LIVE` flip stays Mathieu's.
+**2026-06-11 (day session, since the morning ritual `bce9d9b`):**
+- **Meeting #1 termination fixes** (`761c4e2`) + **Kairos debrief** (`8e401c7`,
+  `council/KAIROS_DEBRIEF_2026-06-11.md`) + canonical `docs/corpus-contract.md`.
+- **MEETING #2 RAN** (`d5d8da54`) — first real autonomous voice-loop run, $0.0834, voice-integrity
+  PASS, 3 real friction bugs found. `VOICE_LOOP_ENABLED=true` made PERMANENT in Railway (kill switch
+  retained). **Premature all-done FIXED** (`1384ff5`): all-done ends a meeting only once the
+  completing round ≥ CLOSING_ROUND_START; `done:true` retaught as "nothing more for the REST of the
+  meeting", kept false through friction/review.
+- **Owner-report EMAIL** (`49a0d12`) — `src/mailer.ts` (Resend HTTP, env-gated, fail-soft),
+  `app_settings` + get/setSetting, owner-gated `GET/POST /api/council/notify-email` + `.../test`;
+  send-on-real-close best-effort; per-reason auto-pass counts appended; 3 routes in route-auth gate.
+  `RESEND_API_KEY` + `OWNER_REPORT_FROM` set in Railway by Mathieu; test mail received + confirmed.
+- **Daily budget REPORT-ONLY** (`a0be897`, owner directive) — run-autonomous never blocks on USD;
+  `spentTodayUsd` on start response + `/cost`. **Turn budget supervision** (`f77ff56` + alias
+  `2dc8d35`) — default 50-turn cap (per-meeting + global override), per-turn budget note to every
+  voice with escalating wrap-up orders, chair auto-passes already-done voices in closing rounds.
+- **checksuite-guard CI** (`e00406d`, Nova's pattern) — daily scan for stuck non-Actions check suites
+  that stall Railway Wait-for-CI. **Transcript-verification recipe** published (`ea7572f`, Logos ask).
+  **COUNCIL_AGENT_ID** confirmed set on Arke's machine (`4711906`); board descoped to kairos+arke
+  (`832658c`).
+- **Brain-manifest 2.1 DRAFTED** (`78e6dc0`/`48ec364`, corpus-contract §6) — `kind=manifest`
+  {actor, pack_sha256, corpus_sha256, committed_at, contract:2.1} uploaded last; hub verifies
+  fail-closed at commit (409 `manifest_mismatch` = torn pair); meeting open pins the atomic pair or
+  falls back to per-kind. File-carried byte-exact to Arke + Nova. **In ratification (see P0 #3).**
+
+## P0 — path to a steady real-meeting cadence (in order)
+0. ~~Meeting #1 termination fixes~~ **DONE** (`761c4e2`) · ~~supervised first autonomous run~~ **DONE
+   2026-06-11 — meeting #2 (`d5d8da54`) WAS it**; `VOICE_LOOP_ENABLED` now permanent. See DONE.
+1. **Nova + Logos packs — THE blocker for a full 4-voice meeting.** Nova CORPUS committed
+   (`nova@sha256:374a33aa…`); **packs still pending** (Nova + Logos) — pack is the cached per-turn
+   voice context the loop reads. Owner can push them from the app via the owner-auth upload path.
+   Nudges sent 2026-06-10 (Nova `5fe9d9d9`, Logos `d78a65b7`); Arke flagged on stub corpus + missing
+   pack (`4090bab2`). **Kairos OWN brain REAL: pack 4.4KB (`683dc723…`) + corpus 280KB (`4347ac7e…`).**
+2. **Meeting #3** — runs as soon as packs land; agenda carries Nova's glob-teaching turn + the
+   standing teaching/code-review rounds. `COUNCIL_V2_LIVE` scheduler flip stays Mathieu's call.
+3. **Brain-manifest 2.1 → hub-side impl.** Awaiting the four's ACCEPT of `78e6dc0`; then Kairos
+   implements fail-closed verify at commit + atomic-pair pinning at meeting open (back-compat
+   per-kind fallback). Resolves the two-artifact upload race Arke + Nova flagged.
 
 ## P1 — alongside / right after the loop
 4. `council-prep` / `council-debrief` skills (Arke drafts; Mathieu installs via Settings→Capabilities)
@@ -137,12 +170,15 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
     (`docs/PROPOSAL_AGENDA_AND_DIRECTIVES.md`, ratify then Kairos implements). UTC-budget note open.
 
 ## WAITING ON
-- **Mathieu**: supervised voice-loop run · Nova/Logos pack pushes if doing it from the cockpit ·
-  `COUNCIL_V2_LIVE` flip (later) · SN7100 SSD → C: migration. (Admin-token install: ✅ DONE himself.)
-- **Arke**: COOP fix shipped (`a543559`) — Arke to re-probe `/backlog` headers + have Mathieu retry
-  the Google button · retire-endpoints DONE (`1a405574` closed) · prep/debrief skill drafts ·
-  canonical 2.1 schema for hierarchy wiring · Layer-2 eval (post-rehearsal).
-- **Nova**: pack brain commit. **Logos**: pack + corpus brain commit + living backlog on biblevoice.net.
+- **Mathieu**: Nova/Logos pack pushes if doing it from the cockpit · `COUNCIL_V2_LIVE` scheduler flip
+  (later, deliberate) · SN7100 SSD → C: migration. (Supervised run + admin-token install: ✅ DONE.)
+- **The four (Arke/Nova/Logos)**: ACCEPT/REJECT brain-manifest 2.1 (`78e6dc0`) so Kairos can wire the
+  hub-side fail-closed verify.
+- **Arke**: prep/debrief skill drafts · canonical 2.1 schema for hierarchy wiring · Layer-2 eval
+  (post-rehearsal). (turnCap app-side + corpus-contract impl: ✅ shipped `03eb0537`; COUNCIL_AGENT_ID
+  set — restart to pick it up.)
+- **Nova**: pack brain commit (corpus done). **Logos**: pack + corpus brain commit + living backlog
+  on biblevoice.net.
 
 ## NOTE FOR THE NEXT SESSION
 - Git is **Windows-only** (`scripts/GIT-WINDOWS-ONLY.md`); run `.ps1` helpers with
