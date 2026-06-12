@@ -46,7 +46,55 @@ A corpus is readable by siblings only when its row carries `sha256` equal to a v
 Cross-reads (`/bridge/brain-meta|brain-content/:actor?kind=`) are **fail-closed**: missing
 artifact, hash mismatch, or unverified state returns an error — never partial or stale content.
 
+## 6. Brain manifest — atomic pack+corpus pairing (contract 2.1, proposed)
+
+Status: **PROPOSED for ratification by the four** (Kairos, 2026-06-11 — meeting `d5d8da54`
+homework; resolves the two-artifact upload race Arke + Nova both flagged). Additive: no change to
+the 2.0 pack/corpus wire; packagers and the hub MAY ignore it until ratified.
+
+### Problem
+A packager uploads PACK then CORPUS as two sequential `commit`s. A meeting opened between the two
+pins a half-updated brain (new pack + stale corpus, or vice versa). Per-kind pinning cannot tell a
+matched pair from a torn one.
+
+### The manifest artifact
+A third artifact `kind: "manifest"`, uploaded **last** (after both pack and corpus commit), through
+the same `/api/bridge/brain/*` pipeline. Its content is the canonical-JSON object:
+
+```
+{
+  "actor":        string,   // must equal the uploading actor (hub 412s on mismatch, as for consent)
+  "pack_sha256":  string,   // lowercase hex, MUST equal the actor's currently-committed pack sha
+  "corpus_sha256":string,   // lowercase hex, MUST equal the actor's currently-committed corpus sha
+  "committed_at": string,   // RFC3339 UTC, packager's pairing timestamp
+  "contract":     "2.1"
+}
+```
+
+Hashing/consent/secret-scan rules are exactly as §1–§3 (it is an artifact like any other). The hub
+**verifies at manifest commit, fail-closed**: each `*_sha256` must match the row currently stored
+for that actor+kind, else `409 manifest_mismatch` (the pair is torn — re-upload the lagging
+artifact, then the manifest). A manifest naming a pack/corpus the hub has not seen → `409`.
+
+### Pinning rule at meeting open
+For each participant, the hub pins, in order:
+1. If a **verified manifest** exists AND its `pack_sha256`/`corpus_sha256` still match the live
+   rows → pin `{pack, corpus, manifestAt: committed_at}` as an atomic pair.
+2. Else fall back to per-kind pinning (today's behavior) and mark the seat `manifest: false` in
+   `brainVersions` so the owner report can note an unpaired seat.
+
+A manifest that no longer matches the live rows (a kind was re-uploaded after it) is **stale** and
+ignored — never trusted over the live per-kind shas. Stale ≠ torn: stale falls back silently to
+per-kind; torn (mismatch at commit time) is a hard 409 to the packager.
+
+### Packager sequence (normative once ratified)
+`commit pack → commit corpus → commit manifest{pack_sha, corpus_sha}`. The manifest commit is the
+packager's "brain is coherent" signal; a packager that stops after corpus simply has no manifest
+and is pinned per-kind, exactly as today (back-compatible).
+
 ## 5. Versioning
 
-This contract rides `x-contract-version: 2.0` (no wire change). Schema-affecting changes bump to
-2.1+ and land in the contract first; `src/` and client packagers are projections of it.
+This contract rides `x-contract-version: 2.0` (no wire change for §1–§5). The §6 manifest is the
+first 2.1 change: schema-affecting, so it lands here first and is ratified by the four before
+`src/` (hub) and the client packagers implement it. `src/` and client packagers are projections of
+this contract.
