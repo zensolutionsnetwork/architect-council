@@ -1,0 +1,75 @@
+{
+  "description": "Golden vector for transcriptSha256 scope: hash = sha256(canon(projection)) per council-jcs-1.0. The projection (NOT the raw transcript[]) is the hashed object. Asserted by test/canon.test.ts (normative impl) and scripts/verify-transcript.mjs --self-test (independent reimpl).",
+  "meeting": {
+    "id": "00000000-0000-4000-8000-000000feed01",
+    "contract_version": "2.0",
+    "brain_versions": {
+      "arke": "arke@sha256:1111111111111111",
+      "kairos": "kairos@sha256:2222222222222222"
+    },
+    "transcript": [
+      {
+        "actor": "kairos",
+        "kind": "speak",
+        "payload": {
+          "text": "Café ☕ line1\nline2",
+          "z": 1,
+          "a": 2,
+          "nested": {
+            "kéy": [
+              "x",
+              7,
+              true,
+              null
+            ]
+          }
+        }
+      },
+      {
+        "actor": "arke",
+        "kind": "pass",
+        "payload": {
+          "ignored": "pass turns hash as empty text"
+        }
+      },
+      {
+        "actor": "arke",
+        "kind": "speak",
+        "payload": {
+          "done": true,
+          "text": "final \"quoted\" backslash \\ tab\t end"
+        }
+      }
+    ]
+  },
+  "expectedProjection": {
+    "contractVersion": "2.0",
+    "meetingId": "00000000-0000-4000-8000-000000feed01",
+    "brainVersions": {
+      "arke": "arke@sha256:1111111111111111",
+      "kairos": "kairos@sha256:2222222222222222"
+    },
+    "turns": [
+      {
+        "seq": 1,
+        "actor": "kairos",
+        "kind": "speak",
+        "text": "{\"a\":2,\"nested\":{\"kéy\":[\"x\",7,true,null]},\"text\":\"Café ☕ line1\\nline2\",\"z\":1}"
+      },
+      {
+        "seq": 2,
+        "actor": "arke",
+        "kind": "pass",
+        "text": ""
+      },
+      {
+        "seq": 3,
+        "actor": "arke",
+        "kind": "speak",
+        "text": "{\"done\":true,\"text\":\"final \\\"quoted\\\" backslash \\\\ tab\\t end\"}"
+      }
+    ]
+  },
+  "expectedCanonicalForm": "{\"brainVersions\":{\"arke\":\"arke@sha256:1111111111111111\",\"kairos\":\"kairos@sha256:2222222222222222\"},\"contractVersion\":\"2.0\",\"meetingId\":\"00000000-0000-4000-8000-000000feed01\",\"turns\":[{\"actor\":\"kairos\",\"kind\":\"speak\",\"seq\":1,\"text\":\"{\\\"a\\\":2,\\\"nested\\\":{\\\"kéy\\\":[\\\"x\\\",7,true,null]},\\\"text\\\":\\\"Café ☕ line1\\\\nline2\\\",\\\"z\\\":1}\"},{\"actor\":\"arke\",\"kind\":\"pass\",\"seq\":2,\"text\":\"\"},{\"actor\":\"arke\",\"kind\":\"speak\",\"seq\":3,\"text\":\"{\\\"done\\\":true,\\\"text\\\":\\\"final \\\\\\\"quoted\\\\\\\" backslash \\\\\\\\ tab\\\\t end\\\"}\"}]}",
+  "expectedSha256": "cef7e0ec38b54ea019c37adf632ed936d340333976887971f00e92218ed12615"
+}

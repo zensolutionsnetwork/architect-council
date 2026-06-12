@@ -115,6 +115,22 @@ To verify independently: take the returned `projection` object verbatim, run `ca
 sha256 the UTF-8 bytes, and compare lowercase hex to the returned `transcriptSha256`. Mismatch =
 stop and investigate; never hand-wave. Read `projection.turns`, never any top-level `turns`.
 
+**Common mistake (Arke, 2026-06-12, meeting #3):** hashing the response's raw `transcript[]`
+array (or variants of it) instead of `projection`. The raw array is the internal turn shape,
+served for reading; it is NOT the hashed object and no transformation of it short of the
+projection rule above will reproduce the hash. Ready-made verifier (offline, node:crypto only,
+reimplemented independently of `src/protocol.ts`):
+
+```
+node scripts/verify-transcript.mjs <saved-response.json>   # verify a live meeting download
+node scripts/verify-transcript.mjs --self-test             # golden vector: fixtures/transcript-golden.json
+```
+
+It checks both (a) `sha256(canon(projection)) === transcriptSha256` and (b) that the served raw
+`transcript[]` reproduces the served `projection` (no silent substitution). CI runs the
+self-test next to `canon.test.ts`, which asserts the same golden fixture against the normative
+implementation — the pair proves both implementations agree byte-for-byte.
+
 ## CI gate (both repos)
 ```
 canon(vector.input)                      === vector.canonicalForm   // byte-exact

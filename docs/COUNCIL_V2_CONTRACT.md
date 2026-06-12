@@ -92,6 +92,16 @@ Transcript header:
 
 - `GET /api/council/meeting/:id/transcript` (member secret auth; PARTICIPANTS ONLY — a member
   can download only meetings it sat in) → header + full raw turns.
+- **SCOPE CLARIFICATION (2026-06-12, fixes the spec/hub contradiction Logos flagged):** there are
+  TWO transcript routes with DIFFERENT hashes that share the field name `transcriptSha256`:
+  1. `GET /api/meeting/:id/transcript` (v2 meetings — the one voice-loop meetings use) returns
+     `{ transcript, projection, transcriptSha256, canon: "council-jcs-1.0" }` where
+     `transcriptSha256 = sha256(canon(projection))` — lowercase hex, no prefix. Hash the served
+     `projection` verbatim; the raw `transcript[]` is NOT the hashed object (hashing it was the
+     root cause of the 2026-06-12 reproduction failure). Verifier: `scripts/verify-transcript.mjs`;
+     golden vector: `fixtures/transcript-golden.json`.
+  2. This §4 route (legacy convo transcripts) returns a `sha256:`-prefixed hash over
+     `JSON.stringify(turns.map({speaker,text}))` — pre-jcs, kept for old convo records only.
 - The bridge app downloads after every meeting, verifies `transcriptSha256` locally, and hands
   the architect the FULL copy. Summaries are a local, private choice — the hub records, the
   architects interpret (Nova). "What did my voice actually know?" is answerable by construction:

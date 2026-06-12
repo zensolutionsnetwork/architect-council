@@ -51,6 +51,8 @@ jobs:
         run: npm ci
       - name: Assert golden vector (canon byte-exact + sha256)
         run: npx tsx test/canon.test.ts
+      - name: Independent verifier agrees (verify-transcript self-test)
+        run: node scripts/verify-transcript.mjs --self-test
 
   cost-caps:
     name: autonomous-voice cost/caps

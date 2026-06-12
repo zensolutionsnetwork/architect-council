@@ -9,6 +9,7 @@
     "secret-scan": "node scripts/secret-scan.mjs",
     "route-auth": "tsx test/route-auth.test.ts",
     "canon-test": "tsx test/canon.test.ts",
+    "verify-transcript": "node scripts/verify-transcript.mjs",
     "cost-test": "tsx test/cost.test.ts",
     "hierarchy-test": "tsx test/hierarchy.test.ts"
   },

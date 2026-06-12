@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { canon } from '../src/protocol.js';
+import { canon, projectTranscript, transcriptSha256Hex } from '../src/protocol.js';
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const fx = (name: string) => path.join(dir, '..', 'fixtures', name);
@@ -38,5 +38,18 @@ for (const f of FILE_VECTORS) {
   else console.log('  edge-large-500: PASS — ' + EXPECT);
 }
 
+/** transcript-golden: transcriptSha256 SCOPE vector (hash covers the projection, never raw transcript[]).
+ *  The fixture was generated independently; this block asserts the NORMATIVE projectTranscript/canon
+ *  reproduce it byte-for-byte. scripts/verify-transcript.mjs --self-test asserts the same fixture
+ *  with a dependency-free reimplementation — together they prove both impls agree. */
+{
+  const v = JSON.parse(fs.readFileSync(fx('transcript-golden.json'), 'utf8'));
+  const projection = projectTranscript(v.meeting);
+  if (canon(projection) !== v.expectedCanonicalForm) { bad('transcript-golden: canon(projectTranscript(meeting)) != expectedCanonicalForm'); }
+  if (canon(projection) !== canon(v.expectedProjection)) { bad('transcript-golden: projection != expectedProjection'); }
+  if (transcriptSha256Hex(projection) !== v.expectedSha256) { bad('transcript-golden: hash ' + transcriptSha256Hex(projection) + ' != ' + v.expectedSha256); }
+  if (!fail) console.log('  transcript-golden.json: PASS — ' + v.expectedSha256);
+}
+
 if (fail) { console.error('council-jcs-1.0 vectors: FAIL'); process.exit(1); }
-console.log('council-jcs-1.0 golden + edge vectors: PASS (4 vectors)');
+console.log('council-jcs-1.0 golden + edge vectors: PASS (5 vectors incl. transcript projection scope)');

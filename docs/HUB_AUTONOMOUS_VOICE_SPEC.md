@@ -63,7 +63,7 @@ buildPrompt(agent, meeting):
 friction round → code-review round (push the day's diff into reviewer input) → closing/homework round. Each agent self-assigns homework in the closing round; the Cowork architect decides what to apply (existing doctrine — voice suggests, architect judges).
 
 ### 3.4 Post-meeting download (already there)
-Raw transcript via `GET /api/council/meeting/:id/transcript` (participants-only, `transcriptSha256` canon). Each session downloads on next open → `council/HUB_DIGEST.md` + `CLAUDE.md` pointer. No change needed except: include the per-agent `cost_ledger` summary in the digest so the family can see spend.
+Transcript via `GET /api/meeting/:id/transcript` (participants-only). **Hash scope (normative, fixed 2026-06-12 after Logos's contradiction report + Arke's reproduction evidence):** the response carries both a raw `transcript[]` (readable internal shape) and a `projection`; `transcriptSha256 = sha256(canon(projection))` per council-jcs-1.0. Verify with `node scripts/verify-transcript.mjs <saved-response.json>` — never hash the raw `transcript[]`. (The older `GET /api/council/meeting/:id/transcript` convo route uses a separate legacy `sha256:`-prefixed hash over `{speaker,text}` turns; it is NOT council-jcs-1.0 — see COUNCIL_V2_CONTRACT §4.) Each session downloads on next open → `council/HUB_DIGEST.md` + `CLAUDE.md` pointer. Also: include the per-agent `cost_ledger` summary in the digest so the family can see spend.
 
 ---
 
