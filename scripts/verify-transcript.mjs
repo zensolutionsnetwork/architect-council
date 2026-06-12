@@ -106,8 +106,11 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const arg = process.argv[2];
 if (!arg) { console.error('usage: node scripts/verify-transcript.mjs <saved-response.json> | --self-test'); process.exit(2); }
 
+/** Read JSON tolerating a UTF-8 BOM (PowerShell 5 Set-Content -Encoding UTF8 writes one). */
+const readJson = (p) => JSON.parse(fs.readFileSync(p, 'utf8').replace(/^﻿/, ''));
+
 if (arg === '--self-test') {
-  const fx = JSON.parse(fs.readFileSync(path.join(here, '..', 'fixtures', 'transcript-golden.json'), 'utf8'));
+  const fx = readJson(path.join(here, '..', 'fixtures', 'transcript-golden.json'));
   const rebuilt = rebuildProjection({
     contractVersion: fx.meeting.contract_version, meetingId: fx.meeting.id,
     brainVersions: fx.meeting.brain_versions, rawTurns: fx.meeting.transcript,
@@ -119,7 +122,7 @@ if (arg === '--self-test') {
   if (got === fx.expectedSha256) pass('sha256 matches golden: ' + got);
   else fail('sha256 ' + got + ' != golden ' + fx.expectedSha256);
 } else {
-  verifyResponse(JSON.parse(fs.readFileSync(arg, 'utf8')), arg);
+  verifyResponse(readJson(arg), arg);
 }
 
 if (failures) { console.error('verify-transcript: FAIL (' + failures + ')'); process.exit(1); }
