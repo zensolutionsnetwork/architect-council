@@ -3,11 +3,16 @@
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
 > Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-12
-> (NIGHTLY ritual, 00:04).
+> (MORNING ritual, 06:05).
 
 ## STATE AT A GLANCE
-- Remote main `48ec364`; prod healthy (`/api/health` ok, vault true); CI **green** (run on `48ec364`
-  success). Working tree clean, in sync with `origin/main`. No live meeting (all in `report`).
+- Remote main `65a2bd8` (midnight nightly commit); prod healthy (`/api/health` ok, vault true); CI
+  **green** (run #72 on `65a2bd8` success). Working tree clean, in sync with `origin/main`. No live
+  meeting (all 20 in `report`; LIVE_ROUNDS_COUNT=0).
+- **ALL FOUR PACKS + CORPUS NOW COMMITTED (verified 06-12 AM):** nova pack 10095B + corpus 1.62MB,
+  logos pack 6592B + corpus 172607B, arke pack 10482B + corpus 324573B, kairos (architect-council)
+  pack 5385B + corpus 297514B. **P0 #1 is CLEARED** — the last code blocker for a full 4-voice
+  meeting #3 is gone; gate is now just Mathieu firing the meeting.
 - **MEETING #2 RAN (`d5d8da54`, 2026-06-11) — first real autonomous voice-loop run, cost $0.0834.**
   `VOICE_LOOP_ENABLED=true` is now **PERMANENT** in Railway (owner's click = per-meeting auth; flag
   stays as the kill switch). Friction round excellent (3 real bugs found); voice-integrity PASS. The
@@ -25,7 +30,9 @@
   + 50-turn cap + VOICE_LOOP_ENABLED gate remain the runaway rails. **Turn budget supervision**
   shipped (`f77ff56`): default 50-turn cap, per-turn budget note to every voice, chair auto-passes
   already-done voices in closing rounds.
-- Inbox: **EMPTY (0 open)** — confirmed live via API this run.
+- Inbox: **EMPTY (0 open)** — confirmed live via API this run. Overnight: Arke `5f15f98d` ACCEPTed
+  brain-manifest 2.1 (sha-verified byte-exact) + acked email panel / premature-done fix / meeting #3
+  ready; replied + closed; Nova/Logos nudged for their ACCEPT/REJECT.
 - Daily rituals armed: `kairos-midnight-backlog-handoff` (00:04) + `kairos-morning-prep` (06:05);
   Nova's **checksuite-guard** CI adopted (`e00406d`) to catch stuck check suites stalling Wait-for-CI.
 
@@ -129,16 +136,17 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
 ## P0 — path to a steady real-meeting cadence (in order)
 0. ~~Meeting #1 termination fixes~~ **DONE** (`761c4e2`) · ~~supervised first autonomous run~~ **DONE
    2026-06-11 — meeting #2 (`d5d8da54`) WAS it**; `VOICE_LOOP_ENABLED` now permanent. See DONE.
-1. **Nova + Logos packs — THE blocker for a full 4-voice meeting.** Nova CORPUS committed
-   (`nova@sha256:374a33aa…`); **packs still pending** (Nova + Logos) — pack is the cached per-turn
-   voice context the loop reads. Owner can push them from the app via the owner-auth upload path.
-   Nudges sent 2026-06-10 (Nova `5fe9d9d9`, Logos `d78a65b7`); Arke flagged on stub corpus + missing
-   pack (`4090bab2`). **Kairos OWN brain REAL: pack 4.4KB (`683dc723…`) + corpus 280KB (`4347ac7e…`).**
-2. **Meeting #3** — runs as soon as packs land; agenda carries Nova's glob-teaching turn + the
-   standing teaching/code-review rounds. `COUNCIL_V2_LIVE` scheduler flip stays Mathieu's call.
-3. **Brain-manifest 2.1 → hub-side impl.** Awaiting the four's ACCEPT of `78e6dc0`; then Kairos
-   implements fail-closed verify at commit + atomic-pair pinning at meeting open (back-compat
-   per-kind fallback). Resolves the two-artifact upload race Arke + Nova flagged.
+1. ~~Nova + Logos packs~~ **DONE 2026-06-12 AM** — all four members now have pack + corpus committed
+   (verified via brain-meta; see STATE glance for byte counts). The last code blocker for a full
+   4-voice meeting is cleared.
+2. **Meeting #3 — NOW the top live P0.** All packs landed; agenda carries Nova's glob-teaching turn +
+   the standing teaching/code-review rounds. Money-spending + Mathieu-present: he fires it (`VOICE_LOOP_ENABLED`
+   already permanent; per-meeting auth = his click). `COUNCIL_V2_LIVE` scheduler flip stays his call.
+3. **Brain-manifest 2.1 → hub-side impl.** **Arke ACCEPTed** (`5f15f98d`, sha-verified byte-exact);
+   Nova + Logos nudged this morning, awaiting their ACCEPT/REJECT. Once all four are in, Kairos
+   implements fail-closed verify at commit + atomic-pair pinning at meeting open (back-compat per-kind
+   fallback). **Arke's impl note (accepted):** the 409 `manifest_mismatch` body must name WHICH kind
+   diverged (pack vs corpus) so the packager knows what to re-upload. Resolves the two-artifact race.
 
 ## P1 — alongside / right after the loop
 4. `council-prep` / `council-debrief` skills (Arke drafts; Mathieu installs via Settings→Capabilities)
@@ -170,15 +178,15 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
     (`docs/PROPOSAL_AGENDA_AND_DIRECTIVES.md`, ratify then Kairos implements). UTC-budget note open.
 
 ## WAITING ON
-- **Mathieu**: Nova/Logos pack pushes if doing it from the cockpit · `COUNCIL_V2_LIVE` scheduler flip
-  (later, deliberate) · SN7100 SSD → C: migration. (Supervised run + admin-token install: ✅ DONE.)
-- **The four (Arke/Nova/Logos)**: ACCEPT/REJECT brain-manifest 2.1 (`78e6dc0`) so Kairos can wire the
-  hub-side fail-closed verify.
+- **Mathieu**: **FIRE meeting #3** (all packs landed — this is the live gate now) · `COUNCIL_V2_LIVE`
+  scheduler flip (later, deliberate) · SN7100 SSD → C: migration. (Supervised run + admin-token
+  install + Nova/Logos packs: ✅ DONE.)
+- **Nova + Logos**: ACCEPT/REJECT brain-manifest 2.1 (nudged 06-12 AM) so Kairos can wire the hub-side
+  fail-closed verify. (Arke: ✅ ACCEPTed.)
 - **Arke**: prep/debrief skill drafts · canonical 2.1 schema for hierarchy wiring · Layer-2 eval
-  (post-rehearsal). (turnCap app-side + corpus-contract impl: ✅ shipped `03eb0537`; COUNCIL_AGENT_ID
-  set — restart to pick it up.)
-- **Nova**: pack brain commit (corpus done). **Logos**: pack + corpus brain commit + living backlog
-  on biblevoice.net.
+  (post-rehearsal). (turnCap app-side + corpus-contract impl + manifest 2.1 accept: ✅ done; email
+  panel wiring queued for his next live session.)
+- **Logos**: living backlog on biblevoice.net (pack + corpus brain: ✅ committed).
 
 ## NOTE FOR THE NEXT SESSION
 - Git is **Windows-only** (`scripts/GIT-WINDOWS-ONLY.md`); run `.ps1` helpers with
