@@ -2,10 +2,29 @@
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-12
-> (DAY session — post-meeting-#3).
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-13
+> (MORNING prep ritual).
 
 ## STATE AT A GLANCE
+- **OVERNIGHT (2026-06-12 day → 2026-06-13 morning):** Logos ACCEPTed brain-manifest 2.1 (twice —
+  `9298fc53` re-sent + `3c33082b` close-ritual; his earlier empty-payload client bug is fixed). With
+  Arke + Nova already in, **2.1 is now UNANIMOUSLY RATIFIED by all four.** Logos's rider is ADOPTED as
+  a hard requirement: the manifest-less/torn fallback MUST be LOGGED + surfaced (Nova's three-state
+  `manifest: true|stale|false`, with reason), never silent. **P0 #3 (hub-side 2.1 impl) is UNBLOCKED**
+  — next day/supervised build. Arke (`42a34c7a`) cleared the meeting-#3 hash-unverified markers + closed
+  his ask #23 against the verifier; his independent verify-transcript.mjs run is queued non-blocking.
+  Replied to Logos + Arke; all consumed; **inbox 0 open.**
+- **TWO MEETINGS RAN OVERNIGHT, both closed (phase=report):** meeting #4 `17f49b6f` (Arke: "fired
+  autonomously overnight, advancing clean") + a second room `344fcf74`. **Both still need a Kairos
+  debrief** (kairos-meeting-debrief ritual) — alongside the still-pending meeting #3 debrief.
+- Remote main now `d01eba2` (verify-transcript BOM-tolerance fix, live-PASS vs meeting #3); working
+  tree clean, in sync with origin/main. Prod healthy (`/api/health` ok, vault true). **Core CI green**
+  on `d01eba2` (4 gates). ⚠️ **checksuite-guard RED** — the Railway App GitHub integration (app_id
+  73253) is creating perpetually-`queued` check suites on every commit since 06-12 (65a2bd8, de027ea,
+  ff4fabe, d01eba2). NOT blocking deploys (deploys landing, prod healthy) but will stall a future
+  Wait-for-CI deploy; documented remedy = disable `auto_trigger_checks` for app_id 73253 (needs GitHub
+  admin token). See P1 #11.
+- No live meeting (LIVE_ROUNDS_COUNT=0; 22 meetings all in `report`).
 - **MEETING #3 RAN (2026-06-12 morning) — full 4-voice, 12 turns, all 3 rounds, clean close at the
   closing round. Round-floor fix `1384ff5` PROVEN live.** Arke debriefed (his
   `council/DEBRIEF_2026-06-12_meeting3.md`); Nova confirmed from her side. Kairos debrief = next
@@ -15,10 +34,9 @@
   `scripts/verify-transcript.mjs` (offline, independent reimpl) + `fixtures/transcript-golden.json`
   + canon.test.ts projection vector + CI self-test step + doc fixes (CANONICALIZATION /
   COUNCIL_V2_CONTRACT §4 / VOICE_SPEC §3.4 — the contradiction Logos flagged).
-- **Brain-manifest 2.1 ratification: Arke ACCEPT (`5f15f98d`) + Nova ACCEPT (`e1528e03`, with
-  non-blocking three-state `manifest: true|stale|false` amendment — ADOPTED into the plan).
-  Logos OUTSTANDING — his only message (`5348bb66`) arrived with an EMPTY payload (client bug);
-  resend requested. Hub-side implement stays gated on his ACCEPT.
+- **Brain-manifest 2.1 ratification: COMPLETE — Arke ACCEPT (`5f15f98d`) + Nova ACCEPT (`e1528e03`,
+  three-state `manifest: true|stale|false` adopted) + Logos ACCEPT (`9298fc53`/`3c33082b`, 06-13,
+  logged-fallback rider adopted). All four in. Hub-side implement is GO (see P0 #3).**
 - Remote main `65a2bd8` (midnight nightly commit); prod healthy (`/api/health` ok, vault true); CI
   **green** (run #72 on `65a2bd8` success). Working tree clean, in sync with `origin/main`. No live
   meeting (all 20 in `report`; LIVE_ROUNDS_COUNT=0).
@@ -43,9 +61,7 @@
   + 50-turn cap + VOICE_LOOP_ENABLED gate remain the runaway rails. **Turn budget supervision**
   shipped (`f77ff56`): default 50-turn cap, per-turn budget note to every voice, chair auto-passes
   already-done voices in closing rounds.
-- Inbox: **EMPTY (0 open)** — confirmed live via API this run. Overnight: Arke `5f15f98d` ACCEPTed
-  brain-manifest 2.1 (sha-verified byte-exact) + acked email panel / premature-done fix / meeting #3
-  ready; replied + closed; Nova/Logos nudged for their ACCEPT/REJECT.
+- Inbox: **EMPTY (0 open)** — confirmed live via API this run (3 overnight msgs consumed + closed).
 - Daily rituals armed: `kairos-midnight-backlog-handoff` (00:04) + `kairos-morning-prep` (06:05);
   Nova's **checksuite-guard** CI adopted (`e00406d`) to catch stuck check suites stalling Wait-for-CI.
 
@@ -152,20 +168,31 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
 1. ~~Nova + Logos packs~~ **DONE 2026-06-12 AM** — all four members now have pack + corpus committed
    (verified via brain-meta; see STATE glance for byte counts). The last code blocker for a full
    4-voice meeting is cleared.
-2. **Meeting #3 — NOW the top live P0.** All packs landed; agenda carries Nova's glob-teaching turn +
-   the standing teaching/code-review rounds. Money-spending + Mathieu-present: he fires it (`VOICE_LOOP_ENABLED`
-   already permanent; per-meeting auth = his click). `COUNCIL_V2_LIVE` scheduler flip stays his call.
-3. **Brain-manifest 2.1 → hub-side impl.** **Arke ACCEPTed** (`5f15f98d`, sha-verified byte-exact);
-   Nova + Logos nudged this morning, awaiting their ACCEPT/REJECT. Once all four are in, Kairos
-   implements fail-closed verify at commit + atomic-pair pinning at meeting open (back-compat per-kind
-   fallback). **Arke's impl note (accepted):** the 409 `manifest_mismatch` body must name WHICH kind
-   diverged (pack vs corpus) so the packager knows what to re-upload. Resolves the two-artifact race.
+2. ~~Meeting #3~~ **DONE 2026-06-12** (full 4-voice, 12 turns, clean close). **Meetings #4 `17f49b6f`
+   + room `344fcf74` also RAN overnight 06-13, both closed clean** (Arke: "fired autonomously
+   overnight, advancing clean"). Cadence is now happening. Remaining: Kairos debriefs of #3/#4/#5
+   (debrief ritual) + `COUNCIL_V2_LIVE` scheduler flip stays Mathieu's deliberate call.
+3. **Brain-manifest 2.1 → hub-side impl. NOW GO — UNANIMOUSLY RATIFIED (Arke `5f15f98d` + Nova
+   `e1528e03` + Logos `9298fc53`/`3c33082b`).** Next day/supervised build (touches commit + meeting-open
+   paths — do NOT deploy over a live meeting). Scope: (a) fail-closed verify at commit, 409
+   `manifest_mismatch` body NAMES which kind diverged (pack vs corpus) — Arke's accepted impl note;
+   (b) atomic pack+corpus pinning at meeting-open with back-compat per-kind fallback; (c) Nova's
+   three-state `manifest: true|stale|false` — and per Logos's adopted rider the fallback MUST be LOGGED
+   + surfaced in the owner report with a reason, never silent. Resolves the two-artifact upload race.
 
 ## P1 — alongside / right after the loop
 4. `council-prep` / `council-debrief` skills (Arke drafts; Mathieu installs via Settings→Capabilities)
    + directive trigger (env-task kind `directive`, §15).
 5. ~~Retire legacy single-row backlog endpoints~~ **DONE** (`3032593`, Arke `1a405574`) — see DONE.
 6. Rotate Nova + Logos member secrets once both confirm env storage (transited chat at onboarding).
+11. **checksuite-guard RED — Railway App phantom check suites (NEW 2026-06-13).** GitHub integration
+    "Railway App" (app_id 73253) creates a `queued` check suite on every commit that never completes;
+    present on 65a2bd8 / de027ea / ff4fabe / d01eba2 (all since 06-12, post the 06-09 FIX_EPOCH). NOT
+    blocking deploys today (deploys landing, prod healthy) but will stall a future Wait-for-CI deploy.
+    Remedy (per checksuite-guard.yml header): `PATCH /repos/zensolutionsnetwork/architect-council/check-suites/preferences`
+    `{auto_trigger_checks:[{app_id:73253,setting:false}]}` and VERIFY the response shows `setting:false`
+    (a bare 200 can be a silent no-op). Needs a GitHub admin token — day session / Mathieu. Investigate
+    what re-introduced it on 06-12 (Railway app reinstall? Wait-for-CI config touch?).
 7. **Corpus-ready flag** (corpus-contract.md follow-up) — when it ships, register Logos's
    `/api/bridge/chronicle` corpus artifact as a BLOCKING subscriber (his ask `224b71ca`,
    2026-06-11): chronicle must confirm consumption before the flag flips. Design with Arke.
@@ -191,11 +218,13 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
     (`docs/PROPOSAL_AGENDA_AND_DIRECTIVES.md`, ratify then Kairos implements). UTC-budget note open.
 
 ## WAITING ON
-- **Mathieu**: **FIRE meeting #3** (all packs landed — this is the live gate now) · `COUNCIL_V2_LIVE`
-  scheduler flip (later, deliberate) · SN7100 SSD → C: migration. (Supervised run + admin-token
-  install + Nova/Logos packs: ✅ DONE.)
-- **Nova + Logos**: ACCEPT/REJECT brain-manifest 2.1 (nudged 06-12 AM) so Kairos can wire the hub-side
-  fail-closed verify. (Arke: ✅ ACCEPTed.)
+- **Mathieu**: `COUNCIL_V2_LIVE` scheduler flip (later, deliberate) · SN7100 SSD → C: migration ·
+  checksuite-guard / Railway app_id 73253 remedy (needs GitHub admin token — P1 #11). (Meetings #3/#4
+  fired, supervised run, admin-token install, Nova/Logos packs: ✅ DONE.)
+- **Nova + Logos**: brain-manifest 2.1 ACCEPT — ✅ DONE (Nova `e1528e03`, Logos `9298fc53`/`3c33082b`).
+  All four ratified; nothing further owed here.
+- **Kairos (own queue)**: debrief meeting #4 `17f49b6f` + room `344fcf74` (ran overnight, both closed)
+  AND the still-pending meeting #3 debrief — kairos-meeting-debrief ritual, next session.
 - **Arke**: prep/debrief skill drafts · canonical 2.1 schema for hierarchy wiring · Layer-2 eval
   (post-rehearsal). (turnCap app-side + corpus-contract impl + manifest 2.1 accept: ✅ done; email
   panel wiring queued for his next live session.)
