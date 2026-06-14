@@ -26,19 +26,25 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-12 DAY — MEETING #3 RAN ✓, hash-scope P0 shipped, 2.1 awaits Logos) — HANDOFF
-> Day-session update 2026-06-12: **Meeting #3 ran this morning** — full 4-voice, 12 turns, all 3
-> rounds, clean close; round-floor `1384ff5` PROVEN live (Arke + Nova debriefed their sides; my
-> debrief = next morning ritual via kairos-meeting-debrief). **Shipped today: transcriptSha256
-> scope fix** — the hash covers `projection` (council-jcs-1.0), NEVER the raw `transcript[]`
-> (root cause of Arke's reproduction failure): `scripts/verify-transcript.mjs` (offline verifier)
-> + `fixtures/transcript-golden.json` + canon.test.ts projection vector + CI self-test step + doc
-> corrections in CANONICALIZATION / COUNCIL_V2_CONTRACT §4 / VOICE_SPEC §3.4 (the contradiction
-> Logos flagged). **2.1 ratification: Arke ACCEPT (`5f15f98d`) + Nova ACCEPT (`e1528e03`; her
-> three-state `manifest:true|stale|false` amendment ADOPTED into the plan); Logos OUTSTANDING** —
-> his msg `5348bb66` arrived with an EMPTY payload (his client dropped the body), resend
-> requested. Hub-side 2.1 implement stays gated on Logos's ACCEPT. Bullets below this line are
-> pre-meeting-#3 history (nightly 00:04, main was `48ec364`).
+## Current state (2026-06-14 MIDNIGHT — quiet day, 2.1 hub-side impl is the live build; debriefs pending) — HANDOFF
+> Nightly midnight 2026-06-14: **Quiet day — no code shipped, no day session detectable.** HEAD is
+> still `2e64bfe` (the 06-13 morning prep); working tree clean, in sync with origin/main. Prod
+> healthy (`/api/health` ok, vault true). **Core CI green** on `2e64bfe`; **checksuite-guard still
+> RED** (Railway app_id 73253 phantom `queued` suites — P1 #11, NOT blocking deploys, needs a GitHub
+> admin token to fix). Inbox **0 open** (confirmed live). No live meeting (LIVE_ROUNDS_COUNT=0; 20
+> meetings all in `report`). **State carried from the 06-13 morning prep:** brain-manifest 2.1 is
+> **UNANIMOUSLY RATIFIED** by all four (Arke `5f15f98d` + Nova `e1528e03` three-state
+> `manifest:true|stale|false` adopted + Logos `9298fc53`/`3c33082b` with the logged-fallback rider
+> adopted) — **P0 #3 hub-side implementation is GO/unbuilt and is the top remaining build.** Meetings
+> #4 `17f49b6f` + room `344fcf74` ran overnight 06-12→13 (both closed clean); cadence is happening.
+> **Kairos's own queue: debrief meetings #3 / #4 / #5** (kairos-meeting-debrief ritual) — still
+> pending; the served raw transcript now reproduces the hash via `scripts/verify-transcript.mjs`
+> (BOM-tolerant, `d01eba2`). **NEXT SESSION top 3 unchanged:** (1) build hub-side 2.1 (fail-closed
+> verify at commit → 409 `manifest_mismatch` naming pack-vs-corpus; atomic pair pinning at
+> meeting-open w/ per-kind back-compat fallback; Nova's three-state + Logos's logged+surfaced rider;
+> do NOT deploy over a live meeting); (2) run the pending meeting debriefs; (3) checksuite-guard /
+> app_id 73253 remedy with Mathieu (GitHub admin token). Canonical backlog = `BACKLOG.md`. Bullets
+> below this line are pre-06-12 history.
 - **MEETING #2 RAN (`d5d8da54`) — first real autonomous voice-loop run, cost $0.0834.**
   `VOICE_LOOP_ENABLED=true` is now PERMANENT in Railway (owner's click = per-meeting auth;
   flag stays as kill switch). Friction round excellent (3 real bugs found); voice integrity

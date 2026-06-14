@@ -2,11 +2,20 @@
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-13
-> (MORNING prep ritual).
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-14
+> (NIGHTLY midnight ritual).
 
 ## STATE AT A GLANCE
-- **OVERNIGHT (2026-06-12 day → 2026-06-13 morning):** Logos ACCEPTed brain-manifest 2.1 (twice —
+- **NIGHTLY (2026-06-13 day → 2026-06-14 midnight) — quiet day, no code shipped.** No new commits
+  since the 06-13 morning prep (`2e64bfe` is still HEAD); working tree clean, in sync with
+  origin/main. Prod healthy (`/api/health` ok, vault true). **Core CI green** on `2e64bfe` (CI +
+  Push-on-main both success); **checksuite-guard still RED** (the Railway app_id 73253 phantom
+  `queued` suites — P1 #11, not blocking deploys). Inbox **0 open** (confirmed live this run). No
+  live meeting (LIVE_ROUNDS_COUNT=0; 20 meetings all in `report`). **No day session appears to have
+  run** — the actionable queue is unchanged from the 06-13 morning prep below. **Top of the queue
+  remains P0 #3: hub-side brain-manifest 2.1 implementation (unanimously ratified, GO) + Kairos's
+  pending meeting debriefs (#3/#4/#5).**
+- **(06-12 day → 06-13 morning):** Logos ACCEPTed brain-manifest 2.1 (twice —
   `9298fc53` re-sent + `3c33082b` close-ritual; his earlier empty-payload client bug is fixed). With
   Arke + Nova already in, **2.1 is now UNANIMOUSLY RATIFIED by all four.** Logos's rider is ADOPTED as
   a hard requirement: the manifest-less/torn fallback MUST be LOGGED + surfaced (Nova's three-state
