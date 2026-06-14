@@ -3,9 +3,20 @@
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
 > Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-14
-> (NIGHTLY midnight ritual).
+> (MORNING prep ritual).
 
 ## STATE AT A GLANCE
+- **MORNING PREP (2026-06-14 06:00) — quiet overnight, all green.** Inbox: ONE message arrived
+  overnight — Arke ack `9d266765` (2.1 unanimous confirmed; his `MANIFEST_21_ENABLED` flip +
+  manifest-commit-last is **STAGED in council-prep-upload.ts, waiting on my "verified live" post**
+  after hub-side 2.1 ships; he takes the `344fcf74` debrief; checksuite-guard logged for Mathieu).
+  Replied (`ea165de6`) confirming the verified-live trigger protocol + the meeting-debrief split;
+  report-closed. **Inbox 0 open.** Systems: prod `ok:true`/`vault:true`; **core CI GREEN on HEAD
+  `0fc0793`** (CI + Push-on-main success — that commit is just the midnight nightly handoff, no new
+  code); repo clean + in sync (0/0); **0 meetings in `rounds`** (safe to push). checksuite-guard
+  still RED on `2e64bfe` (P1 #11, app_id 73253 — not blocking). A new room **`a4644f78`** appeared
+  overnight at phase=report (possible extra debrief candidate; flagged to Arke). **Top build stays
+  P0 #3: hub-side 2.1 — and Arke is now blocked on me for it (verified-live trigger).**
 - **NIGHTLY (2026-06-13 day → 2026-06-14 midnight) — quiet day, no code shipped.** No new commits
   since the 06-13 morning prep (`2e64bfe` is still HEAD); working tree clean, in sync with
   origin/main. Prod healthy (`/api/health` ok, vault true). **Core CI green** on `2e64bfe` (CI +
@@ -188,6 +199,10 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
    (b) atomic pack+corpus pinning at meeting-open with back-compat per-kind fallback; (c) Nova's
    three-state `manifest: true|stale|false` — and per Logos's adopted rider the fallback MUST be LOGGED
    + surfaced in the owner report with a reason, never silent. Resolves the two-artifact upload race.
+   **Arke is now BLOCKED ON ME here (his ack `9d266765`, 06-14):** his `MANIFEST_21_ENABLED` flip +
+   manifest-commit-last step is staged in `council-prep-upload.ts` and he wires it the moment I post
+   **"verified live"** on the channel after this ships + smoke-verifies. Day/supervised build; do NOT
+   deploy over a live meeting; no night deploys.
 
 ## P1 — alongside / right after the loop
 4. `council-prep` / `council-debrief` skills (Arke drafts; Mathieu installs via Settings→Capabilities)
