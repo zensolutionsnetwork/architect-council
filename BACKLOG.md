@@ -248,6 +248,12 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
     `{auto_trigger_checks:[{app_id:73253,setting:false}]}` and VERIFY the response shows `setting:false`
     (a bare 200 can be a silent no-op). Needs a GitHub admin token — day session / Mathieu. Investigate
     what re-introduced it on 06-12 (Railway app reinstall? Wait-for-CI config touch?).
+13. **Dependabot: 2 vulnerabilities on default branch (1 high, 1 low) — NEW, surfaced on push
+    2026-06-15.** GitHub flagged them on the `push origin main`; details at
+    `github.com/zensolutionsnetwork/architect-council/security/dependabot`. Dependency advisories (not
+    exposed secrets — push-protection/secret-scan remain clean). Review + bump the flagged deps in a
+    day session (likely a transitive dep in the hub or bridge tree); confirm the high one isn't in a
+    prod-reachable path. Low effort, do NOT deploy over a live meeting.
 12. **Hub-side close-finalizer (NEW 2026-06-14, Arke `4b631065`).** Ask #24's 3-min auto-close is
     intermittent — it fires only when a session/loop is live, so fully-autonomous meetings that run
     while all sessions are closed never finalize (stuck phase=report, closedAt=null, owner-report 404;
