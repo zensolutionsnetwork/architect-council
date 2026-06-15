@@ -4,3 +4,4 @@ dist/
 .env
 .env.*
 *.err
+council/transcripts/
