@@ -26,7 +26,35 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-15 MIDNIGHT — quiet day, 2.1 hub-side impl is the live build; Arke blocked on my verified-live) — HANDOFF
+## Current state (2026-06-15 DAY session — morning ritual + 2 hub deploys shipped; 2.1 is the next build) — HANDOFF
+> **Day session 2026-06-15 (Kairos, live with Mathieu).** Morning ritual done + two clean CI-green
+> deploys. **Inbox: 0 open** (4 msgs actioned/closed: Logos's two 2.1 ACCEPTs → 2.1 now UNANIMOUS
+> 4/4 with his binding condition = manifest-less fallback LOGGED never silent; Arke's #3-clear; Arke's
+> #7 morning debrief). **Debriefed meetings #4 `17f49b6f` + #5 `344fcf74`** → `council/KAIROS_DEBRIEF_2026-06-15.md`
+> (both verify-transcript.mjs PASS, clean `completed`, $0.98 combined; transcripts gitignored under
+> `council/transcripts/`). Arke separately debriefed #7 `0d94d988`. **SHIPPED (`dfd7c22`, CI green):**
+> gate #6 `scripts/swallow-scan.mjs` (blocks unannotated empty catch in src/, CI step, dry-run was
+> clean) + voiceloop fail-open branches now emit structured WARN (model-call, ledger-persist wrapped
+> so a lost spend write logs not kills, loop) + `CANONICALIZATION.md` pins kind enum = **speak|pass**
+> (resolves Arke's P1 #7-1: `say|vote|close|report` are NOT turn kinds, were v1 verbs; doc→impl, canon
+> untouched). **SHIPPED (`056a22b`, CI green): close-finalizer** — new `src/finalize.ts` (shared, no
+> circular dep) makes the voice loop self-close: a meeting reaching `report` (all-done/turn-cap/
+> closing-cap/token-ceiling) now sets `closed_at` + routes storyUpdates + synthesizes/stores/emails
+> the owner report + charges the ledger, idempotent on `closed_at`, dry-run never spends. Fixes
+> Arke #7-2 (autonomous meetings stuck `closedAt:null`, owner-report 404). **/close route twin left
+> untouched this deploy** — refactor it to call `finalizeMeetingClose` next (low-risk follow-up).
+> **NEXT-SESSION TOP TASK: implement hub-side brain-manifest 2.1** (ratified 4/4; spec corpus-contract
+> §6; fail-closed verify at commit → 409 `manifest_mismatch` on torn pack+corpus, atomic-pair pin at
+> open, per-kind fallback emits Nova three-state `manifest:true|stale|false` WITH reason; then post
+> "2.1 verified live" so Arke flips `MANIFEST_21_ENABLED` + manifest-commit-last). **STILL STUCK (not
+> retro-closed — would email Mathieu 3 old reports; offered, awaiting his ok):** #4 `17f49b6f`, #7
+> `0d94d988`, `a4644f78` sit at `closedAt:null` — retro-fix = call `/close` on each (current prod
+> already synthesizes). **OWNER DECISIONS PENDING:** (1) autonomous-spend #22 — nightly meetings fire
+> hub-side & spend opus (~$0.49 ea, $5/day cap) since `VOICE_LOOP_ENABLED` is permanent → declare the
+> supervised-run gate SATISFIED or pause the nightly fires; (2) admin hub token rotation (Logos flag,
+> defensive); (3) Railway Postgres recurring backup click; (4) Google verification (Nova); (5) SN7100
+> SSD → C:. **Dependabot:** GitHub flags 2 vulns (1 high, 1 low) on main — triage next session.
+> Bullets below are the midnight-nightly snapshot (pre-day-session).
 > Nightly midnight 2026-06-15: **Quiet day — no code shipped, no day session detectable.** HEAD is
 > `28b0c74` (the 06-14 morning-prep commit); no new commits since; working tree clean, in sync with
 > origin/main (0/0). Prod healthy (`/api/health` ok, vault true). **Core CI green** on `28b0c74`
