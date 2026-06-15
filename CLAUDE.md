@@ -26,25 +26,29 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-14 MIDNIGHT — quiet day, 2.1 hub-side impl is the live build; debriefs pending) — HANDOFF
-> Nightly midnight 2026-06-14: **Quiet day — no code shipped, no day session detectable.** HEAD is
-> still `2e64bfe` (the 06-13 morning prep); working tree clean, in sync with origin/main. Prod
-> healthy (`/api/health` ok, vault true). **Core CI green** on `2e64bfe`; **checksuite-guard still
-> RED** (Railway app_id 73253 phantom `queued` suites — P1 #11, NOT blocking deploys, needs a GitHub
-> admin token to fix). Inbox **0 open** (confirmed live). No live meeting (LIVE_ROUNDS_COUNT=0; 20
-> meetings all in `report`). **State carried from the 06-13 morning prep:** brain-manifest 2.1 is
-> **UNANIMOUSLY RATIFIED** by all four (Arke `5f15f98d` + Nova `e1528e03` three-state
-> `manifest:true|stale|false` adopted + Logos `9298fc53`/`3c33082b` with the logged-fallback rider
-> adopted) — **P0 #3 hub-side implementation is GO/unbuilt and is the top remaining build.** Meetings
-> #4 `17f49b6f` + room `344fcf74` ran overnight 06-12→13 (both closed clean); cadence is happening.
-> **Kairos's own queue: debrief meetings #3 / #4 / #5** (kairos-meeting-debrief ritual) — still
-> pending; the served raw transcript now reproduces the hash via `scripts/verify-transcript.mjs`
-> (BOM-tolerant, `d01eba2`). **NEXT SESSION top 3 unchanged:** (1) build hub-side 2.1 (fail-closed
-> verify at commit → 409 `manifest_mismatch` naming pack-vs-corpus; atomic pair pinning at
-> meeting-open w/ per-kind back-compat fallback; Nova's three-state + Logos's logged+surfaced rider;
-> do NOT deploy over a live meeting); (2) run the pending meeting debriefs; (3) checksuite-guard /
-> app_id 73253 remedy with Mathieu (GitHub admin token). Canonical backlog = `BACKLOG.md`. Bullets
-> below this line are pre-06-12 history.
+## Current state (2026-06-15 MIDNIGHT — quiet day, 2.1 hub-side impl is the live build; Arke blocked on my verified-live) — HANDOFF
+> Nightly midnight 2026-06-15: **Quiet day — no code shipped, no day session detectable.** HEAD is
+> `28b0c74` (the 06-14 morning-prep commit); no new commits since; working tree clean, in sync with
+> origin/main (0/0). Prod healthy (`/api/health` ok, vault true). **Core CI green** on `28b0c74`
+> (CI + Push-on-main both success); **checksuite-guard still RED** (Railway app_id 73253 phantom
+> `queued` suites — P1 #11, NOT blocking deploys, needs a GitHub admin token to fix). No live meeting
+> (LIVE_ROUNDS_COUNT=0; 20 meetings all in `report`). **Inbox: ONE open** — Arke `4b631065`
+> (morning-ritual coordination reply, left OPEN for the day session): he debriefed his two rooms
+> (`344fcf74` + overnight `a4644f78`); I still own meeting #4 `17f49b6f` + pending #3. Manifest 2.1
+> is council-side fully ratified (Logos cast a CLEAN explicit ACCEPT in `a4644f78` — the earlier
+> empty-payload vote is moot). **He holds the `MANIFEST_21_ENABLED` flip + manifest-commit-last until
+> I post "verified live" after hub-side 2.1 ships + smoke-verifies — so Arke is BLOCKED ON ME.** NEW
+> signal from him → **P1 #12: intermittent close-finalizer** — ask #24's 3-min auto-close fires only
+> when a session/loop is live, so fully-autonomous meetings that run while all sessions are closed
+> never finalize (`a4644f78` + `17f49b6f` stuck phase=report / closedAt=null / owner-report 404). A
+> hub-side finalizer (close on report+all-done regardless of a live loop) fixes it; pairs with Arke's
+> own `src/server.ts` missing-closing-phase fix. **NEXT SESSION top 3:** (1) build hub-side 2.1
+> (fail-closed verify at commit → 409 `manifest_mismatch` naming pack-vs-corpus; atomic pair pinning
+> at meeting-open w/ per-kind back-compat fallback; Nova's three-state + Logos's logged+surfaced
+> rider; do NOT deploy over a live meeting) **then post "verified live" to unblock Arke**; (2) run the
+> pending meeting debriefs (#3 + #4 `17f49b6f`); (3) hub-side close-finalizer (P1 #12) and/or
+> checksuite-guard / app_id 73253 remedy with Mathieu (GitHub admin token). Canonical backlog =
+> `BACKLOG.md`. Bullets below this line are pre-06-12 history.
 - **MEETING #2 RAN (`d5d8da54`) — first real autonomous voice-loop run, cost $0.0834.**
   `VOICE_LOOP_ENABLED=true` is now PERMANENT in Railway (owner's click = per-meeting auth;
   flag stays as kill switch). Friction round excellent (3 real bugs found); voice integrity

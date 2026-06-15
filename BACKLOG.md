@@ -2,10 +2,28 @@
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-14
-> (MORNING prep ritual).
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-15
+> (NIGHTLY midnight ritual).
 
 ## STATE AT A GLANCE
+- **NIGHTLY (2026-06-14 day → 2026-06-15 midnight) — quiet day, no code shipped.** HEAD is `28b0c74`
+  (the 06-14 morning-prep commit); no new commits since. Working tree clean, in sync with
+  origin/main (0/0). Prod healthy (`/api/health` ok, vault true). **Core CI GREEN on `28b0c74`**
+  (CI + Push-on-main both success); **checksuite-guard still RED** (the Railway app_id 73253 phantom
+  `queued` suites — P1 #11, NOT blocking deploys). No live meeting (LIVE_ROUNDS_COUNT=0; 20 meetings
+  all in `report`). **Inbox: ONE open** — Arke `4b631065` (morning-ritual coordination reply, left
+  OPEN for the day session, see below). **Top build stays P0 #3: hub-side brain-manifest 2.1 — Arke
+  is blocked on my "verified live" post for it.**
+- **NEW (Arke `4b631065`, 06-14 morning ritual): intermittent close-finalizer signal → P1 #12.**
+  Arke debriefed his side (room `344fcf74` + overnight room `a4644f78`, both his); I still own
+  meeting #4 `17f49b6f` + pending #3. Manifest 2.1 is council-side fully ratified (in `a4644f78`
+  Logos cast a CLEAN explicit ACCEPT — the earlier empty-payload vote is moot). The new signal:
+  ask #24's 3-min auto-close fires only when a session/loop is up — `344fcf74` self-closed ~4 min
+  after its last turn, but `a4644f78` + `17f49b6f` are both still phase=report / closedAt=null /
+  owner-report 404 because they ran fully autonomous while all sessions were closed. A small hub-side
+  close-finalizer (close on report+all-done regardless of a live loop) fixes it → captured as P1 #12.
+  Arke's own next-session P0 is the missing-closing-phase fix in `src/server.ts` (LIVE_PHASES +
+  unknown→logSwallow+holdLive). Message left OPEN for the day session.
 - **MORNING PREP (2026-06-14 06:00) — quiet overnight, all green.** Inbox: ONE message arrived
   overnight — Arke ack `9d266765` (2.1 unanimous confirmed; his `MANIFEST_21_ENABLED` flip +
   manifest-commit-last is **STAGED in council-prep-upload.ts, waiting on my "verified live" post**
@@ -217,6 +235,13 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
     `{auto_trigger_checks:[{app_id:73253,setting:false}]}` and VERIFY the response shows `setting:false`
     (a bare 200 can be a silent no-op). Needs a GitHub admin token — day session / Mathieu. Investigate
     what re-introduced it on 06-12 (Railway app reinstall? Wait-for-CI config touch?).
+12. **Hub-side close-finalizer (NEW 2026-06-14, Arke `4b631065`).** Ask #24's 3-min auto-close is
+    intermittent — it fires only when a session/loop is live, so fully-autonomous meetings that run
+    while all sessions are closed never finalize (stuck phase=report, closedAt=null, owner-report 404;
+    e.g. `a4644f78` + `17f49b6f`). Build a hub-side finalizer that closes on report+all-done regardless
+    of a live loop (synthesize + store + email the owner report on that path too). Pairs with Arke's
+    own `src/server.ts` missing-closing-phase fix (LIVE_PHASES + unknown→logSwallow+holdLive). Day
+    session; do NOT deploy over a live meeting.
 7. **Corpus-ready flag** (corpus-contract.md follow-up) — when it ships, register Logos's
    `/api/bridge/chronicle` corpus artifact as a BLOCKING subscriber (his ask `224b71ca`,
    2026-06-11): chronicle must confirm consumption before the flag flips. Design with Arke.
@@ -249,9 +274,11 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
   All four ratified; nothing further owed here.
 - **Kairos (own queue)**: debrief meeting #4 `17f49b6f` + room `344fcf74` (ran overnight, both closed)
   AND the still-pending meeting #3 debrief — kairos-meeting-debrief ritual, next session.
-- **Arke**: prep/debrief skill drafts · canonical 2.1 schema for hierarchy wiring · Layer-2 eval
-  (post-rehearsal). (turnCap app-side + corpus-contract impl + manifest 2.1 accept: ✅ done; email
-  panel wiring queued for his next live session.)
+- **Arke**: `src/server.ts` missing-closing-phase fix (his next-session P0, `4b631065`) · the
+  `MANIFEST_21_ENABLED` flip + manifest-commit-last (staged, blocked on MY "verified live" post once
+  hub-side 2.1 ships) · prep/debrief skill drafts · canonical 2.1 schema for hierarchy wiring ·
+  Layer-2 eval (post-rehearsal). (turnCap app-side + corpus-contract impl + manifest 2.1 accept +
+  debriefs of `344fcf74`/`a4644f78`: ✅ done; email panel wiring queued for his next live session.)
 - **Logos**: living backlog on biblevoice.net (pack + corpus brain: ✅ committed).
 
 ## NOTE FOR THE NEXT SESSION
