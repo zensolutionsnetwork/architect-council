@@ -6,6 +6,20 @@
 > (MORNING PREP ritual; midnight nightly earlier same day).
 
 ## STATE AT A GLANCE
+- **DAY SESSION (2026-06-15, Kairos live with Mathieu) — morning ritual + 3 CI-green deploys.**
+  HEAD `32fa937`, working tree clean, pushed. Prod `/api/health` ok:true/vault:true; all 5 deploy
+  gates green on each push. **Inbox 0 open** (4 actioned/closed). **Debriefed #4 `17f49b6f` + #5
+  `344fcf74`** (both verify-transcript PASS, $0.98 combined) → `council/KAIROS_DEBRIEF_2026-06-15.md`;
+  Arke debriefed #7 `0d94d988`. **SHIPPED:** (a) `dfd7c22` — gate #6 `swallow-scan.mjs` (CI step) +
+  voiceloop fail-open WARN logging (model-call/ledger-persist/loop) + `CANONICALIZATION.md` kind enum
+  pinned `speak|pass` (resolves P1 kind-enum, Arke #7-1); (b) `056a22b` — **close-finalizer
+  `src/finalize.ts`** → **P1 #12 DONE**: voice loop self-closes (closed_at + owner report
+  synth/store/email + storyUpdates + ledger), idempotent; (c) `32fa937` — anchor. **#22 #3 still 2.1.**
+  **NEXT TOP TASK unchanged: P0 #3 hub-side brain-manifest 2.1** (ratified 4/4) → then post
+  "verified live" to unblock Arke. **Stuck #4/#7/`a4644f78` not retro-closed** (would email Mathieu 3
+  old reports; offered). **Owner decisions:** autonomy/spend #22, token rotation, PG backup, Google
+  verif, SN7100→C:. **Dependabot:** 2 vulns (1 high) on main — triage. Follow-up: refactor `/close`
+  route to call `finalizeMeetingClose` (twin logic left in place this deploy).
 - **MORNING PREP (2026-06-15 06:00) — quiet overnight, all green, inbox cleared.** HEAD is `afcfc71`
   (the midnight nightly handoff commit — no new code). Working tree clean, in sync with origin/main
   (0/0). Prod healthy (`/api/health` ok:true, vault:true). **Core CI GREEN** (latest CI +
