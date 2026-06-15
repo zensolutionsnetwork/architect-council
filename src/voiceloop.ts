@@ -11,6 +11,7 @@
 import { callClaudeUsage, type SystemBlock, type Msg } from './architect.js';
 import { getMeeting, updateMeeting, getBrainV2Content, setMeetingLedger, setVoiceRunning } from './store.js';
 import { addUsage, emptyTotals, capsFromEnv, meetingTokenCeilingHit, type LedgerTotals } from './cost.js';
+import { finalizeMeetingClose } from './finalize.js';
 
 const clip = (s: any, n: number) => String(s ?? '').slice(0, n);
 const DEFAULT_MODEL = () => process.env.CHAT_MODEL || 'claude-opus-4-8';
@@ -112,6 +113,7 @@ export async function runVoiceLoop(meetingId: string): Promise<void> {
     let ledger: { total: LedgerTotals; perAgent: Record<string, LedgerTotals> } =
       (m && m.cost_ledger && m.cost_ledger.total) ? m.cost_ledger : { total: emptyTotals(), perAgent: {} };
     let guard = 0;
+    let endReason: string | null = null; // cap/ceiling exits set this, then break to the unified close.
     // Seed each actor's last spoken text from the existing transcript (loop may resume mid-meeting).
     const lastSpoken = new Map<string, string>();
     for (const t of (m && m.transcript) || []) {
@@ -125,8 +127,7 @@ export async function runVoiceLoop(meetingId: string): Promise<void> {
       // Closing-round hard cap: more than CLOSING_MAX_CYCLES full closing cycles -> end the meeting.
       if (m.round >= CLOSING_ROUND_START + CLOSING_MAX_CYCLES) {
         await updateMeeting(meetingId, { phase: 'report' });
-        await setVoiceRunning(meetingId, false, 'closing_cap');
-        return;
+        endReason = 'closing_cap'; break;
       }
       // Skip listen-role + timed-out turns exactly like the lazy autoExpire does.
       const cur = m.participants[m.turn_index];
@@ -171,12 +172,20 @@ export async function runVoiceLoop(meetingId: string): Promise<void> {
       // Fail-closed token ceiling -> stop + close.
       if (meetingTokenCeilingHit(ledger.total.totalTokens, caps)) {
         await updateMeeting(meetingId, { phase: 'report' });
-        await setVoiceRunning(meetingId, false, 'token_ceiling');
-        return;
+        endReason = 'token_ceiling'; break;
       }
       m = await getMeeting(meetingId);
     }
-    await setVoiceRunning(meetingId, false, m && m.phase === 'report' ? 'completed' : null);
+    m = await getMeeting(meetingId);
+    await setVoiceRunning(meetingId, false, endReason ?? (m && m.phase === 'report' ? 'completed' : null));
+    // Close-finalizer (meeting #7 homework, Arke finding 2): a meeting that reached report — by
+    // all-done, turn cap, closing cap, or token ceiling — gets closed_at + owner report
+    // synthesized/stored/emailed here, independent of any owner /close call. Idempotent (skips if
+    // already closed); best-effort (never throws out of the loop).
+    if (m && m.phase === 'report' && !m.closed_at) {
+      try { await finalizeMeetingClose(m); }
+      catch (e) { warnSwallow('finalize', e, `meeting=${meetingId}`); }
+    }
   } catch (e) {
     warnSwallow('loop', e, `meeting=${meetingId}`);
     try { await setVoiceRunning(meetingId, false, 'loop_error'); } catch { /* swallow-ok: status write is best-effort during teardown */ }
