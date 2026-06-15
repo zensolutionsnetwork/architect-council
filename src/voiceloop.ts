@@ -22,6 +22,12 @@ export const isVoiceRunning = (id: string) => running.has(id);
 
 const roleOf = (m: any, actor: string): string => String((m.roles || {})[actor] || 'speak');
 
+/** Structured swallow-logger (council meeting #5 gate, 2026-06-13): every fail-open branch that
+ *  cannot rethrow MUST still surface itself — a degraded path emits a WARN with the resource name
+ *  and the triggering error, never a bare silent swallow. */
+const warnSwallow = (where: string, err: unknown, ctx = ''): void =>
+  console.warn(`[voiceloop] swallow ${where}${ctx ? ' ' + ctx : ''}: ${(err as any)?.message ?? String(err)}`);
+
 // ---- Termination guards (meeting #1 fixes, 2026-06-11): the closing round of meeting 6aef82f6
 // looped ~70 turns because voices held done:false ("homework not done") and re-stated the same
 // turn until the token cap fired. Three layers, all fail-closed toward ENDING the meeting:
@@ -65,7 +71,7 @@ function roundPlan(round: number): { model: string; instruction: string } {
  *  Logos guardrail (biblevoice) is appended last and is inviolable. */
 async function buildSystem(actor: string, agenda: string, turnCap = 0, participantCount = 0): Promise<SystemBlock[]> {
   let pack = '';
-  try { const got = await getBrainV2Content(actor, 'pack'); if (got) pack = got.content.toString('utf8'); } catch { /* no pack -> minimal persona */ }
+  try { const got = await getBrainV2Content(actor, 'pack'); if (got) pack = got.content.toString('utf8'); } catch { /* swallow-ok: no pack => minimal persona is a valid degraded state */ }
   let persona = `You ARE ${actor} in the Architects Council daily meeting — speak in the first person as ${actor}, plainly and technically. The goal is making each other more efficient at what each of you builds. Share real code, specs and commands when useful. Out-of-character is welcome.
 
 === TURN PROTOCOL (meeting #1 lessons, 2026-06-11) ===
@@ -135,7 +141,9 @@ export async function runVoiceLoop(meetingId: string): Promise<void> {
         const out = await callClaudeUsage(system, messages, MAX_TOKENS_PER_TURN(), plan.model);
         text = out.text; usage = out.usage;
       } catch (e) {
-        // Model/network failure: charge nothing, pass this turn, keep the meeting moving.
+        // Model/network failure: charge nothing, pass this turn, keep the meeting moving — but
+        // surface it (a silent string of 'error' passes otherwise looks like voices choosing to pass).
+        warnSwallow('model-call', e, `actor=${cur} round=${m.round}`);
         await passTurn(m, cur, 'error'); m = await getMeeting(meetingId); continue;
       }
       // Repeat guard: a near-identical consecutive turn from the same actor adds nothing —
@@ -155,7 +163,11 @@ export async function runVoiceLoop(meetingId: string): Promise<void> {
       // Fold usage into the ledger (per-agent + grand total) and persist; refresh heartbeat.
       ledger.total = addUsage(ledger.total, plan.model, usage);
       ledger.perAgent[cur] = addUsage(ledger.perAgent[cur] || emptyTotals(), plan.model, usage);
-      await setMeetingLedger(meetingId, ledger);
+      // A failed ledger persist must NOT silently vanish: a lost spend write makes the next read
+      // under-report and the cost ceiling stop biting. Log it and keep the in-memory ledger (the
+      // next turn re-persists the running total), rather than letting it throw to the outer catch.
+      try { await setMeetingLedger(meetingId, ledger); }
+      catch (e) { warnSwallow('ledger-persist', e, `meeting=${meetingId}`); }
       // Fail-closed token ceiling -> stop + close.
       if (meetingTokenCeilingHit(ledger.total.totalTokens, caps)) {
         await updateMeeting(meetingId, { phase: 'report' });
@@ -165,8 +177,9 @@ export async function runVoiceLoop(meetingId: string): Promise<void> {
       m = await getMeeting(meetingId);
     }
     await setVoiceRunning(meetingId, false, m && m.phase === 'report' ? 'completed' : null);
-  } catch {
-    try { await setVoiceRunning(meetingId, false, 'loop_error'); } catch { /* noop */ }
+  } catch (e) {
+    warnSwallow('loop', e, `meeting=${meetingId}`);
+    try { await setVoiceRunning(meetingId, false, 'loop_error'); } catch { /* swallow-ok: status write is best-effort during teardown */ }
   } finally {
     running.delete(meetingId);
   }

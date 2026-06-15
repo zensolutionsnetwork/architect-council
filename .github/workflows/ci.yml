@@ -17,6 +17,8 @@ jobs:
           node-version: '20'
       - name: Run secret scan
         run: node scripts/secret-scan.mjs
+      - name: Silent-swallow gate (#6 — no unannotated empty catch in src/)
+        run: node scripts/swallow-scan.mjs
 
   route-auth:
     name: Route auth (default-deny)

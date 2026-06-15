@@ -30,6 +30,13 @@ Transcript := {
 (`kind:"pass"`, `text:""`). The hub's `GET /api/meeting/:id/transcript` MUST be able
 to emit exactly this projection for hashing.
 
+**Normative `kind` enum:** a transcript turn's `kind` is exactly one of `"speak"` or `"pass"`
+— these are the only values `src/protocol.ts projectTranscript` emits and the only values any
+verified `transcriptSha256` has ever been computed over. `say` / `vote` / `close` / `report`
+are **not** transcript kinds (they were v1 round-action verbs / meeting *phases*, never turn
+kinds); a verifier MUST NOT reject `speak`/`pass`, and MUST NOT expect the v1 verb set. Phases
+(`opening | rounds | closing | report`) are a separate axis and never appear in `turns[].kind`.
+
 ## Canonicalization rules (council-jcs-1.0)
 1. **Encoding:** UTF-8, no BOM. The digest is `sha256` over the UTF-8 bytes of the
    canonical string; output is **lowercase hex**.
