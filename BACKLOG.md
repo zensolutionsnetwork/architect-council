@@ -6,6 +6,16 @@
 > (MORNING PREP ritual; midnight nightly earlier same day).
 
 ## STATE AT A GLANCE
+- **2026-06-15 LATE — brain-manifest 2.1 LOOP FULLY CLOSED across all four.** Arke flipped
+  `MANIFEST_21_ENABLED=true` + wired manifest-commit-last (`council-prep-upload.ts`, 62/62 green);
+  Logos committed his manifest and pins **`paired`** hub-side (first EXTERNAL 2.1 packager — independent
+  validation beyond my smoke). Folded Arke's byte-exact `§7` (corpus floor three-guard / invariant #4) +
+  `§8` (transcript verify) into canonical `docs/corpus-contract.md` (carrier sha-verified `e9188a76` then
+  removed = single-source), reconciled `§6`. **#26 RESOLVED:** new `docs/council-jcs-1.0.md` states
+  `kind ∈ {speak,pass}` under the named file + points to `CANONICALIZATION.md` (enum already pinned
+  `dfd7c22`) → Arke clears #26. Pushed `1d07f79`; replied + closed Arke `78b2f47c`/`1173039d` + Logos
+  `57ca4eb8`. **Inbox 0; LIVE_ROUNDS_COUNT=0.** All session "owe Arke" tails now cleared. Remaining =
+  owner decisions + checksuite-guard #11 + retro-close stuck meetings (all Mathieu).
 - **DAY SESSION (2026-06-15 PM, Kairos live with Mathieu) — P0 #3 brain-manifest 2.1 SHIPPED + VERIFIED LIVE.**
   Commit `58cb808` (CI green all gates, Railway rolled). Hub-side 2.1 implemented: third brain
   `kind=manifest` through `/api/bridge/brain/*`, verified **fail-closed at commit** (409

@@ -35,8 +35,13 @@ or ask Mathieu first.
 > `brainVersions` string unchanged (back-compat). Fixed latent bug: `setMeetingLedger` was unimported in
 > council.ts (silent ledger-charge miss on `/close`). **Posted "verified live" → Arke (`c9b1be62`) +
 > Nova + Logos; Arke now UNBLOCKED to flip `MANIFEST_21_ENABLED` + manifest-commit-last.** Closed Arke
-> `5972fe33`. Inbox 0; LIVE_ROUNDS_COUNT=0. **Owe Arke (P1):** council-jcs-1.0.md #26 doc fix +
-> corpus-contract §7/invariant-#4 (byte-floor) reconciliation (his copy has them, mine §1–§6). Earlier
+> `5972fe33`. Inbox 0; LIVE_ROUNDS_COUNT=0. **2.1 LOOP NOW FULLY CLOSED (later same day):** Arke
+> flipped `MANIFEST_21_ENABLED` + manifest-commit-last (62/62); Logos committed his manifest, pins
+> `paired` (first external packager); folded Arke's byte-exact §7 (three-guard/invariant #4) + §8
+> (transcript verify) into canonical `corpus-contract.md` (carrier removed = single-source), reconciled
+> §6; **#26 RESOLVED** via new `docs/council-jcs-1.0.md` (`kind∈{speak,pass}`) → Arke clears it. Pushed
+> `1d07f79`; Arke `78b2f47c`/`1173039d` + Logos `57ca4eb8` replied+closed. All owed tails cleared.
+> Remaining = owner decisions + checksuite-guard #11 + retro-close stuck meetings (all Mathieu). Earlier
 > the same day (morning ritual + 2 deploys), see below.
 > **Day session 2026-06-15 (Kairos, live with Mathieu).** Morning ritual done + two clean CI-green
 > deploys. **Inbox: 0 open** (4 msgs actioned/closed: Logos's two 2.1 ACCEPTs → 2.1 now UNANIMOUS
