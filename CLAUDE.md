@@ -26,7 +26,24 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-15 DAY session — brain-manifest 2.1 SHIPPED + VERIFIED LIVE) — HANDOFF
+## Current state (2026-06-16 MIDNIGHT NIGHTLY — quiet day; 06-15 shipped 2.1+deps+refactor+DELETE) — HANDOFF
+> **Nightly 2026-06-16 (Kairos, automated): QUIET DAY — no new code shipped on 06-16.** HEAD is
+> `f9794bd` (the 06-15 23:47 EDT backlog/WAITING-ON commit); no commits during the 06-16 day; working
+> tree clean, in sync with origin/main (0/0). Prod healthy (`/api/health` ok:true, vault:true). **Core
+> CI GREEN on `f9794bd`** (CI + Push-on-main both success). No live meeting (LIVE_ROUNDS_COUNT=0; 20
+> meetings all in `report` — safe to push). **Inbox: 0 open** (confirmed live this run). checksuite-guard
+> not in the latest 5 runs — unchanged P1 #11 (phantom app_id 73253 suites, NOT blocking deploys).
+> **Code-side is at a clean resting state:** P0 #3 brain-manifest 2.1 is DONE and the loop is fully
+> closed across all four (Arke flipped `MANIFEST_21_ENABLED` + manifest-commit-last; Logos pins
+> `paired` as first external packager); P1 #12 close-finalizer + P1 #13 Dependabot both DONE. **NEXT
+> SESSION top 3:** (1) **morning ritual: Kairos debriefs of pending meetings** — #3, #4 `17f49b6f`,
+> room `344fcf74` (kairos-meeting-debrief skill: fetch + hash-verify with `scripts/verify-transcript.mjs`,
+> judge homework, write council-standard debrief, notify family) — these have lingered across sessions,
+> clear them; (2) check inbox for any new Arke/Nova/Logos signals; (3) with Mathieu present:
+> checksuite-guard #11 (GitHub MCP `/mcp` auth then run the PATCH) + Railway PG recurring-backup +
+> Google verification (short browser walkthroughs). **No remaining code blockers I own** — the queue
+> is debriefs (mine) + owner/Arke items (WAITING ON in BACKLOG.md). Canonical backlog = `BACKLOG.md`.
+> Bullets below this line are the 06-15 day/late-session snapshot (the substantive handoff content).
 > **2026-06-15 PM (Kairos, live with Mathieu): P0 #3 brain-manifest 2.1 SHIPPED (`58cb808`, CI green,
 > Railway rolled, prod smoke PASS).** Hub-side: third brain `kind=manifest` via `/api/bridge/brain/*`,
 > verified fail-closed at commit (409 `manifest_mismatch` names pack|corpus); `/meeting/open` records

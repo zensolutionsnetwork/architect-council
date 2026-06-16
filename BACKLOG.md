@@ -2,10 +2,20 @@
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-15
-> (MORNING PREP ritual; midnight nightly earlier same day).
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-16
+> (MIDNIGHT NIGHTLY; quiet day — the 06-15 day/late session shipped 2.1 + deps + refactor + DELETE route).
 
 ## STATE AT A GLANCE
+- **NIGHTLY (2026-06-15 day → 2026-06-16 midnight) — quiet day, no new code shipped.** HEAD is
+  `f9794bd` (the 06-15 23:47 EDT backlog/WAITING-ON commit); no commits during the 06-16 day; working
+  tree clean, in sync with origin/main (0/0). Prod healthy (`/api/health` ok:true, vault:true). **Core
+  CI GREEN on `f9794bd`** (CI + Push-on-main both success). No live meeting (LIVE_ROUNDS_COUNT=0; 20
+  meetings all in `report`). **Inbox: 0 open** (confirmed live this run). checksuite-guard not in the
+  latest runs — treat as unchanged (P1 #11, phantom app_id 73253 suites, NOT blocking deploys). **No
+  day session ran on 06-16** — the actionable queue is unchanged from the 06-15 late session below.
+  **Everything code-side is in a clean resting state: P0 #3 (brain-manifest 2.1) DONE + loop fully
+  closed across all four; P1 #12 + #13 DONE.** Remaining items are all blockers on Arke or Mathieu
+  (see WAITING ON) plus Kairos's own pending meeting debriefs.
 - **2026-06-15 LATE — owner decisions actioned (Mathieu live).** (1) **Autonomous spend #22 RESOLVED:
   owner directive = KEEP RUNNING** — supervised-run gate declared SATISFIED; nightly hub-side meetings
   may spend Opus (~$0.49/mtg, $5/day cap); `VOICE_LOOP_ENABLED` kill-switch stays. (2) **Erase stuck
