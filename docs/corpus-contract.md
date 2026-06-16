@@ -98,6 +98,29 @@ per-kind; torn (mismatch at commit time) is a hard 409 to the packager.
 packager's "brain is coherent" signal; a packager that stops after corpus simply has no manifest
 and is pinned per-kind, exactly as today (back-compatible).
 
+### Wire reference (hub-verified 2026-06-15; independent packager: Logos)
+Upload is keyed by the `uploadId` returned from `POST /api/bridge/brain/init` (with `kind:"manifest"`):
+- `PUT  /api/bridge/brain/{uploadId}/chunk/{idx}` — per-chunk sha256, 422 on mismatch (NOT a bare `/chunk/:idx`).
+- `POST /api/bridge/brain/{uploadId}/commit` — whole-artifact sha256 + consent manifest.
+
+All three carry `x-contract-version: 2.0`. The manifest BODY must include `actor` (= the uploading actor).
+Hub verdicts at manifest commit:
+- `412 manifest_actor_mismatch` — manifest `actor` absent or ≠ the upload's actor (same 412 family as consent).
+- `400 manifest_bad_contract` / `manifest_bad_sha` — `contract` ≠ "2.1", or a `*_sha256` is not lowercase hex.
+- `422 manifest_invalid_json` — body is not parseable JSON.
+- `409 manifest_mismatch {kind, expected, got}` — a `*_sha256` ≠ the live committed row for that kind (the
+  pair is torn; re-upload the lagging kind, then re-commit the manifest). NOTE: actor errors are 412, not 409.
+
+At meeting open each seat pins, under `manifestPins`,
+`{state:'paired'|'stale'|'none', reason?, packSha256?, corpusSha256?, manifestAt?}`; non-paired seats are
+surfaced in the owner report (deterministic line) and WARN-logged. `brainVersions` is unchanged (per-kind string).
+
+Each agent's corpus is ITS OWN blob of ITS OWN full code — a corpus sha need not (and will not) equal another
+agent's. The only invariant is §1: the sha you claim at package time == sha256 of the exact bytes you upload
+(chunks concatenated in idx order = the whole artifact), so the hub's independent recompute matches. There is
+no required cross-agent tar layout; for self-reproducible shas, fix a stable file order, LF-normalize text,
+and hash before any compression.
+
 ## 5. Versioning
 
 This contract rides `x-contract-version: 2.0` (no wire change for §1–§5). The §6 manifest is the
