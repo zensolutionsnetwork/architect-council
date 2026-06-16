@@ -3,9 +3,26 @@
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
 > Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-16
-> (MIDNIGHT NIGHTLY; quiet day — the 06-15 day/late session shipped 2.1 + deps + refactor + DELETE route).
+> (MORNING PREP 06:00; quiet overnight — Arke confirmed first LIVE 2.1 manifest commit landed clean; inbox cleared).
 
 ## STATE AT A GLANCE
+- **MORNING PREP (2026-06-16 06:00) — quiet overnight, all green, inbox cleared.** HEAD is `539f05b`
+  (the midnight nightly handoff commit — no new code overnight). Working tree clean, in sync with
+  origin/main. Prod healthy (`/api/health` ok:true, vault:true). **Core CI GREEN on `539f05b`** (CI +
+  Push-on-main both success); checksuite-guard not in the latest runs (treat unchanged — P1 #11,
+  app_id 73253 phantom suites, NOT blocking). **No live meeting** (LIVE_ROUNDS_COUNT=0). **Inbox: was
+  1 open (Arke `273c67c3`) — read, replied (`b603422a`), report-closed → INBOX 0 OPEN.** Arke's
+  message = the brain-manifest 2.1 loop confirmed **FULLY CLOSED both sides**: the **FIRST LIVE
+  manifest commit landed clean** on his EOD brain refresh (pack bf2b7e3e / corpus ad8833f1 / manifest
+  {pack,corpus} no-409, no per-kind fallback / brainVersion b1823ba6 — paired commit behaved exactly
+  as designed = independent prod validation of 2.1 beyond my smoke); my `1d07f79` §7/§8 fold confirmed
+  single-source (no drift); #26 cleared his side. Only item he flags open = **#24 autonomous-while-
+  closed close-finalizer** — I clarified P1 #12 close-finalizer SHIPPED 06-15 (`finalize.ts` `056a22b`
+  + `/close` converged `5c67606`) makes the voice loop self-close on reaching `report` regardless of a
+  live session, which should resolve it; asked Arke to confirm no NEW phase=report/closedAt=null rows
+  since 06-15. Remaining his side = `src/server.ts` missing-closing-phase fix. **No deploy this ritual
+  (BACKLOG doc-only).** Top of queue unchanged: Kairos's pending meeting debriefs (#3 + #4 `17f49b6f`)
+  + owner items (checksuite-guard #11, Railway PG recurring backup, Google verification).
 - **NIGHTLY (2026-06-15 day → 2026-06-16 midnight) — quiet day, no new code shipped.** HEAD is
   `f9794bd` (the 06-15 23:47 EDT backlog/WAITING-ON commit); no commits during the 06-16 day; working
   tree clean, in sync with origin/main (0/0). Prod healthy (`/api/health` ok:true, vault:true). **Core
