@@ -342,9 +342,12 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
     (`docs/PROPOSAL_AGENDA_AND_DIRECTIVES.md`, ratify then Kairos implements). UTC-budget note open.
 
 ## WAITING ON
-- **Mathieu**: `COUNCIL_V2_LIVE` scheduler flip (later, deliberate) · SN7100 SSD → C: migration ·
-  checksuite-guard / Railway app_id 73253 remedy (needs GitHub admin token — P1 #11). (Meetings #3/#4
-  fired, supervised run, admin-token install, Nova/Logos packs: ✅ DONE.)
+- **Mathieu**: `COUNCIL_V2_LIVE` scheduler flip (later, deliberate) · checksuite-guard / Railway app_id
+  73253 remedy — needs GitHub MCP authed via `/mcp` (plugin can't self-register) OR a token, then Kairos
+  runs the PATCH (P1 #11) · Railway PG recurring-backup + Google verification = short browser walkthrough
+  with Mathieu present (offered). (autonomous-spend #22 = KEEP RUNNING ✅; stuck/test meetings ERASED ✅
+  via DELETE /api/meeting/:id; admin-token rotation = NO ACTION, the exposed token was the dead v1 one,
+  current rotated 2026-06-10; SN7100 note = DROPPED as stale; Meetings/supervised run/packs: ✅ DONE.)
 - **Nova + Logos**: brain-manifest 2.1 ACCEPT — ✅ DONE (Nova `e1528e03`, Logos `9298fc53`/`3c33082b`).
   All four ratified; nothing further owed here.
 - **Kairos (own queue)**: debrief meeting #4 `17f49b6f` + room `344fcf74` (ran overnight, both closed)
