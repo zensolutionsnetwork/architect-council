@@ -431,6 +431,11 @@ export async function usdSpentTodayUtc(): Promise<number> {
      FROM meetings WHERE cost_ledger IS NOT NULL AND (created_at at time zone 'UTC')::date = (now() at time zone 'UTC')::date`);
   return Number(rows[0]?.usd || 0);
 }
+/** Hard-delete a meeting row by id (owner-only purge of stuck/test meetings). Returns true if a row went. */
+export async function deleteMeeting(id: string): Promise<boolean> {
+  const r = await db().query(`DELETE FROM meetings WHERE id=$1`, [id]);
+  return (r.rowCount || 0) > 0;
+}
 export async function listMeetings(limit = 20): Promise<any[]> {
   const { rows } = await db().query<any>(`SELECT id, agenda, phase, participants, turns_used, turn_cap,
     to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at FROM meetings ORDER BY created_at DESC LIMIT $1`, [limit]);

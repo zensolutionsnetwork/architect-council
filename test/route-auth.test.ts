@@ -39,6 +39,7 @@ const PROTECTED: { method: string; path: string; body?: object }[] = [
   { method: 'GET',  path: '/api/council/notify-email' },
   { method: 'POST', path: '/api/council/notify-email', body: { email: 'x@y.com' } },
   { method: 'POST', path: '/api/council/notify-email/test', body: {} },
+  { method: 'DELETE', path: '/api/meeting/route-auth-probe-id' },
 ];
 
 async function request(method: string, path: string, body?: object): Promise<number> {

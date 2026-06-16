@@ -6,6 +6,16 @@
 > (MORNING PREP ritual; midnight nightly earlier same day).
 
 ## STATE AT A GLANCE
+- **2026-06-15 LATE — owner decisions actioned (Mathieu live).** (1) **Autonomous spend #22 RESOLVED:
+  owner directive = KEEP RUNNING** — supervised-run gate declared SATISFIED; nightly hub-side meetings
+  may spend Opus (~$0.49/mtg, $5/day cap); `VOICE_LOOP_ENABLED` kill-switch stays. (2) **Erase stuck
+  meetings: owner said erase, don't retro-close** → added owner-gated `DELETE /api/meeting/:id` (purge
+  for stuck/test rows; route-auth-gated, 25/0) and deleted the 3 pre-finalizer stuck rows + my smoke
+  dry-runs. (3) **Admin token rotation:** verifying whether still needed (current token rotated
+  2026-06-10; the exposed one was the dead v1 token). (4) **Railway PG recurring backup / (5) Google
+  verif:** need a short browser walkthrough with Mathieu present. (6) **SN7100 SSD:** stale inherited
+  note — clarifying / likely dropping. (7) **checksuite-guard #11:** GitHub MCP needs manual `/mcp`
+  auth (can't self-register) — still owner. (8) **always-allow:** explained.
 - **2026-06-15 LATE — brain-manifest 2.1 LOOP FULLY CLOSED across all four.** Arke flipped
   `MANIFEST_21_ENABLED=true` + wired manifest-commit-last (`council-prep-upload.ts`, 62/62 green);
   Logos committed his manifest and pins **`paired`** hub-side (first EXTERNAL 2.1 packager — independent

@@ -18,7 +18,7 @@ import {
   queueOutbox, pendingOutbox, markOutboxDelivered, ackOutbox, sweepOutbox,
   setAgentBacklog, getAgentBacklogs, setConvoArchived, setConvoV2Meta, getRegistryVersion,
   queueEnvTask, listEnvTasks, getEnvTask, claimEnvTask, reportEnvTask, sweepEnvTasks,
-  createMeeting, getMeeting, updateMeeting, listMeetings, listMeetingsForActor, setMeetingOwnerReport,
+  createMeeting, getMeeting, updateMeeting, listMeetings, listMeetingsForActor, setMeetingOwnerReport, deleteMeeting,
   setMeetingLedger, setMeetingManifestPins,
   setVoiceRunning, closeStaleVoiceMeetings, usdSpentTodayUtc,
   createBrainUpload, getBrainUpload, putBrainChunk, brainReceived, assembleBrain,
@@ -664,6 +664,16 @@ councilRouter.post('/meeting/:id/close', async (req, res) => {
     // a re-close on an already-closed meeting never re-synthesizes or re-emails (returns alreadyClosed).
     const r = await finalizeMeetingClose(m, { report: clip((req.body || {}).report, 16000) });
     res.json({ ok: r.ok, dryRun: r.dryRun, alreadyClosed: r.alreadyClosed, storyUpdatesRouted: r.storyUpdatesRouted, ownerReport: r.ownerReport, emailSent: r.emailSent, emailReason: r.emailReason });
+  } catch (e) { internalError(res, e); }
+});
+// Owner-only purge of a meeting row (owner directive 2026-06-15: erase stuck/test meetings). Hard delete
+// by explicit id; admin token only. Used to clean pre-finalizer stuck meetings + dry-run test rooms.
+councilRouter.delete('/meeting/:id', async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a || !a.admin) return res.status(401).json({ error: 'unauthorized' });
+    const deleted = await deleteMeeting(req.params.id);
+    if (!deleted) return res.status(404).json({ error: 'not_found' });
+    res.json({ ok: true, deleted: req.params.id });
   } catch (e) { internalError(res, e); }
 });
 // Owner report readback — owner-gated (it is Mathieu's report; members read the transcript instead).
