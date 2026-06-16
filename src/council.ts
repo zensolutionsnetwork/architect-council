@@ -25,7 +25,7 @@ import {
   commitBrainV2, getBrainV2Meta, getBrainV2Content, sweepBrainUploads,
   getSetting, setSetting,
 } from './store.js';
-import { manifestPinLine } from './finalize.js';
+import { finalizeMeetingClose } from './finalize.js';
 
 const clip = (s: any, n: number) => String(s ?? '').slice(0, n);
 /** Timing-safe credential compare (council 2026-06-07): length check + timingSafeEqual, never ===. */
@@ -658,58 +658,12 @@ councilRouter.post('/meeting/:id/close', async (req, res) => {
   try {
     const a = await resolveActor(req); if (!a || !a.admin) return res.status(401).json({ error: 'unauthorized' });
     const m = await getMeeting(req.params.id); if (!m) return res.status(404).json({ error: 'not_found' });
-    await updateMeeting(m.id, { phase: 'report', report: clip((req.body || {}).report, 16000) || m.report, closed: true });
-    // Route each storyUpdate to Logos for the Chronicle (Arke refinement 5) — UNLESS this is a dry-run/test
-    // room, in which case mock storyUpdates must NOT pollute the Chronicle (Arke finding 3, 2026-06-09).
-    let storyCount = 0;
-    if (!m.dry_run) {
-      for (const t of (m.transcript || [])) {
-        const su = t && t.payload && t.payload.storyUpdate;
-        if (su) { storyCount++; try { await queueEnvTask('hub', 'logos', 'story', clip('storyUpdate from ' + t.actor + ' (meeting ' + m.id + ')', 300), { text: String(su), actor: t.actor, meetingId: m.id }, 'normal'); } catch { /* best effort */ } }
-      }
-    }
-    // OWNER REPORT (ROADMAP Layer 0 / Fable review 2.2): on every REAL close, synthesize the 4-point
-    // report for Mathieu (code review, direction, friction, flags) with one bounded Sonnet call.
-    // Best-effort: a synthesis failure never fails the close. Dry-run rooms never spend.
-    let ownerReportGenerated = false;
-    let emailResult: any = { sent: false, reason: 'not_attempted' };
-    if (!m.dry_run) {
-      const spoken = (m.transcript || [])
-        .filter((t: any) => t && t.kind === 'speak' && t.payload)
-        .map((t: any) => ({ actor: String(t.actor), text: clip(JSON.stringify(t.payload), 4000) }));
-      // Per-reason auto-PASS counts (Arke 8bd37dd6): make an error-heavy or stalled meeting visible
-      // at a glance in the owner report. error = a voice call failed and fell back to a pass.
-      const passCounts: Record<string, number> = {};
-      for (const t of (m.transcript || [])) if (t && t.kind === 'pass' && t.auto) { const r = String(t.reason || 'unknown'); passCounts[r] = (passCounts[r] || 0) + 1; }
-      if (spoken.length) {
-        try {
-          const { report, usage } = await synthesizeOwnerReport(m.agenda || '', spoken);
-          if (report && !report.startsWith('(owner-report error')) {
-            const passLine = Object.keys(passCounts).length ? `\n\n---\nAuto-passes this meeting: ${Object.entries(passCounts).map(([r, n]) => `${r}=${n}`).join(', ')}` : '';
-            // Brain-manifest 2.1 (Logos rider): surface any non-paired seat in the owner report, never silent.
-            const manifestLine = manifestPinLine(m.manifest_pins);
-            const full = clip(report + passLine + manifestLine, 16000);
-            await setMeetingOwnerReport(m.id, full);
-            ownerReportGenerated = true;
-            // EMAIL the report (owner directive 2026-06-11). Env-gated + fail-soft: a send failure
-            // (or no key / no registered email) never fails the close — it is reported in the response.
-            try {
-              const to = await getSetting('owner_notify_email');
-              if (to) emailResult = await sendOwnerReportEmail(to, `Architects Council — meeting report (${new Date().toISOString().slice(0, 10)})`, full);
-              else emailResult = { sent: false, reason: 'no_registered_email' };
-            } catch (e) { emailResult = { sent: false, reason: 'email_threw:' + (e as Error).message.slice(0, 80) }; }
-          }
-          // Charge the synthesis call to the meeting cost ledger (ledger accuracy for the §2 envelope).
-          if (usage && (usage.input_tokens || usage.output_tokens)) {
-            const led = (m.cost_ledger && m.cost_ledger.total) ? m.cost_ledger : { total: emptyTotals(), perAgent: {} };
-            led.total = addUsage(led.total, OWNER_REPORT_MODEL, usage);
-            led.perAgent['owner-report'] = addUsage(led.perAgent['owner-report'] || emptyTotals(), OWNER_REPORT_MODEL, usage);
-            await setMeetingLedger(m.id, led);
-          }
-        } catch { /* best effort */ }
-      }
-    }
-    res.json({ ok: true, dryRun: !!m.dry_run, storyUpdatesRouted: storyCount, ownerReport: ownerReportGenerated, emailSent: !!emailResult.sent, emailReason: emailResult.reason || null });
+    // Converged onto the shared finalizer (src/finalize.ts, 2026-06-15) so the owner /close route and the
+    // autonomous voice loop finish a meeting IDENTICALLY: closed_at + storyUpdates routed to Logos +
+    // owner report synth/store/email + ledger charge + the 2.1 manifest-pin line. Idempotent on closed_at —
+    // a re-close on an already-closed meeting never re-synthesizes or re-emails (returns alreadyClosed).
+    const r = await finalizeMeetingClose(m, { report: clip((req.body || {}).report, 16000) });
+    res.json({ ok: r.ok, dryRun: r.dryRun, alreadyClosed: r.alreadyClosed, storyUpdatesRouted: r.storyUpdatesRouted, ownerReport: r.ownerReport, emailSent: r.emailSent, emailReason: r.emailReason });
   } catch (e) { internalError(res, e); }
 });
 // Owner report readback — owner-gated (it is Mathieu's report; members read the transcript instead).

@@ -15,9 +15,8 @@
  * left untouched, so a double close/finalize never re-synthesizes or re-emails. Dry-run rooms never
  * spend and never pollute the Chronicle.
  *
- * NOTE: the owner /close route (council.ts) still contains a twin of this logic for now; that route
- * should be refactored to call finalizeMeetingClose in a follow-up (low-risk, kept out of this deploy
- * to avoid touching the live owner-close path). Keep the two in step until then.
+ * The owner /close route (council.ts) and the autonomous voice loop BOTH call finalizeMeetingClose
+ * (converged 2026-06-15) — single close path, no twin to keep in step.
  */
 import { updateMeeting, setMeetingOwnerReport, setMeetingLedger, queueEnvTask, getSetting } from './store.js';
 import { synthesizeOwnerReport, OWNER_REPORT_MODEL } from './architect.js';
