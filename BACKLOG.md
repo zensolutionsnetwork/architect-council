@@ -19,7 +19,11 @@
   Arke msg `5972fe33` read+closed (LIVE_PHASES staged app-side, three-guard floor + #26 accept + #7
   re-verify PASS). **Inbox 0 open. LIVE_ROUNDS_COUNT=0.** Owe Arke: council-jcs-1.0.md #26 doc fix +
   corpus-contract §7/invariant-#4 reconciliation (his copy has them, mine doesn't — get byte-exact text).
-  Next this session: P1 #13 Dependabot triage; follow-up /close→finalizeMeetingClose refactor.
+  **ALSO shipped this session:** P1 #13 Dependabot — `npm audit fix` esbuild bump (`a335199`), 0 vulns,
+  build/dev-time only (not prod-reachable); `/close` route converged onto shared `finalizeMeetingClose`
+  (`5c67606`, −47 lines, idempotent re-close verified on prod) — the twin is gone, P1 #12 fully retired.
+  **All 3 deploys CI-green + prod-smoked.** Remaining = blockers only: #26 doc-target clarify + §7/inv-4
+  text (Arke); checksuite-guard #11 + 5 owner decisions + retro-close stuck meetings (Mathieu).
 - **DAY SESSION (2026-06-15, Kairos live with Mathieu) — morning ritual + 3 CI-green deploys.**
   HEAD `32fa937`, working tree clean, pushed. Prod `/api/health` ok:true/vault:true; all 5 deploy
   gates green on each push. **Inbox 0 open** (4 actioned/closed). **Debriefed #4 `17f49b6f` + #5
@@ -274,13 +278,19 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
     `{auto_trigger_checks:[{app_id:73253,setting:false}]}` and VERIFY the response shows `setting:false`
     (a bare 200 can be a silent no-op). Needs a GitHub admin token — day session / Mathieu. Investigate
     what re-introduced it on 06-12 (Railway app reinstall? Wait-for-CI config touch?).
-13. **Dependabot: 2 vulnerabilities on default branch (1 high, 1 low) — NEW, surfaced on push
-    2026-06-15.** GitHub flagged them on the `push origin main`; details at
+13. ~~**Dependabot: 2 vulnerabilities (1 high, 1 low)**~~ **DONE 2026-06-15 (`a335199`).** `npm audit fix`
+    bumped esbuild (transitive via tsx) → `npm audit` reports 0 vulnerabilities; `package.json` unchanged
+    (lockfile-only). Both advisories were build/dev-time only (esbuild dev-server file-read on Windows /
+    Deno RCE) — NOT prod-reachable (Railway runs `tsx` on Linux, no `esbuild serve`, no Deno). All gates green.
+    (Original note below for history.) GitHub flagged them on the `push origin main`; details at
     `github.com/zensolutionsnetwork/architect-council/security/dependabot`. Dependency advisories (not
     exposed secrets — push-protection/secret-scan remain clean). Review + bump the flagged deps in a
     day session (likely a transitive dep in the hub or bridge tree); confirm the high one isn't in a
     prod-reachable path. Low effort, do NOT deploy over a live meeting.
-12. **Hub-side close-finalizer (NEW 2026-06-14, Arke `4b631065`).** Ask #24's 3-min auto-close is
+12. ~~**Hub-side close-finalizer**~~ **DONE — `src/finalize.ts` (`056a22b`) + `/close` converged onto it
+    (`5c67606`, 2026-06-15).** Both the owner `/close` route and the autonomous voice loop now finish a
+    meeting identically (closed_at + storyUpdates + owner report + ledger + 2.1 manifest line), idempotent
+    on closed_at (verified on prod). No twin remains. (Original note below for history.) Ask #24's 3-min auto-close is
     intermittent — it fires only when a session/loop is live, so fully-autonomous meetings that run
     while all sessions are closed never finalize (stuck phase=report, closedAt=null, owner-report 404;
     e.g. `a4644f78` + `17f49b6f`). Build a hub-side finalizer that closes on report+all-done regardless
