@@ -26,6 +26,19 @@ import { emptyTotals, addUsage } from './cost.js';
 
 const clip = (s: any, n: number) => String(s ?? '').slice(0, n);
 
+/** Brain-manifest 2.1 owner-report surface (corpus-contract §6, Logos rider): a deterministic line
+ *  noting every seat whose pack+corpus did NOT pin as a verified atomic pair, with the reason — so a
+ *  manifest-less or stale-manifest meeting is never silently trusted. Returns '' when every seat paired. */
+export function manifestPinLine(pins: any): string {
+  if (!pins || typeof pins !== 'object') return '';
+  const entries = Object.entries(pins as Record<string, any>);
+  if (!entries.length) return '';
+  const notPaired = entries.filter(([, v]) => v && v.state !== 'paired');
+  if (!notPaired.length) return `\n\n---\nBrain manifests: all ${entries.length} seat(s) pinned a verified pack+corpus pair (manifest 2.1).`;
+  const detail = notPaired.map(([actor, v]) => `${actor}=${v.state || 'none'}(${v.reason || 'unspecified'})`).join(', ');
+  return `\n\n---\nBrain manifests (2.1): ${notPaired.length} of ${entries.length} seat(s) NOT atomically paired — fell back to per-kind pinning: ${detail}.`;
+}
+
 export interface FinalizeResult {
   ok: boolean;
   alreadyClosed: boolean;
@@ -80,7 +93,10 @@ export async function finalizeMeetingClose(m: any, opts: { report?: string } = {
         const { report, usage } = await synthesizeOwnerReport(m.agenda || '', spoken);
         if (report && !report.startsWith('(owner-report error')) {
           const passLine = Object.keys(passCounts).length ? `\n\n---\nAuto-passes this meeting: ${Object.entries(passCounts).map(([r, n]) => `${r}=${n}`).join(', ')}` : '';
-          const full = clip(report + passLine, 16000);
+          // Brain-manifest 2.1 (Logos rider): any non-paired seat MUST be surfaced in the owner report
+          // with a reason — never silent. Deterministic line, not LLM-synthesized.
+          const manifestLine = manifestPinLine(m.manifest_pins);
+          const full = clip(report + passLine + manifestLine, 16000);
           await setMeetingOwnerReport(m.id, full);
           base.ownerReport = true;
           try {

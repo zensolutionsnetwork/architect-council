@@ -105,6 +105,10 @@ export async function initDb(): Promise<void> {
   await q.query(`ALTER TABLE meetings ADD COLUMN IF NOT EXISTS brain_versions jsonb`);
   // Owner report (ROADMAP Layer 0 / Fable review 2.2): 4-point synthesis to Mathieu at meeting close.
   await q.query(`ALTER TABLE meetings ADD COLUMN IF NOT EXISTS owner_report text`);
+  // Brain-manifest 2.1 (corpus-contract §6): per-seat atomic pack+corpus pin state recorded at
+  // meeting open — { actor: { state:'paired'|'stale'|'none', reason, packSha256, corpusSha256, manifestAt } }.
+  // Parallel to brain_versions (which stays the back-compat per-kind string); surfaced in the owner report.
+  await q.query(`ALTER TABLE meetings ADD COLUMN IF NOT EXISTS manifest_pins jsonb`);
   // Autonomous voice loop (HUB_AUTONOMOUS_VOICE_SPEC §2/§3): per-meeting cost ledger + caps + robustness.
   await q.query(`ALTER TABLE meetings ADD COLUMN IF NOT EXISTS cost_ledger jsonb`);
   await q.query(`ALTER TABLE meetings ADD COLUMN IF NOT EXISTS ended_reason text`);
@@ -377,7 +381,7 @@ export async function createMeeting(id: string, agenda: string, participants: st
     [id, String(agenda || '').slice(0, 8000), JSON.stringify(participants), turnCap, phase, openedBy, turnTimeoutSec > 0 ? turnTimeoutSec : 600, JSON.stringify(roles || {}), !!dryRun, JSON.stringify(brainVersions || {})]);
 }
 export async function getMeeting(id: string): Promise<any | null> {
-  const { rows } = await db().query<any>(`SELECT id, agenda, participants, turn_cap, phase, turn_index, round, turns_used, transcript, report, opened_by, turn_timeout_sec, roles, dry_run, brain_versions, owner_report, cost_ledger, ended_reason, voice_running,
+  const { rows } = await db().query<any>(`SELECT id, agenda, participants, turn_cap, phase, turn_index, round, turns_used, transcript, report, opened_by, turn_timeout_sec, roles, dry_run, brain_versions, manifest_pins, owner_report, cost_ledger, ended_reason, voice_running,
     to_char(voice_heartbeat at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS voice_heartbeat,
     to_char(turn_started_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS turn_started_at,
     to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
@@ -386,7 +390,12 @@ export async function getMeeting(id: string): Promise<any | null> {
   if (!rows[0]) return null;
   const r = rows[0];
   return { ...r, participants: Array.isArray(r.participants) ? r.participants : [], transcript: Array.isArray(r.transcript) ? r.transcript : [],
-    roles: r.roles && typeof r.roles === 'object' ? r.roles : {}, brain_versions: r.brain_versions && typeof r.brain_versions === 'object' ? r.brain_versions : {} };
+    roles: r.roles && typeof r.roles === 'object' ? r.roles : {}, brain_versions: r.brain_versions && typeof r.brain_versions === 'object' ? r.brain_versions : {},
+    manifest_pins: r.manifest_pins && typeof r.manifest_pins === 'object' ? r.manifest_pins : {} };
+}
+/** Record per-seat brain-manifest 2.1 pin state at meeting open (corpus-contract §6). Best-effort sibling to brain_versions. */
+export async function setMeetingManifestPins(id: string, pins: any): Promise<void> {
+  await db().query(`UPDATE meetings SET manifest_pins=$2::jsonb WHERE id=$1`, [id, JSON.stringify(pins ?? {})]);
 }
 export async function updateMeeting(id: string, patch: { phase?: string; turn_index?: number; round?: number; turns_used?: number; transcript?: MeetingTurn[]; report?: string; closed?: boolean; touchTurn?: boolean }): Promise<void> {
   await db().query(`UPDATE meetings SET
@@ -429,10 +438,15 @@ export async function listMeetings(limit = 20): Promise<any[]> {
 }
 
 // ---- Brain-upload pipeline (resumable chunks; docs/CONTRACT_DELTAS_2.0.md a/e) ----
+// Artifact kinds: pack (curated voice prefix) | corpus (full code, default/back-compat) |
+// manifest (corpus-contract §6 atomic pack+corpus pairing, contract 2.1).
+export function brainKind(k: unknown): 'pack' | 'corpus' | 'manifest' {
+  return k === 'pack' ? 'pack' : k === 'manifest' ? 'manifest' : 'corpus';
+}
 export async function createBrainUpload(uploadId: string, actor: string, brainId: string, totalBytes: number, chunkSize: number, sha256: string, manifest: any[], kind = 'corpus'): Promise<void> {
   await db().query(`INSERT INTO brain_uploads (upload_id, actor, brain_id, total_bytes, chunk_size, claimed_sha256, manifest, kind)
     VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8) ON CONFLICT (upload_id) DO NOTHING`,
-    [uploadId, actor, brainId || null, totalBytes || 0, chunkSize || 0, String(sha256 || '').toLowerCase(), JSON.stringify(Array.isArray(manifest) ? manifest : []), kind === 'pack' ? 'pack' : 'corpus']);
+    [uploadId, actor, brainId || null, totalBytes || 0, chunkSize || 0, String(sha256 || '').toLowerCase(), JSON.stringify(Array.isArray(manifest) ? manifest : []), brainKind(kind)]);
 }
 export async function getBrainUpload(uploadId: string): Promise<any | null> {
   const { rows } = await db().query<any>(`SELECT upload_id, actor, brain_id, total_bytes, chunk_size, claimed_sha256, manifest, status, kind FROM brain_uploads WHERE upload_id=$1`, [uploadId]);
@@ -455,7 +469,7 @@ export async function assembleBrain(uploadId: string): Promise<Buffer> {
 }
 export async function commitBrainV2(actor: string, brainId: string, brainVersion: string, sha256: string, bytes: number, content: Buffer, consent: any, kind = 'corpus'): Promise<void> {
   const c = db();
-  const k = kind === 'pack' ? 'pack' : 'corpus';
+  const k = brainKind(kind);
   await c.query(`INSERT INTO brains_v2 (actor, kind, brain_id, brain_version, sha256, bytes, content, consent, committed_at)
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb, now())
     ON CONFLICT (actor, kind) DO UPDATE SET brain_id=EXCLUDED.brain_id, brain_version=EXCLUDED.brain_version,
@@ -466,13 +480,13 @@ export async function commitBrainV2(actor: string, brainId: string, brainVersion
 export async function getBrainV2Meta(actor: string, kind = 'corpus'): Promise<any | null> {
   const { rows } = await db().query<any>(`SELECT actor, kind, brain_id, brain_version, sha256, bytes,
     to_char(committed_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS committed_at FROM brains_v2 WHERE actor=$1 AND kind=$2`,
-    [actor, kind === 'pack' ? 'pack' : 'corpus']);
+    [actor, brainKind(kind)]);
   return rows[0] || null;
 }
 export async function getBrainV2Content(actor: string, kind = 'corpus'): Promise<{ content: Buffer; meta: any } | null> {
   const { rows } = await db().query<any>(`SELECT actor, kind, brain_id, brain_version, sha256, bytes, content, consent,
     to_char(committed_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS committed_at FROM brains_v2 WHERE actor=$1 AND kind=$2`,
-    [actor, kind === 'pack' ? 'pack' : 'corpus']);
+    [actor, brainKind(kind)]);
   if (!rows[0]) return null;
   const r = rows[0];
   return { content: Buffer.isBuffer(r.content) ? r.content : Buffer.from(r.content || ''), meta: { actor: r.actor, kind: r.kind, brain_id: r.brain_id, brain_version: r.brain_version, sha256: r.sha256, bytes: Number(r.bytes), consent: r.consent, committed_at: r.committed_at } };

@@ -46,11 +46,17 @@ A corpus is readable by siblings only when its row carries `sha256` equal to a v
 Cross-reads (`/bridge/brain-meta|brain-content/:actor?kind=`) are **fail-closed**: missing
 artifact, hash mismatch, or unverified state returns an error — never partial or stale content.
 
-## 6. Brain manifest — atomic pack+corpus pairing (contract 2.1, proposed)
+## 6. Brain manifest — atomic pack+corpus pairing (contract 2.1)
 
-Status: **PROPOSED for ratification by the four** (Kairos, 2026-06-11 — meeting `d5d8da54`
-homework; resolves the two-artifact upload race Arke + Nova both flagged). Additive: no change to
-the 2.0 pack/corpus wire; packagers and the hub MAY ignore it until ratified.
+Status: **RATIFIED (4/4) + IMPLEMENTED hub-side** (Kairos, 2026-06-15). Ratified by Arke
+(`5f15f98d`), Nova (`e1528e03`, three-state `manifest: true|stale|false`), and Logos
+(`9298fc53`/`3c33082b`, logged-fallback rider). Hub-side implemented this session: manifest is a
+third `kind` through `/api/bridge/brain/*`, verified fail-closed at commit (409 `manifest_mismatch`
+naming the divergent kind); meeting open records a three-state `manifest_pins` per seat (paired |
+stale | none + reason), surfaced in the owner report (never silent). Additive: no change to the 2.0
+pack/corpus wire; a packager that never uploads a manifest is pinned per-kind, exactly as before.
+Packager side (Arke's `MANIFEST_21_ENABLED` flip + manifest-commit-last) wires on the "verified
+live" signal.
 
 ### Problem
 A packager uploads PACK then CORPUS as two sequential `commit`s. A meeting opened between the two

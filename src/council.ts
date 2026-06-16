@@ -19,11 +19,13 @@ import {
   setAgentBacklog, getAgentBacklogs, setConvoArchived, setConvoV2Meta, getRegistryVersion,
   queueEnvTask, listEnvTasks, getEnvTask, claimEnvTask, reportEnvTask, sweepEnvTasks,
   createMeeting, getMeeting, updateMeeting, listMeetings, listMeetingsForActor, setMeetingOwnerReport,
+  setMeetingLedger, setMeetingManifestPins,
   setVoiceRunning, closeStaleVoiceMeetings, usdSpentTodayUtc,
   createBrainUpload, getBrainUpload, putBrainChunk, brainReceived, assembleBrain,
   commitBrainV2, getBrainV2Meta, getBrainV2Content, sweepBrainUploads,
   getSetting, setSetting,
 } from './store.js';
+import { manifestPinLine } from './finalize.js';
 
 const clip = (s: any, n: number) => String(s ?? '').slice(0, n);
 /** Timing-safe credential compare (council 2026-06-07): length check + timingSafeEqual, never ===. */
@@ -511,7 +513,7 @@ function meetingView(m: any, actor: string | null) {
   const cur = m.participants[m.turn_index] || null;
   return { id: m.id, phase: m.phase, round: m.round, turnIndex: m.turn_index, currentActor: cur,
     cap: m.turn_cap, turnCap: m.turn_cap /* alias for the app (Arke 03eb0537) */, turnsUsed: m.turns_used, participants: m.participants, agenda: m.agenda,
-    roles: m.roles || {}, dryRun: !!m.dry_run, brainVersions: m.brain_versions || {},
+    roles: m.roles || {}, dryRun: !!m.dry_run, brainVersions: m.brain_versions || {}, manifestPins: m.manifest_pins || {},
     turnTimeoutSec: m.turn_timeout_sec, turnStartedAt: m.turn_started_at,
     transcript: m.transcript, report: m.report || null, yourTurn: !!actor && actor === cur };
 }
@@ -557,11 +559,47 @@ councilRouter.post('/meeting/open', async (req, res) => {
     for (const p of participants) { const r = String(rawRoles[p] || '').toLowerCase(); if (ROLE_SET.includes(r)) roles[p] = r; }
     if (Object.values(roles).filter((r) => r === 'facilitate').length > 1) return res.status(400).json({ error: 'too_many_facilitators', message: 'at most one facilitator per room' });
     const dryRun = b.dryRun === true || b.test === true;
-    // Pin each participant's committed brainVersion (contract b): "the brain in the room == what I sent".
+    // Pin each participant's committed brain at meeting OPEN (contract b + brain-manifest 2.1, corpus-contract §6).
+    // brain_versions stays the back-compat per-kind (corpus) string Arke's app reads; manifest_pins records the
+    // THREE-STATE atomic-pair check — paired | stale | none — with a reason, surfaced in the owner report
+    // (Logos rider: a manifest-less or stale-manifest seat is never silently trusted).
     const brainVersions: Record<string, any> = {};
-    for (const p of participants) { try { const meta = await getBrainV2Meta(p); brainVersions[p] = meta ? meta.brain_version : null; } catch { brainVersions[p] = null; } }
+    const manifestPins: Record<string, any> = {};
+    for (const p of participants) {
+      let corpusMeta: any = null, packMeta: any = null;
+      try { corpusMeta = await getBrainV2Meta(p, 'corpus'); } catch { /* absent */ }
+      try { packMeta = await getBrainV2Meta(p, 'pack'); } catch { /* absent */ }
+      brainVersions[p] = corpusMeta ? corpusMeta.brain_version : null;
+      let pin: any = { state: 'none', reason: 'no_manifest' };
+      try {
+        const manc = await getBrainV2Content(p, 'manifest');
+        if (manc) {
+          let mani: any = null;
+          try { mani = JSON.parse(manc.content.toString('utf8')); } catch { mani = null; }
+          if (!mani || typeof mani !== 'object') {
+            pin = { state: 'none', reason: 'manifest_unreadable' };
+          } else {
+            const wantPack = String(mani.pack_sha256 || '').toLowerCase();
+            const wantCorpus = String(mani.corpus_sha256 || '').toLowerCase();
+            const livePack = packMeta ? String(packMeta.sha256).toLowerCase() : null;
+            const liveCorpus = corpusMeta ? String(corpusMeta.sha256).toLowerCase() : null;
+            if (livePack && liveCorpus && wantPack === livePack && wantCorpus === liveCorpus) {
+              // Verified atomic pair — pin pack+corpus together (stale ≠ torn: a re-uploaded kind makes it stale).
+              pin = { state: 'paired', packSha256: livePack, corpusSha256: liveCorpus, manifestAt: mani.committed_at || manc.meta.committed_at || null };
+            } else {
+              pin = { state: 'stale', reason: 'manifest_superseded', packSha256: livePack, corpusSha256: liveCorpus };
+            }
+          }
+        }
+      } catch { pin = { state: 'none', reason: 'manifest_lookup_error' }; }
+      manifestPins[p] = pin;
+      if (pin.state !== 'paired') {
+        try { console.warn(`[hub:manifest2.1] seat ${p} not atomically paired at open: state=${pin.state} reason=${pin.reason || ''}`); } catch { /* noop */ }
+      }
+    }
     const id = crypto.randomUUID();
     await createMeeting(id, clip(b.agenda, 8000), participants, cap, a.actor, 'rounds', tto, roles, dryRun, brainVersions);
+    try { await setMeetingManifestPins(id, manifestPins); } catch { /* best-effort: pins are a sibling record, never fail the open */ }
     res.json({ ok: true, meetingId: id, ...meetingView(await getMeeting(id), a.actor) });
   } catch (e) { internalError(res, e); }
 });
@@ -648,7 +686,9 @@ councilRouter.post('/meeting/:id/close', async (req, res) => {
           const { report, usage } = await synthesizeOwnerReport(m.agenda || '', spoken);
           if (report && !report.startsWith('(owner-report error')) {
             const passLine = Object.keys(passCounts).length ? `\n\n---\nAuto-passes this meeting: ${Object.entries(passCounts).map(([r, n]) => `${r}=${n}`).join(', ')}` : '';
-            const full = clip(report + passLine, 16000);
+            // Brain-manifest 2.1 (Logos rider): surface any non-paired seat in the owner report, never silent.
+            const manifestLine = manifestPinLine(m.manifest_pins);
+            const full = clip(report + passLine + manifestLine, 16000);
             await setMeetingOwnerReport(m.id, full);
             ownerReportGenerated = true;
             // EMAIL the report (owner directive 2026-06-11). Env-gated + fail-soft: a send failure
@@ -854,8 +894,9 @@ councilRouter.post('/bridge/brain/init', requireContract2, async (req, res) => {
     const target = a.admin ? String(actor || '').trim() : a.actor;
     if (a.admin && !target) return res.status(400).json({ error: 'actor_required', message: 'owner upload must name body.actor (the target member)' });
     if (a.admin && !(await getMember(target))) return res.status(404).json({ error: 'unknown_actor', actor: target });
-    // Two-artifact brain (§11.2): kind ∈ {pack, corpus}; absent/unknown = corpus (back-compat with today's app upload).
-    const k = kind === 'pack' ? 'pack' : 'corpus';
+    // Brain artifacts: kind ∈ {pack, corpus, manifest}; absent/unknown = corpus (back-compat with today's app upload).
+    // manifest = corpus-contract §6 atomic pack+corpus pairing (contract 2.1), verified fail-closed at commit.
+    const k = kind === 'pack' ? 'pack' : kind === 'manifest' ? 'manifest' : 'corpus';
     const uploadId = crypto.randomUUID();
     await createBrainUpload(uploadId, target, String(brainId || ''), Number(totalBytes) || 0, Number(chunkSize) || 0, String(sha256), manifest, k);
     res.json({ uploadId, actor: target, kind: k, received: [] });
@@ -912,6 +953,24 @@ councilRouter.post('/bridge/brain/:uploadId/commit', requireContract2, async (re
     const whole = sha256hex(buf);
     const claimed = String(sha256 || up.claimed_sha256 || '').toLowerCase();
     if (whole !== claimed) return res.status(422).json({ error: 'object_hash_mismatch', expected: claimed, got: whole });
+    // Brain-manifest 2.1 (corpus-contract §6): a manifest artifact is verified FAIL-CLOSED at commit.
+    // Content is canonical JSON {actor, pack_sha256, corpus_sha256, committed_at, contract:"2.1"}; each
+    // *_sha256 MUST equal the actor's currently-committed pack/corpus row — else the pair is torn (409,
+    // naming which kind diverged so the packager re-uploads the lagging artifact then the manifest).
+    if (up.kind === 'manifest') {
+      let mani: any;
+      try { mani = JSON.parse(buf.toString('utf8')); } catch { return res.status(422).json({ error: 'manifest_invalid_json' }); }
+      if (!mani || typeof mani !== 'object') return res.status(422).json({ error: 'manifest_invalid_json' });
+      if (String(mani.contract || '') !== '2.1') return res.status(400).json({ error: 'manifest_bad_contract', expected: '2.1', got: mani.contract ?? null });
+      if (mani.actor !== up.actor) return res.status(412).json({ error: 'manifest_actor_mismatch', expected: up.actor, got: mani.actor ?? null });
+      const wantPack = String(mani.pack_sha256 || '').toLowerCase();
+      const wantCorpus = String(mani.corpus_sha256 || '').toLowerCase();
+      if (!/^[0-9a-f]{64}$/.test(wantPack) || !/^[0-9a-f]{64}$/.test(wantCorpus)) return res.status(400).json({ error: 'manifest_bad_sha', message: 'pack_sha256 + corpus_sha256 must be lowercase hex sha256' });
+      const packMeta = await getBrainV2Meta(up.actor, 'pack');
+      const corpusMeta = await getBrainV2Meta(up.actor, 'corpus');
+      if (!packMeta || String(packMeta.sha256).toLowerCase() !== wantPack) return res.status(409).json({ error: 'manifest_mismatch', kind: 'pack', expected: wantPack, got: packMeta ? String(packMeta.sha256).toLowerCase() : null });
+      if (!corpusMeta || String(corpusMeta.sha256).toLowerCase() !== wantCorpus) return res.status(409).json({ error: 'manifest_mismatch', kind: 'corpus', expected: wantCorpus, got: corpusMeta ? String(corpusMeta.sha256).toLowerCase() : null });
+    }
     // Attribute the brain to the UPLOAD's actor (the target member), never to 'owner' on an admin upload.
     const brainVersion = `${up.actor}@sha256:${whole}`;
     await commitBrainV2(up.actor, String(up.brain_id || ''), brainVersion, whole, buf.length, buf, c, up.kind || 'corpus');
