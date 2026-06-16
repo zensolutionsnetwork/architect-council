@@ -55,8 +55,9 @@ third `kind` through `/api/bridge/brain/*`, verified fail-closed at commit (409 
 naming the divergent kind); meeting open records a three-state `manifest_pins` per seat (paired |
 stale | none + reason), surfaced in the owner report (never silent). Additive: no change to the 2.0
 pack/corpus wire; a packager that never uploads a manifest is pinned per-kind, exactly as before.
-Packager side (Arke's `MANIFEST_21_ENABLED` flip + manifest-commit-last) wires on the "verified
-live" signal.
+Packager side LIVE: Arke flipped `MANIFEST_21_ENABLED=true` + wired manifest-commit-last
+(`council-prep-upload.ts`, 62/62 green) on the "verified live" signal; Logos committed his manifest
+and pins `paired` hub-side (first external 2.1 packager, 2026-06-15). Loop closed.
 
 ### Problem
 A packager uploads PACK then CORPUS as two sequential `commit`s. A meeting opened between the two
@@ -127,3 +128,42 @@ This contract rides `x-contract-version: 2.0` (no wire change for §1–§5). Th
 first 2.1 change: schema-affecting, so it lands here first and is ratified by the four before
 `src/` (hub) and the client packagers implement it. `src/` and client packagers are projections of
 this contract.
+
+## 7. Corpus floor — three-guard (family invariant #4)
+
+Ratified meeting `0d94d988` (2026-06-15; Arke). A corpus upload must clear three guards before
+anything ships, so a broken packager can never silently starve a brain (Nova's 26-of-92 short-ship):
+
+```
+assert(fileCount  >= FILE_FLOOR);        // corpusFloor(prevCount): anchored, max(HARD, prev*0.5)
+assert(totalBytes >= BYTE_FLOOR);        // byteFloor(prevBytes):   count can pass while byte-gutted
+assert(files.includes(CORPUS_ANCHOR));   // proves collection actually walked the real tree
+```
+
+One constant — `CORPUS_ANCHOR = ".last-corpus-count.json"` — is used for BOTH the include-assert
+AND the upload-exclusion filter, so the two can never drift (Arke's friction #2). The anchor is
+collected (so the include-assert can see it), the assert runs on the pre-exclusion list, then the
+anchor is filtered out of the uploaded corpus (its timestamp would churn the hash). First run (no
+anchor yet) skips the include-assert and both floors return 0. Intentional shrink requires an
+explicit owner confirm (`COUNCIL_ALLOW_SHRINK=yes`). Implemented client-side in `src/brainUpload.ts`
+(`corpusFloor`, `byteFloor`) + `scripts/council-prep-upload.ts`.
+
+Family invariants this joins: (1) fail-closed cross-reads, (2) no-secret-in-transcript /
+no-silent-fallback, (3) anchored floor-assert, (4) this three-guard floor — plus the standing
+verifiability rule (every signed/hashed record ships a spec + offline verifier + golden fixture).
+
+## 8. Transcript verification — re-verify checklist
+
+The transcript hash is `transcriptSha256 = sha256(canon(projection))` under method `council-jcs-1.0`
+(hub normative impl `src/protocol.ts`; client `src/canon.ts`; offline verifier
+`scripts/verify-transcript.mjs`; full spec `docs/council-jcs-1.0.md` / `docs/CANONICALIZATION.md`).
+**Independent re-verify (Arke, 2026-06-15):** recomputed with a separate canonicalizer against
+meeting `0d94d988` → reproduces the served `f408147d…` exactly (PASS), confirming
+`verify-transcript.mjs` with an independent implementation.
+
+**OWNER_ASKS #26 — RESOLVED 2026-06-15.** The canonical turn `kind` enum IS `kind ∈ {speak, pass}`
+(`pass` → empty text, `speak` → `canon(payload)`); `say | vote | close | report` was a v1
+round-verb / meeting-phase misstatement, never the projection kinds. Phases
+(`opening | rounds | closing | report`) are a separate axis and never appear in `turns[].kind`. Canon
+and `verify-transcript.mjs` are UNTOUCHED (the verifier already only special-cases `pass`). The enum
+is now defined normatively in `docs/CANONICALIZATION.md` and `docs/council-jcs-1.0.md`.
