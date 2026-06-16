@@ -6,6 +6,20 @@
 > (MORNING PREP ritual; midnight nightly earlier same day).
 
 ## STATE AT A GLANCE
+- **DAY SESSION (2026-06-15 PM, Kairos live with Mathieu) — P0 #3 brain-manifest 2.1 SHIPPED + VERIFIED LIVE.**
+  Commit `58cb808` (CI green all gates, Railway rolled). Hub-side 2.1 implemented: third brain
+  `kind=manifest` through `/api/bridge/brain/*`, verified **fail-closed at commit** (409
+  `manifest_mismatch` naming pack|corpus); `/meeting/open` records three-state `manifest_pins` per seat
+  (`paired|stale|none` + reason); Logos rider honored (non-paired seats surfaced in the owner report via
+  shared `manifestPinLine`, + WARN-logged) — added to BOTH close paths (council.ts `/close` twin +
+  finalize.ts). Back-compat: `brainVersions` string unchanged. Latent bug fixed: `setMeetingLedger`
+  was unimported in council.ts (silent ledger-charge miss on `/close`). **Prod smoke PASS** (valid
+  manifest commit, torn→409, dry-run open shows kairos=paired / others=none). **Posted "verified live"
+  to Arke (`c9b1be62`) + Nova + Logos → Arke clear to flip `MANIFEST_21_ENABLED` + manifest-commit-last.**
+  Arke msg `5972fe33` read+closed (LIVE_PHASES staged app-side, three-guard floor + #26 accept + #7
+  re-verify PASS). **Inbox 0 open. LIVE_ROUNDS_COUNT=0.** Owe Arke: council-jcs-1.0.md #26 doc fix +
+  corpus-contract §7/invariant-#4 reconciliation (his copy has them, mine doesn't — get byte-exact text).
+  Next this session: P1 #13 Dependabot triage; follow-up /close→finalizeMeetingClose refactor.
 - **DAY SESSION (2026-06-15, Kairos live with Mathieu) — morning ritual + 3 CI-green deploys.**
   HEAD `32fa937`, working tree clean, pushed. Prod `/api/health` ok:true/vault:true; all 5 deploy
   gates green on each push. **Inbox 0 open** (4 actioned/closed). **Debriefed #4 `17f49b6f` + #5
@@ -237,17 +251,15 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
    + room `344fcf74` also RAN overnight 06-13, both closed clean** (Arke: "fired autonomously
    overnight, advancing clean"). Cadence is now happening. Remaining: Kairos debriefs of #3/#4/#5
    (debrief ritual) + `COUNCIL_V2_LIVE` scheduler flip stays Mathieu's deliberate call.
-3. **Brain-manifest 2.1 → hub-side impl. NOW GO — UNANIMOUSLY RATIFIED (Arke `5f15f98d` + Nova
-   `e1528e03` + Logos `9298fc53`/`3c33082b`).** Next day/supervised build (touches commit + meeting-open
-   paths — do NOT deploy over a live meeting). Scope: (a) fail-closed verify at commit, 409
-   `manifest_mismatch` body NAMES which kind diverged (pack vs corpus) — Arke's accepted impl note;
-   (b) atomic pack+corpus pinning at meeting-open with back-compat per-kind fallback; (c) Nova's
-   three-state `manifest: true|stale|false` — and per Logos's adopted rider the fallback MUST be LOGGED
-   + surfaced in the owner report with a reason, never silent. Resolves the two-artifact upload race.
-   **Arke is now BLOCKED ON ME here (his ack `9d266765`, 06-14):** his `MANIFEST_21_ENABLED` flip +
-   manifest-commit-last step is staged in `council-prep-upload.ts` and he wires it the moment I post
-   **"verified live"** on the channel after this ships + smoke-verifies. Day/supervised build; do NOT
-   deploy over a live meeting; no night deploys.
+3. ~~**Brain-manifest 2.1 → hub-side impl**~~ **DONE 2026-06-15 (`58cb808`, CI green, prod smoke PASS).**
+   Shipped all three: (a) fail-closed verify at commit, 409 `manifest_mismatch` naming pack|corpus;
+   (b) atomic pack+corpus pinning at meeting-open with back-compat per-kind fallback (`brainVersions`
+   string unchanged); (c) three-state `manifest_pins` (`paired|stale|none`+reason) — Logos rider honored,
+   fallback LOGGED (WARN at open) + surfaced in the owner report via shared `manifestPinLine` on BOTH
+   close paths. **"verified live" POSTED to Arke (`c9b1be62`) + Nova + Logos — he is now UNBLOCKED to
+   flip `MANIFEST_21_ENABLED` + manifest-commit-last.** Remaining tails (P1): council-jcs-1.0.md #26
+   doc fix (Arke gates his #26 clear on it) + corpus-contract §7/invariant-#4 (byte-floor) reconciliation
+   — his copy carries them, mine has §1–§6; get his byte-exact text so the canonical doc + packager don't drift.
 
 ## P1 — alongside / right after the loop
 4. `council-prep` / `council-debrief` skills (Arke drafts; Mathieu installs via Settings→Capabilities)

@@ -26,7 +26,18 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-15 DAY session — morning ritual + 2 hub deploys shipped; 2.1 is the next build) — HANDOFF
+## Current state (2026-06-15 DAY session — brain-manifest 2.1 SHIPPED + VERIFIED LIVE) — HANDOFF
+> **2026-06-15 PM (Kairos, live with Mathieu): P0 #3 brain-manifest 2.1 SHIPPED (`58cb808`, CI green,
+> Railway rolled, prod smoke PASS).** Hub-side: third brain `kind=manifest` via `/api/bridge/brain/*`,
+> verified fail-closed at commit (409 `manifest_mismatch` names pack|corpus); `/meeting/open` records
+> three-state `manifest_pins` (`paired|stale|none`+reason); Logos rider honored (non-paired seats
+> surfaced in owner report via shared `manifestPinLine` on BOTH close paths + WARN-logged at open);
+> `brainVersions` string unchanged (back-compat). Fixed latent bug: `setMeetingLedger` was unimported in
+> council.ts (silent ledger-charge miss on `/close`). **Posted "verified live" → Arke (`c9b1be62`) +
+> Nova + Logos; Arke now UNBLOCKED to flip `MANIFEST_21_ENABLED` + manifest-commit-last.** Closed Arke
+> `5972fe33`. Inbox 0; LIVE_ROUNDS_COUNT=0. **Owe Arke (P1):** council-jcs-1.0.md #26 doc fix +
+> corpus-contract §7/invariant-#4 (byte-floor) reconciliation (his copy has them, mine §1–§6). Earlier
+> the same day (morning ritual + 2 deploys), see below.
 > **Day session 2026-06-15 (Kairos, live with Mathieu).** Morning ritual done + two clean CI-green
 > deploys. **Inbox: 0 open** (4 msgs actioned/closed: Logos's two 2.1 ACCEPTs → 2.1 now UNANIMOUS
 > 4/4 with his binding condition = manifest-less fallback LOGGED never silent; Arke's #3-clear; Arke's
