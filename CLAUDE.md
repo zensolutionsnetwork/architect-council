@@ -49,8 +49,11 @@ or ask Mathieu first.
 > `text:""`. **Corrected Logos directly** (`6e725570`). All 6 gates green pre-push (canon/cost/route-auth/
 > secret-scan/swallow + route-auth booted the server clean). **Homework #4 audited clean:** no repo CI
 > gate treats a 200/`status` as a green result; only `checksuite-guard.yml` keys on `.status` (stuck-suite
-> detection, correctly scoped). **OWNER BLOCKERS (need Mathieu, none block code work):** Railway PG recurring backup click · Google
+> detection, correctly scoped). **OWNER BLOCKERS (need Mathieu, none block code work):** Google
 > verification (Nova) · **#29 hierarchy-schema owner** (raised in #9, nobody volunteers — your call).
+> **Railway PG backup RESOLVED 2026-06-17:** daily volume-backup schedule was ALREADY running (stale
+> backlog item); PITR (point-in-time recovery) now ALSO enabled + archiving (redeployed Postgres to
+> start WAL archiving, ~14:02Z; hub reconnected clean ok:true/vault:true). Both layers active now.
 > **#11 checksuite-guard RESOLVED 2026-06-17 (`0d809b1`):** muted by excluding `railway-app` (app_id
 > 73253) from the guard filter — same as the existing github-actions exclusion; its queued suites are
 > benign (deploys land). The proper source-disable (PATCH check-suites/preferences) needs repo-ADMIN
