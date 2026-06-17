@@ -23,7 +23,8 @@
   owner admin PAT (Actions token can't PATCH check-suites/preferences even at read/write — 2 fails);
   guard greens next 11:00 UTC run; dead disable-railway-checks.yml removed. **Railway PG backup RESOLVED 2026-06-17:** daily volume backups were already
   running (stale item); PITR now also enabled + archiving (Postgres redeployed ~14:02Z, hub reconnected
-  clean). **Owner-blocked, none block code:** Google verification · **#29 hierarchy owner**. **Voice-loop supervised
+  clean). **Owner-blocked, none block code:** **#29 hierarchy owner** (Google verification is Nova's — her own
+  session, not Kairos's; dropped from this list). **Voice-loop supervised
   first run RETIRED 2026-06-17 (owner "a") — satisfied by evidence: loop self-closes autonomously in prod
   within envelope; spend authorized 06-15. No longer a blocker.**
 - **2nd MORNING PREP (2026-06-17, Mathieu present — meeting #9 ran late-morning).** Mathieu ran a meeting
