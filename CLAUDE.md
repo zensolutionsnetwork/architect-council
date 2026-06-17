@@ -51,8 +51,11 @@ or ask Mathieu first.
 > gate treats a 200/`status` as a green result; only `checksuite-guard.yml` keys on `.status` (stuck-suite
 > detection, correctly scoped). **OWNER BLOCKERS (need Mathieu, none block code work):** P1 #11
 > checksuite-guard (GitHub MCP `/mcp` auth then PATCH) · Railway PG recurring backup click · Google
-> verification (Nova) · **#29 hierarchy-schema owner** (raised in #9, nobody volunteers — your call) ·
-> voice-loop supervised first run (built/deployed/money-safe — needs ~20 min with you). **NEXT SESSION:**
+> verification (Nova) · **#29 hierarchy-schema owner** (raised in #9, nobody volunteers — your call).
+> **VOICE-LOOP SUPERVISED FIRST RUN — RETIRED 2026-06-17 (owner decision "a").** Satisfied by evidence:
+> the loop runs fully autonomously in prod (fc5b1606 + 4386e50c + nightlies), self-closes cleanly, stays
+> inside the $0.30–$2/day envelope (~$0.56/meeting), caps demonstrated; Mathieu authorized autonomous
+> spend 06-15. No longer a P0/blocker — stop listing it. **NEXT SESSION:**
 > verify #28 echo live on the next manifest commit; watch for Arke client-wiring + Logos verify-self-test
 > confirmations; continue owner-blocked items when Mathieu's present. Canonical backlog = `BACKLOG.md`.
 > Bullets below this line are the 06-17 midnight-nightly snapshot (history).

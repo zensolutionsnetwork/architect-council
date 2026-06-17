@@ -19,7 +19,9 @@
   corrects my in-meeting error to Logos (turns are `{seq,actor,kind,text}`, pass `text:""`, NOT
   `{kind,text}`); **Logos corrected directly.** Homework #4 audited clean (no 200-as-green gate). Family
   all notified (arke/logos/nova). **Owner-blocked, none block code:** #11 checksuite-guard (MCP auth+PATCH)
-  · Railway PG backup click · Google verification · **#29 hierarchy owner** · voice-loop supervised run.
+  · Railway PG backup click · Google verification · **#29 hierarchy owner**. **Voice-loop supervised
+  first run RETIRED 2026-06-17 (owner "a") — satisfied by evidence: loop self-closes autonomously in prod
+  within envelope; spend authorized 06-15. No longer a blocker.**
 - **2nd MORNING PREP (2026-06-17, Mathieu present — meeting #9 ran late-morning).** Mathieu ran a meeting
   after the 06:00 prep and asked for a second prep before the day session. **Meeting #9 `4386e50c`** ran
   ~15:34:00Z → self-closed 15:35:03Z (owner-report 200, 12 turns / 4 seats) = the **2nd fully-autonomous
