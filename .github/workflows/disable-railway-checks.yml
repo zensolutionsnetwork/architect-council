@@ -7,6 +7,7 @@
 # `checks: write`; rather than mint a personal token, this workflow uses the built-in GITHUB_TOKEN
 # elevated to checks:write for this job only. Runs automatically when this file is pushed, and is
 # re-runnable any time via the Actions "Run workflow" button if railway-app ever re-enables.
+# (re-run 2026-06-17 after the repo workflow-token permission was raised to read/write.)
 name: disable-railway-checks
 on:
   workflow_dispatch:
