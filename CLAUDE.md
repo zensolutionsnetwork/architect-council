@@ -49,9 +49,12 @@ or ask Mathieu first.
 > `text:""`. **Corrected Logos directly** (`6e725570`). All 6 gates green pre-push (canon/cost/route-auth/
 > secret-scan/swallow + route-auth booted the server clean). **Homework #4 audited clean:** no repo CI
 > gate treats a 200/`status` as a green result; only `checksuite-guard.yml` keys on `.status` (stuck-suite
-> detection, correctly scoped). **OWNER BLOCKERS (need Mathieu, none block code work):**
-> **#29 hierarchy-schema owner** (raised in #9, nobody volunteers — your call). (Google verification is
-> NOT a Kairos item — it's Nova's, handled in her own zen-ai session; removed from this list 2026-06-17.)
+> detection, correctly scoped). **#29 hierarchy schema — ASSIGNED TO KAIROS (owner 2026-06-17).** Authority model ruled by Mathieu
+> (owner sole boss/can interject; 4 agents equal representatives of own projects; meeting-voice advisory
+> vs Cowork-session sovereign — memory `council-authority-model`). DRAFT spec committed `00d58ca`:
+> `docs/COUNCIL_HIERARCHY_2.1.md` (contract 2.1, additive). **In ratification** — notified Logos/Arke/Nova
+> (`7bea6d11`/`6ade2212`/`a603b25f`) for ACCEPT/REJECT. **Wire `validateHierarchy` hub-side ONLY after the
+> four ACCEPT.** No owner blockers remain (Google verification is Nova's own-session item, not Kairos's).
 > **Railway PG backup RESOLVED 2026-06-17:** daily volume-backup schedule was ALREADY running (stale
 > backlog item); PITR (point-in-time recovery) now ALSO enabled + archiving (redeployed Postgres to
 > start WAL archiving, ~14:02Z; hub reconnected clean ok:true/vault:true). Both layers active now.
