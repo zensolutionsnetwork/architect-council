@@ -585,7 +585,9 @@ councilRouter.post('/meeting/open', async (req, res) => {
             const liveCorpus = corpusMeta ? String(corpusMeta.sha256).toLowerCase() : null;
             if (livePack && liveCorpus && wantPack === livePack && wantCorpus === liveCorpus) {
               // Verified atomic pair — pin pack+corpus together (stale ≠ torn: a re-uploaded kind makes it stale).
-              pin = { state: 'paired', packSha256: livePack, corpusSha256: liveCorpus, manifestAt: mani.committed_at || manc.meta.committed_at || null };
+              // #28: manifestAt is the SERVER-stamped commit time (manc.meta.committed_at), never the client
+              // wall-clock value inside the manifest JSON (mani.committed_at) — client value is last-resort only.
+              pin = { state: 'paired', packSha256: livePack, corpusSha256: liveCorpus, manifestAt: manc.meta.committed_at || mani.committed_at || null };
             } else {
               pin = { state: 'stale', reason: 'manifest_superseded', packSha256: livePack, corpusSha256: liveCorpus };
             }
@@ -938,7 +940,11 @@ councilRouter.post('/bridge/brain/:uploadId/commit', requireContract2, async (re
     // Attribute the brain to the UPLOAD's actor (the target member), never to 'owner' on an admin upload.
     const brainVersion = `${up.actor}@sha256:${whole}`;
     await commitBrainV2(up.actor, String(up.brain_id || ''), brainVersion, whole, buf.length, buf, c, up.kind || 'corpus');
-    res.json({ brainVersion, actor: up.actor, kind: up.kind || 'corpus', sha256: whole, bytes: buf.length });
+    // #28: echo the SERVER-stamped committed_at (commitBrainV2 writes now()) so the client records the
+    // authoritative commit time rather than its own wall clock. Best-effort: a meta-read miss never fails the commit.
+    let committedAt: string | null = null;
+    try { const cm = await getBrainV2Meta(up.actor, up.kind || 'corpus'); committedAt = cm ? cm.committed_at : null; } catch { /* echo is best-effort */ }
+    res.json({ brainVersion, actor: up.actor, kind: up.kind || 'corpus', sha256: whole, bytes: buf.length, committedAt });
   } catch (e) { internalError(res, e); }
 });
 councilRouter.get('/bridge/brain-meta/:actor', async (req, res) => {

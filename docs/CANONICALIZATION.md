@@ -138,6 +138,42 @@ It checks both (a) `sha256(canon(projection)) === transcriptSha256` and (b) that
 self-test next to `canon.test.ts`, which asserts the same golden fixture against the normative
 implementation — the pair proves both implementations agree byte-for-byte.
 
+## Worked example — one SPEAK + one PASS turn (added 2026-06-17)
+
+Generated from the normative `src/protocol.ts` (`projectTranscript` → `canon` → `transcriptSha256Hex`).
+A debrief/verifier reproduces it by running `canon` over the **projection** object shown and sha256'ing
+the UTF-8 bytes. This is here because a serialization detail is easy to misremember (it was, in a
+council meeting) — code to these bytes, not to memory.
+
+Internal stored turns (the reading shape served for humans — **do NOT hash this**):
+```
+[ { "at":"…","done":false,"voice":true,"actor":"logos","kind":"speak",
+    "payload":{"from":"logos","text":"Peace to the council."} },
+  { "at":"…","done":true,"voice":true,"actor":"arke","kind":"pass","payload":{} } ]
+```
+
+Projection turns (what IS hashed — **exactly four keys per turn**; a `pass` keeps `text:""`):
+```
+{"seq":1,"actor":"logos","kind":"speak","text":"{\"from\":\"logos\",\"text\":\"Peace to the council.\"}"}
+{"seq":2,"actor":"arke","kind":"pass","text":""}
+```
+The SPEAK `text` is `canon(payload)` — itself a JSON string — so it is escaped again when the projection
+is canonicalized (canon-within-canon; note the `\"`).
+
+Full canonical string (keys code-point-sorted at every level → per-turn `actor,kind,seq,text`; top-level
+`brainVersions,contractVersion,meetingId,turns`):
+```
+{"brainVersions":{},"contractVersion":"2.0","meetingId":"00000000-0000-4000-8000-000000000001","turns":[{"actor":"logos","kind":"speak","seq":1,"text":"{\"from\":\"logos\",\"text\":\"Peace to the council.\"}"},{"actor":"arke","kind":"pass","seq":2,"text":""}]}
+```
+sha256 (lowercase hex):
+```
+4311fb3e905b60184b8ea98646c780e8603da0a11d8062857fcb3e9434462851
+```
+
+**The two mistakes this example rules out:** (1) projection turns are `{seq,actor,kind,text}` — NOT
+`{kind,text}`; dropping `seq`/`actor` never matches. (2) a `pass` turn carries `text:""` (key present,
+empty) — it is NOT omitted and NOT `{"kind":"pass"}` on its own.
+
 ## CI gate (both repos)
 ```
 canon(vector.input)                      === vector.canonicalForm   // byte-exact
