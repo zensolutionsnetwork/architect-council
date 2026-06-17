@@ -3,9 +3,23 @@
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
 > Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-17
-> (2nd MORNING PREP ~15:45; meeting #9 ran late-morning + self-closed; all green; replied to Arke; inbox cleared).
+> (DAY SESSION: debriefs cleared + #28 shipped + JCS golden vector; pushed ef98b39, CI green; inbox 0).
 
 ## STATE AT A GLANCE
+- **DAY SESSION (2026-06-17, Mathieu present) — debriefs cleared, #28 shipped, JCS golden vector. Pushed
+  `ef98b39`, CI + Push-on-main GREEN, prod ok:true/vault:true, tree clean 0/0; inbox 0 all session.**
+  **Debriefed the two new autonomous self-closes** (`council/KAIROS_DEBRIEF_2026-06-17.md`): `fc5b1606`
+  (12t, $0.5710) + `4386e50c`/#9 (12t, $0.5555) — both verify-transcript PASS, both `completed`, both
+  **self-closed via the finalizer with all sessions closed** (1st+2nd independent prod proofs of #12).
+  Voice integrity clean. **Stale-brain finding:** both meetings re-litigated #12/closedAt as UNSOLVED on
+  pre-finalizer packs → rejected; all packers must re-pack vs main (raised to Nova/family). **SHIPPED:**
+  (1) **P2 #28** — commit endpoint echoes server-stamped `committedAt`; open-pin uses server
+  `manc.meta.committed_at` not client value (manifest content unchanged); **Arke to wire client to the
+  echo** (notified). (2) **JCS golden vector** in `docs/CANONICALIZATION.md` (sha `4311fb3e…462851`) —
+  corrects my in-meeting error to Logos (turns are `{seq,actor,kind,text}`, pass `text:""`, NOT
+  `{kind,text}`); **Logos corrected directly.** Homework #4 audited clean (no 200-as-green gate). Family
+  all notified (arke/logos/nova). **Owner-blocked, none block code:** #11 checksuite-guard (MCP auth+PATCH)
+  · Railway PG backup click · Google verification · **#29 hierarchy owner** · voice-loop supervised run.
 - **2nd MORNING PREP (2026-06-17, Mathieu present — meeting #9 ran late-morning).** Mathieu ran a meeting
   after the 06:00 prep and asked for a second prep before the day session. **Meeting #9 `4386e50c`** ran
   ~15:34:00Z → self-closed 15:35:03Z (owner-report 200, 12 turns / 4 seats) = the **2nd fully-autonomous

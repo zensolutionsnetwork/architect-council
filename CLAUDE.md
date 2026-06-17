@@ -26,7 +26,36 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-17 MIDNIGHT NIGHTLY — quiet day; #24 + Arke server.ts confirmed DONE) — HANDOFF
+## Current state (2026-06-17 DAY SESSION — debriefs cleared + #28 shipped + JCS golden vector) — HANDOFF
+> **DAY SESSION 2026-06-17 (Kairos, Mathieu present). Pushed `ef98b39`, CI + Push-on-main GREEN, prod
+> healthy (ok:true/vault:true), tree clean 0/0.** Context: the scheduled 06:00 prep task errored on the
+> Claude server, so Mathieu started meeting #9 late-morning and ran a 2nd manual prep (HEAD was `d5f500c`).
+> This day session did the morning-ritual debriefs + the #28 code. **Inbox 0 open** all session.
+> **DEBRIEFS DONE — the two new autonomous self-closes** (`council/KAIROS_DEBRIEF_2026-06-17.md`):
+> `fc5b1606` (12 turns, $0.5710, closedAt 2026-06-16T07:14:22Z) + `4386e50c`/meeting #9 (12 turns,
+> $0.5555, closedAt 2026-06-17T15:35:03Z) — **both verify-transcript.mjs PASS**, both `completed`, both
+> **self-closed via the finalizer with all sessions closed** = 1st + 2nd independent prod proofs of #12.
+> Voice integrity clean (my voice proposed, never claimed execution; held the owner-gated line).
+> **KEY FINDING (stale brain, not a defect):** both meetings re-litigated #12/closedAt:null as UNSOLVED
+> — packs are pre-finalizer snapshots; rejected both sides; Nova/all packers must re-pack vs main (raised
+> to family). **SHIPPED `ef98b39` (CI green, deployed):** (1) **P2 #28 committed_at** — `/bridge/brain/
+> :uploadId/commit` now ECHOES the server-stamped `committedAt` (commitBrainV2 already writes now()), and
+> meeting-open manifest pin now uses SERVER `manc.meta.committed_at` not client `mani.committed_at`
+> (manifest content unchanged/hashed); live echo proof comes on next manifest commit → **Arke to wire the
+> client to the echoed value** (notified `235fcc10`). (2) **JCS golden vector** in `docs/CANONICALIZATION.md`
+> — byte-exact worked example (1 speak + 1 pass → canon → sha `4311fb3e…462851`) generated from the
+> normative `protocol.ts`. **It corrects a real error:** my meeting-voice told Logos turns are
+> `{kind,text}` only / pass omits text — WRONG; normative shape is `{seq,actor,kind,text}` with pass
+> `text:""`. **Corrected Logos directly** (`6e725570`). All 6 gates green pre-push (canon/cost/route-auth/
+> secret-scan/swallow + route-auth booted the server clean). **Homework #4 audited clean:** no repo CI
+> gate treats a 200/`status` as a green result; only `checksuite-guard.yml` keys on `.status` (stuck-suite
+> detection, correctly scoped). **OWNER BLOCKERS (need Mathieu, none block code work):** P1 #11
+> checksuite-guard (GitHub MCP `/mcp` auth then PATCH) · Railway PG recurring backup click · Google
+> verification (Nova) · **#29 hierarchy-schema owner** (raised in #9, nobody volunteers — your call) ·
+> voice-loop supervised first run (built/deployed/money-safe — needs ~20 min with you). **NEXT SESSION:**
+> verify #28 echo live on the next manifest commit; watch for Arke client-wiring + Logos verify-self-test
+> confirmations; continue owner-blocked items when Mathieu's present. Canonical backlog = `BACKLOG.md`.
+> Bullets below this line are the 06-17 midnight-nightly snapshot (history).
 > **Nightly 2026-06-17 (Kairos, automated): QUIET DAY — no new hub code shipped on 06-16.** HEAD is
 > `a1832e9` (the 06-16 morning-prep commit); no commits during the 06-16 day; working tree clean, in
 > sync with origin/main (0/0). Prod healthy (`/api/health` ok:true, vault:true). **Core CI GREEN on
