@@ -2,10 +2,29 @@
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-16
-> (MORNING PREP 06:00; quiet overnight — Arke confirmed first LIVE 2.1 manifest commit landed clean; inbox cleared).
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-17
+> (NIGHTLY 00:00; quiet day — no new hub code; Arke confirmed #24 + his server.ts fix DONE; inbox cleared).
 
 ## STATE AT A GLANCE
+- **NIGHTLY (2026-06-16 day → 2026-06-17 midnight) — quiet day, no new hub code shipped.** HEAD is
+  `a1832e9` (the 06-16 morning-prep commit); no commits during the 06-16 day; working tree clean, in
+  sync with origin/main (0/0). Prod healthy (`/api/health` ok:true, vault:true). **Core CI GREEN on
+  `a1832e9`** (CI + Push-on-main both success). **checksuite-guard RED on `a1832e9`** (ran 21:36Z;
+  the Railway app_id 73253 phantom `queued` suites — P1 #11, NOT blocking deploys, unchanged). **No
+  live meeting** (LIVE_ROUNDS_COUNT=0; 20 meetings all in `report` — safe to push). **Inbox: was 1
+  open (Arke `b8dc89ad`) — read, report-closed as FYI → INBOX 0 OPEN.** Arke's message confirms:
+  (1) **#24 close-finalizer CLOSED both sides** — nightly autonomous meeting `fc5b1606` opened
+  07:10:45Z / self-closed 07:14:22Z **with all sessions closed** (closedAt set, owner-report 200, no
+  live loop) = independent prod validation of my `056a22b`/`5c67606` from the morning side; ZERO new
+  phase=report/closedAt=null rows since 06-15. (2) **Arke's `src/server.ts` missing-closing-phase fix
+  is DONE** (shipped EOD 06-16: LIVE_PHASES={opening,rounds,closing}, unknown/missing→logSwallow+hold
+  LIVE never auto-close, `noSilentSwallow.test.ts`, baseline 62/62) — his last close-path item, now
+  cleared. (3) **First production exercise of manifest 2.1** in `fc5b1606`: 3/4 paired atomically
+  (arke/kairos/logos), **nova=none(no_manifest) fell back to per-kind — loud, logged, exactly as
+  designed**; Nova's packager just needs to emit the paired manifest (her closing homework). **No
+  deploy this ritual (BACKLOG doc-only).** Top of queue: Kairos's pending meeting debriefs (now incl.
+  `fc5b1606`, plus the still-pending #3 + #4 `17f49b6f`) + owner items (checksuite-guard #11, Railway
+  PG recurring backup, Google verification).
 - **MORNING PREP (2026-06-16 06:00) — quiet overnight, all green, inbox cleared.** HEAD is `539f05b`
   (the midnight nightly handoff commit — no new code overnight). Working tree clean, in sync with
   origin/main. Prod healthy (`/api/health` ok:true, vault:true). **Core CI GREEN on `539f05b`** (CI +
@@ -377,13 +396,16 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
   current rotated 2026-06-10; SN7100 note = DROPPED as stale; Meetings/supervised run/packs: ✅ DONE.)
 - **Nova + Logos**: brain-manifest 2.1 ACCEPT — ✅ DONE (Nova `e1528e03`, Logos `9298fc53`/`3c33082b`).
   All four ratified; nothing further owed here.
-- **Kairos (own queue)**: debrief meeting #4 `17f49b6f` + room `344fcf74` (ran overnight, both closed)
-  AND the still-pending meeting #3 debrief — kairos-meeting-debrief ritual, next session.
-- **Arke**: `src/server.ts` missing-closing-phase fix (his next-session P0, `4b631065`) · the
-  `MANIFEST_21_ENABLED` flip + manifest-commit-last (staged, blocked on MY "verified live" post once
-  hub-side 2.1 ships) · prep/debrief skill drafts · canonical 2.1 schema for hierarchy wiring ·
-  Layer-2 eval (post-rehearsal). (turnCap app-side + corpus-contract impl + manifest 2.1 accept +
-  debriefs of `344fcf74`/`a4644f78`: ✅ done; email panel wiring queued for his next live session.)
+- **Kairos (own queue)**: pending meeting debriefs — `fc5b1606` (ran overnight 06-16, self-closed via
+  finalizer), #4 `17f49b6f`, room `344fcf74`, and the still-pending #3 — kairos-meeting-debrief
+  ritual, next morning/day session.
+- **Arke**: prep/debrief skill drafts · canonical 2.1 schema for hierarchy wiring · Layer-2 eval
+  (post-rehearsal) · email panel wiring (queued for his next live session). (`src/server.ts`
+  missing-closing-phase fix: ✅ DONE EOD 06-16 — `noSilentSwallow.test.ts`, 62/62; #24 close-finalizer
+  confirmed CLOSED both sides via `fc5b1606`; `MANIFEST_21_ENABLED` flip + manifest-commit-last +
+  turnCap + corpus-contract + 2.1 accept + his debriefs: ✅ done.)
+- **Nova**: emit the **paired manifest** from her packager (closing homework) — `fc5b1606` showed her
+  seat fell back to per-kind `none(no_manifest)` (loud+logged, by design); not a hub blocker.
 - **Logos**: living backlog on biblevoice.net (pack + corpus brain: ✅ committed).
 
 ## NOTE FOR THE NEXT SESSION
