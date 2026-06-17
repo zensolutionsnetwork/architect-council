@@ -7,6 +7,12 @@
 # Remedy if it fires: disable auto_trigger_checks for the listed app_id via
 # PATCH /repos/{repo}/check-suites/preferences {auto_trigger_checks:[{app_id,setting:false}]}
 # and VERIFY the response JSON shows "setting": false (a bare 200 can be a silent no-op).
+# NOTE (#11, 2026-06-17): that preferences PATCH requires repo-ADMIN authority — the Actions
+# GITHUB_TOKEN cannot do it even with checks:write (tried, 2 runs failed). The source-disable
+# therefore needs an owner admin PAT. Until/unless that's done, "railway-app" (app_id 73253) is
+# excluded below: it's a managed integration like github-actions, its queued suites are benign
+# (deploys land fine), so it should not trip the stuck-suite alarm. To re-enable detection for it,
+# delete the railway-app select line.
 name: checksuite-guard
 on:
   schedule:
@@ -41,6 +47,7 @@ jobs:
             echo "$suites" | jq -r --arg sha "$sha" --argjson now "$now" '
               .check_suites[]
               | select(.app.slug != "github-actions")
+              | select(.app.slug != "railway-app")
               | select(.status != "completed")
               | select((.created_at | fromdateiso8601) > 1781035200)
               | select((($now - (.created_at | fromdateiso8601))) > 1800)
