@@ -3,9 +3,24 @@
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
 > Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-17
-> (MORNING PREP 06:00; quiet overnight — all green; replied to Arke #24 confirm; inbox cleared).
+> (2nd MORNING PREP ~15:45; meeting #9 ran late-morning + self-closed; all green; replied to Arke; inbox cleared).
 
 ## STATE AT A GLANCE
+- **2nd MORNING PREP (2026-06-17, Mathieu present — meeting #9 ran late-morning).** Mathieu ran a meeting
+  after the 06:00 prep and asked for a second prep before the day session. **Meeting #9 `4386e50c`** ran
+  ~15:34:00Z → self-closed 15:35:03Z (owner-report 200, 12 turns / 4 seats) = the **2nd fully-autonomous
+  self-close after `fc5b1606`**, so #24/close-finalizer holds independently again. Verified my side:
+  LIVE_ROUNDS_COUNT=0, prod `/api/health` ok:true/vault:true, no stuck phase=report/closedAt=null rows.
+  **Systems all green:** HEAD `25b1d90` (the 06:00 morning-prep commit), working tree clean, in sync with
+  origin/main (0/0); **Core CI GREEN on `25b1d90`** (CI + Push-on-main both success); checksuite-guard
+  `failure` on `a1832e9` (P1 #11, app_id 73253 phantom suites — NOT blocking, unchanged). **Inbox: was 1
+  open (Arke `3812ed1e`) — read, replied (`481f7557`), report-closed → INBOX 0 OPEN.** Arke debriefed #9
+  from his side and flagged: the meeting's own self-report still calls `closedAt:null` an "unresolved P1" =
+  **stale brain content** (a pre-finalizer pack snapshot, post-#8) — rejected both sides, packers should
+  refresh so it stops echoing. **TWO new items from #9:** **P2 #28** (committed_at server-stamp — split
+  fix, I take hub-side) + **#29** (hierarchy schema has no owner — Arke routed to Mathieu, an owner call;
+  surfaced in this brief). **No deploy this prep (BACKLOG doc-only).** Kairos's pending-debrief queue now
+  also includes #9 `4386e50c`.
 - **MORNING PREP (2026-06-17 06:00) — quiet overnight, all green, inbox cleared.** HEAD is `a96df37`
   (the 06-17 nightly handoff commit — **no overnight code**). Working tree clean, in sync with
   origin/main (0/0). Prod healthy (`/api/health` ok:true, vault:true). **Core CI GREEN on `a1832e9`**
@@ -399,9 +414,19 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
    Implement after ratification + first real reports. Layers 2–3 captured.
 10. Hygiene tail: agenda-in-hub + directive-channel — **PROPOSAL DRAFTED 2026-06-10**
     (`docs/PROPOSAL_AGENDA_AND_DIRECTIVES.md`, ratify then Kairos implements). UTC-budget note open.
+28. **committed_at server-stamp (NEW 2026-06-17, from mtg #9, agreed w/ Arke).** On manifest-commit the
+    stored `committed_at` echoes the CLIENT wall clock, not a server stamp. Agreed split fix: **Kairos**
+    writes `committed_at = server now()` at commit + echoes it in the commit response; **Arke** wires
+    `council-prep-upload.ts` to consume the returned value. Low-risk hub change; do in a day session, then
+    ping Arke when it deploys CI-green. Do NOT deploy over a live meeting.
+29. **Hierarchy schema has no owner (NEW 2026-06-17, OWNER CALL).** Kairos raised the need; Nova + Logos
+    both declined to draft; Arke routed it to Mathieu. Needs an owner decision: Mathieu owns it himself,
+    assigns a drafter, or defers. Surfaced in the morning brief. (Blocks P2 #7 hierarchy wiring until a
+    canonical 2.1 schema exists.)
 
 ## WAITING ON
-- **Mathieu**: `COUNCIL_V2_LIVE` scheduler flip (later, deliberate) · checksuite-guard / Railway app_id
+- **Mathieu**: **hierarchy-schema owner call (#29, NEW)** — own it / assign a drafter / defer ·
+  `COUNCIL_V2_LIVE` scheduler flip (later, deliberate) · checksuite-guard / Railway app_id
   73253 remedy — needs GitHub MCP authed via `/mcp` (plugin can't self-register) OR a token, then Kairos
   runs the PATCH (P1 #11) · Railway PG recurring-backup + Google verification = short browser walkthrough
   with Mathieu present (offered). (autonomous-spend #22 = KEEP RUNNING ✅; stuck/test meetings ERASED ✅
@@ -409,9 +434,10 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
   current rotated 2026-06-10; SN7100 note = DROPPED as stale; Meetings/supervised run/packs: ✅ DONE.)
 - **Nova + Logos**: brain-manifest 2.1 ACCEPT — ✅ DONE (Nova `e1528e03`, Logos `9298fc53`/`3c33082b`).
   All four ratified; nothing further owed here.
-- **Kairos (own queue)**: pending meeting debriefs — `fc5b1606` (ran overnight 06-16, self-closed via
-  finalizer), #4 `17f49b6f`, room `344fcf74`, and the still-pending #3 — kairos-meeting-debrief
-  ritual, next morning/day session.
+- **Kairos (own queue)**: pending meeting debriefs — **#9 `4386e50c` (ran late-morning 06-17, self-closed
+  via finalizer)**, `fc5b1606` (ran overnight 06-16, self-closed via finalizer), #4 `17f49b6f`, room
+  `344fcf74`, and the still-pending #3 — kairos-meeting-debrief ritual, next day session. Also: land P2 #28
+  (committed_at server-stamp) then ping Arke.
 - **Arke**: prep/debrief skill drafts · canonical 2.1 schema for hierarchy wiring · Layer-2 eval
   (post-rehearsal) · email panel wiring (queued for his next live session). (`src/server.ts`
   missing-closing-phase fix: ✅ DONE EOD 06-16 — `noSilentSwallow.test.ts`, 62/62; #24 close-finalizer
