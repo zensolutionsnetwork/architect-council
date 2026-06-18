@@ -50,6 +50,7 @@ const PROTECTED: { method: string; path: string; body?: object }[] = [
   { method: 'GET',  path: '/api/council/scheduler' },
   { method: 'POST', path: '/api/council/scheduler', body: { enabled: true } },
   { method: 'GET',  path: '/api/council/dashboard' },
+  { method: 'POST', path: '/api/council/member/probe/active', body: { active: false } },
 ];
 
 async function request(method: string, path: string, body?: object): Promise<number> {

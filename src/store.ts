@@ -267,6 +267,11 @@ export async function listMembers(): Promise<Member[]> {
   const { rows } = await db().query<any>(`SELECT name, display_name, base_url, owner_email, rules, capabilities, active FROM members WHERE active ORDER BY created_at`);
   return rows.map((r) => ({ ...r, capabilities: Array.isArray(r.capabilities) ? r.capabilities : [] }));
 }
+/** Flip a member's active flag (owner housekeeping — e.g. retire a pre-true-name row). Returns true if a row changed. */
+export async function setMemberActive(name: string, active: boolean): Promise<boolean> {
+  const { rowCount } = await db().query(`UPDATE members SET active=$2 WHERE name=$1`, [name, active]);
+  return (rowCount ?? 0) > 0;
+}
 export async function getMember(name: string): Promise<(Member & { secret: string }) | null> {
   const { rows } = await db().query<any>(`SELECT m.name, m.display_name, m.base_url, m.owner_email, m.rules, m.capabilities, s.secret_enc
     FROM members m JOIN member_secrets s ON s.member_name=m.name WHERE m.name=$1 AND m.active`, [name]);

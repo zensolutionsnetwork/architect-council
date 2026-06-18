@@ -12,7 +12,7 @@ import { capsFromEnv, dailyBudgetExhausted, emptyTotals, addUsage } from './cost
 import { projectTranscript, transcriptSha256Hex } from './protocol.js';
 import { sendOwnerReportEmail } from './mailer.js';
 import {
-  upsertMember, listMembers, getMember, getBrain, setBrain,
+  upsertMember, listMembers, setMemberActive, getMember, getBrain, setBrain,
   createConvo, updateConvo, getConvo, listConvos, consumeJoinToken, issueJoinToken,
   setTakeaways, getLatestTakeaways, recentConvoActivity, type Turn,
   queueOutbox, pendingOutbox, markOutboxDelivered, ackOutbox, sweepOutbox,
@@ -856,6 +856,19 @@ councilRouter.get('/council/dashboard', requireOwner, async (_req, res) => {
     const scheduler = { enabled: (await getSetting('hub_meeting_scheduler').catch(() => null)) === 'on',
       time: await getSchedTime(), tz: 'America/Toronto', voiceLoopEnabled: process.env.VOICE_LOOP_ENABLED === 'true' };
     res.json({ ok: true, ts: Date.now(), vault: vaultReady(), scheduler, spentTodayUsd, meetings, members, boots, backlogs });
+  } catch (e) { internalError(res, e); }
+});
+// Member housekeeping (owner 2026-06-18): retire/restore a member row. GUARDED — a canonical council seat
+// (MEETING_DEFAULT) can NEVER be deactivated, so this only touches non-seats (e.g. the retired
+// pre-true-name rows zen-ai / biblevoice). architect-council re-registers itself on boot regardless.
+councilRouter.post('/council/member/:name/active', requireOwner, async (req, res) => {
+  try {
+    const name = String(req.params.name);
+    const active = (req.body || {}).active === true;
+    if (!active && MEETING_DEFAULT.includes(name)) return res.status(400).json({ error: 'protected_seat', message: name + ' is a canonical council seat and cannot be deactivated' });
+    const changed = await setMemberActive(name, active);
+    if (!changed) return res.status(404).json({ error: 'no_such_member' });
+    res.json({ ok: true, name, active });
   } catch (e) { internalError(res, e); }
 });
 // ===== AUTONOMOUS VOICE LOOP (HUB_AUTONOMOUS_VOICE_SPEC §4) — owner-gated, FAIL-CLOSED money gate =====
