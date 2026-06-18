@@ -22,9 +22,11 @@
   **#29 stays BLOCKED** (do not wire solo): hub-side `validateHierarchy` waits on Arke landing his
   `hierarchy.ts` rev2 mirror + confirming (agreed sequencing, `9b046dd4`). **Pending Kairos homework
   (judged ACCEPT, sequenced):** hub auth-layer exhaustiveness-switch audit; hub corpus-commit
-  floor-assert + delta-print (Nova's pattern). **To ask Mathieu:** retro-close the stuck legacy meetings
-  (`17f49b6f`/`344fcf74`/`a4644f78`/#3, all `closedAt:null`) — would email old owner-reports — or leave
-  parked. Owner items otherwise unchanged (see WAITING ON).
+  floor-assert + delta-print (Nova's pattern). **STUCK-MEETING CLEANUP DONE (Mathieu ok'd 06-18):** purged
+  **25 empty/probe/smoke/test meeting rows** via `DELETE /api/meeting/:id` (owner directive 2026-06-15; rule
+  = delete <=2-turn rows) — no `/close`, so no report emails/synth spend. **10 real council meetings remain**
+  (all >=3 turns, incl. #1 `6aef82f6`/83t). Recurring "retro-close stuck meetings" question RETIRED. Owner
+  items otherwise unchanged (see WAITING ON).
 - **MORNING PREP (2026-06-18 06:00) — quiet overnight, all green, inbox cleared, one new autonomous
   meeting.** HEAD is `8214841` (the midnight nightly's backlog/handoff refresh commit, landed 04:28Z —
   CI + Push-on-main both GREEN on it; no new CODE overnight). Working tree clean, in sync with

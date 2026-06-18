@@ -57,8 +57,13 @@ or ask Mathieu first.
 > → ONLY THEN wire hub-side `validateHierarchy` (#29, do not ship solo); also watch the **#28 echo live**
 > on the next manifest commit + Arke's `council-prep-upload.ts` wiring; (3) **my judged-ACCEPT homework**
 > (sequenced): hub auth-layer exhaustiveness-`switch` audit (logged-deny default) + hub corpus-commit
-> floor-assert + delta-print (Nova's pattern). **To ask Mathieu:** retro-close the stuck legacy meetings
-> (`17f49b6f`/`344fcf74`/`a4644f78`/#3, all `closedAt:null`) or leave parked. **WAITING ON:** Arke
+> floor-assert + delta-print (Nova's pattern). **STUCK-MEETING CLEANUP DONE (Mathieu ok'd 06-18, doesn't
+> need the old reports):** purged **25 empty/probe/smoke/test meeting rows** via `DELETE /api/meeting/:id`
+> (owner directive 2026-06-15; rule = delete any meeting with <=2 projection turns) — no `/close`, so NO
+> report emails + no synth spend. **10 real council meetings remain** (all >=3 turns, incl. #1 `6aef82f6`/83t,
+> #2 `d5d8da54`/4t, the 3 recent self-closed), kept as history at `report` phase. The recurring "retro-close
+> stuck meetings" question is RETIRED. (Note: the `/api/meetings` list is capped ~20 and omits `closed_at` —
+> do NOT infer stuck-ness from it; check `GET /api/meeting/:id/report` `closedAt` per-meeting.) **WAITING ON:** Arke
 > (hierarchy.ts rev2 mirror; #28 client wiring) · Nova (paired 2.1 manifest — still `none(no_manifest)`,
 > 3/4 paired). Canonical backlog = `BACKLOG.md`. Bullets below this line are the 06-18 NIGHTLY snapshot (history).
 > **NIGHTLY 2026-06-18 (Kairos, automated). QUIET OVERNIGHT — no new hub code since the 06-17 day
