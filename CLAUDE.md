@@ -103,7 +103,15 @@ or ask Mathieu first.
 > the per-agent backlog. No token ever in the page. route-auth 35/0. **Fixed a latent bug the dashboard
 > surfaced:** `usdSpentTodayUtc` + the dashboard cost read `cost_ledger->>'usd'` but USD lives at
 > `cost_ledger.total.usd` → "spent today" was ALWAYS $0; now correct (`377ba7c`). Open at
-> `https://architectscouncil.com/backlog`.
+> `https://architectscouncil.com/backlog`. (12) **DASHBOARD member panel filtered to the 4 canonical seats**
+> (`897a237`, MEETING_DEFAULT) — excludes hub-self + retired rows. **MEMBER HOUSEKEEPING (`ca1bed8`):**
+> owner-gated guarded `POST /api/council/member/:name/active` (a MEETING_DEFAULT seat can NEVER be
+> deactivated — verified: kairos→400); **retired `zen-ai` + `biblevoice`** (pre-true-name rows) → active
+> members = architect-council(hub-self) + kairos/arke/nova/logos. **Repo confirmed clean** (no dead
+> workflows/`.err`/`.log`; src all live). **FLAGGED for a deliberate refactor session (NOT ripped out tonight):
+> the dead v1 conversation system** — `COUNCIL_PAUSED`/`COUNCIL_V2_LIVE`/`nightlyRetro`/`runCouncil` +
+> `/converse`/`/convos` + the `conversations`/`takeaways` tables — fully obsolete since the v2 stack + the
+> hub scheduler, but removal touches many files + route-auth probes, so do it carefully not blind.
 > **STUCK-MEETING CLEANUP DONE (Mathieu ok'd 06-18, doesn't
 > need the old reports):** purged **25 empty/probe/smoke/test meeting rows** via `DELETE /api/meeting/:id`
 > (owner directive 2026-06-15; rule = delete any meeting with <=2 projection turns) — no `/close`, so NO
