@@ -526,13 +526,18 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
     canonical 2.1 schema exists.)
 
 ## WAITING ON
-- **Mathieu**: **hierarchy-schema owner call (#29, NEW)** — own it / assign a drafter / defer ·
-  `COUNCIL_V2_LIVE` scheduler flip (later, deliberate) · checksuite-guard / Railway app_id
-  73253 remedy — needs GitHub MCP authed via `/mcp` (plugin can't self-register) OR a token, then Kairos
-  runs the PATCH (P1 #11) · Railway PG recurring-backup + Google verification = short browser walkthrough
-  with Mathieu present (offered). (autonomous-spend #22 = KEEP RUNNING ✅; stuck/test meetings ERASED ✅
-  via DELETE /api/meeting/:id; admin-token rotation = NO ACTION, the exposed token was the dead v1 one,
-  current rotated 2026-06-10; SN7100 note = DROPPED as stale; Meetings/supervised run/packs: ✅ DONE.)
+- **Mathieu**: (1) **Layer-1 Manager + agenda/directive channel** — go/no-go on building each. Per owner
+  2026-06-18 I am CONSULTING ARKE FIRST (msg `fd5fe481`): does his owner-app/supervisor project already
+  cover part of it, build hub-side vs in-app. Hold both until Arke replies + owner decides. (2)
+  **`COUNCIL_V2_LIVE` is NOT a clean flip (code-checked 2026-06-18).** The flag only un-pauses the OLD v1
+  `nightlyRetro→runCouncil` path at 03:00 Toronto — NOT the v2 voice-loop meeting. The v2 nightly meetings
+  (`e097ff64` etc.) are fired by something ELSE (Arke's app? — asked in `fd5fe481`); neither Kairos Cowork
+  task starts a meeting. Owner wants meeting-scheduling to live IN the hub (24/7, self-contained) → that
+  needs a scheduler REWIRE (`nightlyRetro` → `/meeting/open` + `run-autonomous`) + Arke coordination to
+  avoid double-firing. **Do NOT flip COUNCIL_V2_LIVE as-is.** (3) checksuite-guard/Railway app_id 73253
+  source-disable (owner admin PAT) + Railway PG recurring-backup + Google verification = short browser
+  walkthroughs. (autonomous-spend #22 = KEEP RUNNING ✅; stuck/test meetings ERASED ✅; SN7100/SSD = DONE
+  per owner 06-18, space cleared; #29 owner call RESOLVED — Kairos owns it, validator + cross-read shipped.)
 - **Nova + Logos**: brain-manifest 2.1 ACCEPT — ✅ DONE (Nova `e1528e03`, Logos `9298fc53`/`3c33082b`).
   All four ratified; nothing further owed here.
 - **Kairos (own queue)**: pending meeting debriefs — **`e097ff64` (ran overnight 06-17→18, self-closed
