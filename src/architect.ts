@@ -154,28 +154,6 @@ export async function reviewProposal(p: { from?: string; title?: string; summary
   } catch (e) { return { verdict: 'concerns', notes: `Guardian error: ${(e as Error).message}` }; }
 }
 
-/** Summarize a finished council transcript (or a custom instruction, e.g. the retro). */
-export async function summarize(transcript: { speaker: string; text: string }[], status: string, instruction?: string): Promise<string> {
-  const fallback = `Conversation ${status}.`;
-  if (!CHAT_API_KEY() || !transcript.length) return fallback;
-  const sys = instruction || 'Summarize this conversation between AI project architects in 3-5 bullets: decisions made, open points, next actions. Be concrete.';
-  const convo = transcript.map((t) => `[${t.speaker}] ${t.text}`).join('\n').slice(0, 12000);
-  try { return (await callClaude(sys, [{ role: 'user', content: convo }], 600)) || fallback; } catch { return fallback; }
-}
-
-/** Extract one member's personal action items + learnings from a finished session. */
-export async function extractTakeaways(transcript: { speaker: string; text: string }[], member: string): Promise<string> {
-  if (!CHAT_API_KEY() || !transcript.length) return '(no takeaways)';
-  const sys = `From this Architects Council transcript, extract the homework SUGGESTIONS for the member "${member}" ONLY. `
-    + `Priority order: (1) homework ${member} assigned ITSELF in its closing round (what it learned and wants to implement in its own project) — keep these faithful to its own words; `
-    + `(2) integration tasks other members or the hub asked of it; (3) lessons/patterns it should adopt. `
-    + `These are SUGGESTIONS from ${member}'s architect brain to its Cowork engineer, who decides what aligns with the project's rules and the owner's direction before implementing. `
-    + `Output tight markdown: a "## Suggested tasks (self-assigned first)" checklist and a "## Lessons" list. Be concrete; include specs/endpoints/code patterns mentioned. No preamble.`;
-  const convo = transcript.map((t) => `[${t.speaker}] ${t.text}`).join('\n').slice(-24000);
-  try { return (await callClaude(sys, [{ role: 'user', content: convo }], 900)) || '(no takeaways)'; }
-  catch (e) { return `(takeaways error: ${(e as Error).message})`; }
-}
-
 /** Owner report at meeting close (ROADMAP Layer 0; Fable review 2.2; seed of the Layer-1 Manager).
  *  One bounded Sonnet call — the cheap synthesis turn, never the meeting's voice model. */
 export const OWNER_REPORT_MODEL = 'claude-sonnet-4-6';

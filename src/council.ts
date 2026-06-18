@@ -6,17 +6,17 @@
  */
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import crypto from 'node:crypto';
-import { architectReply, reviewProposal, councilBrain, summarize, extractTakeaways, synthesizeOwnerReport, OWNER_REPORT_MODEL } from './architect.js';
+import { architectReply, reviewProposal, councilBrain, synthesizeOwnerReport, OWNER_REPORT_MODEL } from './architect.js';
 import { runVoiceLoop, isVoiceRunning } from './voiceloop.js';
 import { capsFromEnv, dailyBudgetExhausted, emptyTotals, addUsage } from './cost.js';
 import { projectTranscript, transcriptSha256Hex } from './protocol.js';
 import { sendOwnerReportEmail } from './mailer.js';
 import {
-  upsertMember, listMembers, setMemberActive, getMember, getBrain, setBrain,
-  createConvo, updateConvo, getConvo, listConvos, consumeJoinToken, issueJoinToken,
-  setTakeaways, getLatestTakeaways, recentConvoActivity, type Turn,
+  upsertMember, listMembers, setMemberActive, getMember,
+  consumeJoinToken, issueJoinToken,
+  type Turn,
   queueOutbox, pendingOutbox, markOutboxDelivered, ackOutbox, sweepOutbox,
-  setAgentBacklog, getAgentBacklogs, setConvoArchived, setConvoV2Meta, getRegistryVersion,
+  setAgentBacklog, getAgentBacklogs, getRegistryVersion,
   queueEnvTask, listEnvTasks, getEnvTask, claimEnvTask, reportEnvTask, sweepEnvTasks,
   createMeeting, getMeeting, updateMeeting, listMeetings, listMeetingsForActor, setMeetingOwnerReport, deleteMeeting,
   setMeetingLedger, setMeetingManifestPins,
@@ -109,27 +109,6 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
-/** Call a member's bridge /ask with its vault secret. Defensive parse (Zen AI pattern). */
-async function askMember(member: { name: string; base_url: string; secret: string }, body: any): Promise<{ reply: string; done: boolean }> {
-  try {
-    const res = await fetch(member.base_url.replace(/\/+$/, '') + '/api/bridge/ask', {
-      method: 'POST', headers: { 'content-type': 'application/json', 'x-bridge-secret': member.secret },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) return { reply: `(error: HTTP ${res.status})`, done: true };
-    const d: any = await res.json();
-    let reply = String(d.reply ?? ''), done = d.done === true;
-    // Some members return their reply still wrapped (```json fences and/or a raw {"reply":...} JSON string) — unwrap it.
-    let inner = reply.trim();
-    if (inner.startsWith('```')) inner = inner.replace(/^```[a-z]*\s*/i, '').replace(/```\s*$/, '').trim();
-    if (inner.startsWith('{') && inner.includes('"reply"')) {
-      const a = inner.indexOf('{'), b = inner.lastIndexOf('}');
-      if (a >= 0 && b > a) { try { const p = JSON.parse(inner.slice(a, b + 1)); if (p.reply) { inner = String(p.reply); done = done || p.done === true; } } catch { /* keep inner as-is */ } }
-    }
-    if (inner) reply = inner;
-    return { reply: clip(reply, 4000) || '(empty reply)', done };
-  } catch (e) { return { reply: `(unreachable: ${(e as Error).message})`, done: true }; }
-}
 async function pingMember(base: string, secret: string): Promise<boolean> {
   try { const r = await fetch(base.replace(/\/+$/, '') + '/api/bridge/ping', { headers: { 'x-bridge-secret': secret } }); return r.ok; }
   catch { return false; }
@@ -183,164 +162,6 @@ councilRouter.get('/council/registry-version', async (req, res) => {
     const adminOk = !!process.env.COUNCIL_ADMIN_TOKEN && safeEqual(req.headers['x-admin-token'], process.env.COUNCIL_ADMIN_TOKEN);
     if (!adminOk && !(await anyMemberOk(req))) return res.status(401).json({ error: 'unauthorized' });
     res.json({ version: await getRegistryVersion() });
-  } catch (e) { internalError(res, e); }
-});
-
-councilRouter.get('/council/member/:name/brain', requireAdmin, async (req, res) => {
-  try {
-    const m = await getMember(req.params.name);
-    if (!m) return res.status(404).json({ error: 'unknown_member' });
-    try {
-      const r = await fetch(m.base_url.replace(/\/+$/, '') + '/api/bridge/brain', { headers: { 'x-bridge-secret': m.secret } });
-      if (r.ok) { const d: any = await r.json(); await setBrain(m.name, d.brain || ''); return res.json({ project: m.name, brain: d.brain || '', updatedAt: d.updatedAt }); }
-    } catch { /* fall back to cache */ }
-    const cached = await getBrain(m.name);
-    res.json({ project: m.name, brain: cached.content, updatedAt: cached.updatedAt, cached: true });
-  } catch (e) { internalError(res, e); }
-});
-
-// ---------- Orchestrator: N-member round-robin relay (hub has no opinion; it brokers) ----------
-async function runCouncil(id: string, topic: string, memberNames: string[], maxRounds: number): Promise<void> {
-  const members = (await Promise.all(memberNames.map((n) => getMember(n)))).filter(Boolean) as Array<{ name: string; base_url: string; secret: string }>;
-  if (members.length < 1) { await updateConvo(id, { status: 'error', summary: 'No reachable members.' }); return; }
-  // architect-council leads: it initiates every conversation it takes part in (owner's rule).
-  const selfIdx = members.findIndex((m) => m.name === SELF);
-  if (selfIdx > 0) members.unshift(...members.splice(selfIdx, 1));
-  const transcript: Turn[] = [];
-  const outboxDelivered = new Set<string>();
-  const persist = async (st: string) => { try { await updateConvo(id, { transcript, status: st }); } catch { /* best-effort */ } };
-  let msg = clip(topic, 4000), from = 'council';
-  let status = 'cap';
-  const cap = Math.min(Math.max(1, maxRounds || 10), 150); // owner-approved ceiling; "done" ends it sooner
-  // V2 (contract §3/§4): pin each participant's brainVersion at meeting OPEN. Unreachable or not yet
-  // implemented -> null (recorded absent — never defaulted, never impersonated).
-  try {
-    const participants = await Promise.all(members.map(async (m) => {
-      let brainVersion: string | null = null;
-      try {
-        const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 5000);
-        const r = await fetch(m.base_url.replace(/\/+$/, '') + '/api/bridge/brain-version', { headers: { 'x-bridge-secret': m.secret }, signal: ctl.signal });
-        clearTimeout(t);
-        if (r.ok) { const d: any = await r.json(); if (typeof d.brainVersion === 'string') brainVersion = clip(d.brainVersion, 100); }
-      } catch { /* absent */ }
-      return { member: m.name, displayName: (m as any).display_name || m.name, brainVersion };
-    }));
-    await setConvoV2Meta(id, { contractVersion: '2.0-draft1', turnCap: cap, participants });
-  } catch { /* meta is best-effort; the meeting itself must not die on it */ }
-  const order = members.map((m) => m.name).join(' → ');
-  for (let i = 0; i < cap; i++) {
-    const member = members[i % members.length];
-    // Every member knows the circle and the budget (owner's rule): meta line travels with the message, not the transcript.
-    const meta = `[council meta — turn ${i + 1} of max ${cap} | circle: ${order} | you are ${member.name}, ~${Math.max(1, Math.ceil((cap - i) / members.length))} of your turns left | norms (owner's rule): speak plainly and technically, out of character is welcome — the goal is making each other more efficient at what you are meant to be; share actual code, specs and commands whenever useful | when the discussion has served its purpose, close by assigning YOURSELF homework (what you learned tonight that you suggest implementing in your own project, within your rules) and set done:true]`;
-    // History window: members get the last 30 turns minus the latest (which travels as `message`).
-    // Deep-copy at the relay boundary so no member can mutate the shared transcript (council decision 2026-06-06, ~5ms cost accepted).
-    const hist = transcript.length ? transcript.slice(0, -1).slice(-30).map((t) => ({ speaker: t.speaker, text: t.text })) : [];
-    // Outbox delivery (council decision 2026-06-06): each member receives its queued notes once, at its first turn.
-    let outboxNote = '';
-    if (!outboxDelivered.has(member.name)) {
-      outboxDelivered.add(member.name);
-      try {
-        const items = await pendingOutbox(member.name);
-        if (items.length) {
-          outboxNote = `\n[outbox — notes other members queued for you: ${JSON.stringify(items.map((o) => ({ from: o.from_member, topic: o.topic, note: o.note, priority: o.priority })))}]`;
-          await markOutboxDelivered(items.map((o) => o.id), member.name);
-        }
-      } catch { /* outbox delivery is best-effort */ }
-    }
-    const r = await askMember(member, { from, message: `${meta}${outboxNote}\n\n${msg}`, history: hist });
-    transcript.push({ speaker: member.name, text: r.reply });
-    await persist('running');
-    if (r.done && i >= members.length - 1) { status = 'done'; break; } // let everyone speak once before honoring done
-    msg = r.reply; from = member.name;
-  }
-  const summary = await summarize(transcript, status);
-  await updateConvo(id, { transcript, status, summary });
-  // Post-session handoff: pull each participant's fresh brain + generate their personal takeaways.
-  for (const m of members) {
-    try {
-      const r = await fetch(m.base_url.replace(/\/+$/, '') + '/api/bridge/brain', { headers: { 'x-bridge-secret': m.secret } });
-      if (r.ok) { const d: any = await r.json(); await setBrain(m.name, d.brain || ''); }
-    } catch { /* brain pull is best-effort */ }
-    try { await setTakeaways(m.name, id, await extractTakeaways(transcript, m.name)); } catch { /* best-effort */ }
-  }
-}
-
-councilRouter.post('/council/converse/start', requireAdmin, async (req, res) => {
-  try {
-    // COUNCIL V1 PAUSED (owner 2026-06-07): fail loudly while v2 is rebuilt. Override only via COUNCIL_V2_LIVE=1.
-    if (COUNCIL_PAUSED()) return res.status(503).json({ error: 'council_paused', message: 'Council v1 is paused — v2 rebuild in progress (new room, new contract). No meetings until the owner re-enables.' });
-    const { topic, members, maxRounds } = req.body || {};
-    const names = Array.isArray(members) ? members.map((m: any) => String(m)).filter(Boolean) : [];
-    if (!topic || names.length < 1) return res.status(400).json({ error: 'topic and at least one member are required' });
-    const id = crypto.randomUUID();
-    await createConvo(id, String(topic), names);
-    runCouncil(id, String(topic), names, Number(maxRounds) || 10).catch(() => updateConvo(id, { status: 'error' }).catch(() => {}));
-    res.json({ ok: true, id });
-  } catch (e) { internalError(res, e); }
-});
-councilRouter.get('/council/convo/:id', requireAdmin, async (req, res) => {
-  try { const c = await getConvo(req.params.id); if (!c) return res.status(404).json({ error: 'not_found' }); res.json(c); }
-  catch (e) { internalError(res, e); }
-});
-councilRouter.get('/council/convos', requireAdmin, async (_req, res) => {
-  try { res.json({ convos: await listConvos() }); } catch (e) { internalError(res, e); }
-});
-/** Archive / unarchive a conversation (console housekeeping — owner's request 2026-06-06). */
-councilRouter.post('/council/convo/:id/archive', requireAdmin, async (req, res) => {
-  try {
-    const ok = await setConvoArchived(req.params.id, (req.body || {}).archived !== false);
-    if (!ok) return res.status(404).json({ error: 'not_found' });
-    res.json({ ok: true });
-  } catch (e) { internalError(res, e); }
-});
-
-// ---------- V2 meeting transcript (contract §4: RAW, hashed, participants-only) ----------
-// The hub records; the architects interpret. Same canonical hash as arke-bridge-app/src/protocol.ts:
-// sha256 over JSON.stringify(turns.map(({speaker,text}))) — reimplementable byte-for-byte, node:crypto only.
-const canonicalTurns = (turns: Turn[]): string => JSON.stringify(turns.map((t) => ({ speaker: t.speaker, text: t.text })));
-const transcriptSha256 = (turns: Turn[]): string => 'sha256:' + crypto.createHash('sha256').update(Buffer.from(canonicalTurns(turns), 'utf8')).digest('hex');
-councilRouter.get('/council/meeting/:id/transcript', async (req, res) => {
-  try {
-    const c = await getConvo(req.params.id);
-    if (!c) return res.status(404).json({ error: 'not_found' });
-    const adminOk = !!process.env.COUNCIL_ADMIN_TOKEN && safeEqual(req.headers['x-admin-token'], process.env.COUNCIL_ADMIN_TOKEN);
-    if (!adminOk) {
-      // Participants-only: the credential resolves the actor, and the actor must have sat in this meeting.
-      const sec = req.headers['x-bridge-secret'] as string;
-      let actor: string | null = null;
-      if (sec) for (const mm of await listMembers()) { const m = await getMember(mm.name); if (m && safeEqual(sec, m.secret)) { actor = m.name; break; } }
-      const memberList: string[] = Array.isArray(c.members) ? c.members : [];
-      if (!actor || !memberList.includes(actor)) return res.status(403).json({ error: 'participants_only' });
-    }
-    const turns: Turn[] = Array.isArray(c.transcript) ? c.transcript : [];
-    const meta: any = c.v2_meta || {};
-    res.json({
-      header: {
-        contractVersion: meta.contractVersion || '2.0-draft1',
-        meetingId: c.id,
-        openedAt: c.created_at || null,
-        closedAt: c.status === 'running' ? null : (c.updated_at || null),
-        status: c.status,
-        turnsUsed: turns.length,
-        turnCap: meta.turnCap ?? null,
-        participants: meta.participants ?? (Array.isArray(c.members) ? c.members.map((n: string) => ({ member: n, displayName: n, brainVersion: null })) : []),
-        transcriptSha256: transcriptSha256(turns),
-      },
-      turns,
-    });
-  } catch (e) { internalError(res, e); }
-});
-
-/** Each member downloads its own homework, machine-to-machine, with its OWN bridge secret (or the admin token). */
-councilRouter.get('/council/takeaways/:member', async (req, res) => {
-  try {
-    const name = req.params.member;
-    const adminOk = !!process.env.COUNCIL_ADMIN_TOKEN && safeEqual(req.headers['x-admin-token'], process.env.COUNCIL_ADMIN_TOKEN);
-    if (!adminOk) {
-      const m = await getMember(name);
-      if (!m || !safeEqual(req.headers['x-bridge-secret'], m.secret)) return res.status(401).json({ error: 'unauthorized' });
-    }
-    res.json({ member: name, takeaways: await getLatestTakeaways(name), brain: await getBrain(name) });
   } catch (e) { internalError(res, e); }
 });
 
@@ -490,42 +311,16 @@ councilRouter.get('/council/security-selfcheck', requireOwner, (_req, res) => {
   });
 });
 
-// ---------- COUNCIL V1 PAUSED (owner's order 2026-06-07) ----------
-// All meetings aborted while v2 is rebuilt (new dedicated machine, new contract). Set COUNCIL_V2_LIVE=1
-// to re-enable. Read endpoints, bridge endpoints, backlog and admin stay live; scheduling and new
-// conversations fail LOUDLY (Logos's advice: never silently).
-const COUNCIL_PAUSED = () => process.env.COUNCIL_V2_LIVE !== '1';
-
 // ---------- Nightly schedule (America/Toronto): 02:45 brain pull, 03:00 council meeting ----------
 // Owner's daily cycle: 02:00/02:15/02:30 close rituals (Cowork side) write handoffs + queue outboxes,
 // 02:45 brain pull, 03:00 meeting, wrap-up writes per-member homework SUGGESTIONS, mornings 05:30/06:00/06:30 implement.
 const TZ = 'America/Toronto';
-let lastPullDate = '', lastRetroDate = '', lastSweepDate = '';
+let lastSweepDate = '';
 function torontoParts(): { date: string; hhmm: string } {
   const p = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date());
   const g = (t: string) => p.find((x) => x.type === t)?.value || '00';
   return { date: `${g('year')}-${g('month')}-${g('day')}`, hhmm: `${g('hour')}:${g('minute')}` };
 }
-async function pullAllBrains(): Promise<void> {
-  for (const mm of await listMembers()) {
-    const m = await getMember(mm.name); if (!m) continue;
-    try {
-      const r = await fetch(m.base_url.replace(/\/+$/, '') + '/api/bridge/brain', { headers: { 'x-bridge-secret': m.secret } });
-      if (r.ok) { const d: any = await r.json(); await setBrain(m.name, d.brain || ''); }
-    } catch { /* nightly pull is best-effort */ }
-  }
-}
-async function nightlyRetro(): Promise<void> {
-  if (await recentConvoActivity(3)) return; // a session just happened or is running — it counts as the retro
-  const names = (await listMembers()).map((m) => m.name);
-  if (names.length < 2) return;
-  const id = crypto.randomUUID();
-  const topic = 'Nightly council meeting. Start with the FRICTION ROUND: each member shares the friction it hit in today\'s work, how it resolved it (or didn\'t), and asks the others for advice. Then the CODE REVIEW ROUND (owner\'s rule, 2026-06-06): review together the ACTUAL CODE each member shipped today — share real diffs, functions and specs from your day\'s work; critique for correctness, efficiency and security; evaluate together which version of a pattern is the most efficient; do not cut quality for brevity, take the turns you need. CLOSING ROUND (owner\'s rule): each member ends by assigning ITSELF homework — the concrete improvements from the review and what it learned tonight that it suggests implementing in its own project tomorrow, always within its own project rules and guardrails. These are suggestions to your Cowork architect, who applies what it judges good and aligned with the owner\'s direction, and asks the owner when in doubt.';
-  await createConvo(id, topic, names, 'retro');
-  // Cap 150 (owner 2026-06-06): never cut code-review quality. Track turns-used vs cap in the morning digest to retune.
-  runCouncil(id, topic, names, 150).catch(() => updateConvo(id, { status: 'error' }).catch(() => {}));
-}
-
 // ---------- Meeting orchestrator (docs/MEETING_PROTOCOL.md, 2026-06-08) ------
 // Poll-based turn-taking among the chosen-name actors. Own state machine; pause-independent.
 const MEETING_DEFAULT = ['kairos', 'arke', 'nova', 'logos'];
@@ -1192,10 +987,6 @@ export function startScheduler(): void {
   setInterval(async () => {
     try {
       const { date, hhmm } = torontoParts();
-      if (!COUNCIL_PAUSED()) {
-        if (hhmm === '02:45' && lastPullDate !== date) { lastPullDate = date; await pullAllBrains(); }
-        if (hhmm === '03:00' && lastRetroDate !== date) { lastRetroDate = date; await nightlyRetro(); }
-      }
       // Hub-side v2 auto-scheduler (owner 2026-06-18) — independent of the dead v1 COUNCIL_PAUSED gate;
       // its own app_setting + VOICE_LOOP_ENABLED gates. Fires at the app-configured time (default 03:00
       // Toronto). Replaces the external trigger task.

@@ -42,17 +42,8 @@ export async function initDb(): Promise<void> {
     created_at timestamptz NOT NULL DEFAULT now())`);
   await q.query(`CREATE TABLE IF NOT EXISTS member_secrets (
     member_name text PRIMARY KEY REFERENCES members(name) ON DELETE CASCADE, secret_enc text NOT NULL)`);
-  await q.query(`CREATE TABLE IF NOT EXISTS brains (
-    member_name text PRIMARY KEY, content text NOT NULL DEFAULT '', updated_at timestamptz)`);
-  await q.query(`CREATE TABLE IF NOT EXISTS conversations (
-    id text PRIMARY KEY, kind text NOT NULL DEFAULT 'council', topic text, members jsonb NOT NULL DEFAULT '[]',
-    status text NOT NULL DEFAULT 'running', transcript jsonb NOT NULL DEFAULT '[]', summary text,
-    created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now())`);
   await q.query(`CREATE TABLE IF NOT EXISTS join_tokens (
     token_hash text PRIMARY KEY, label text, expires_at timestamptz, used_at timestamptz,
-    created_at timestamptz NOT NULL DEFAULT now())`);
-  await q.query(`CREATE TABLE IF NOT EXISTS takeaways (
-    id text PRIMARY KEY, member_name text NOT NULL, convo_id text, items text NOT NULL,
     created_at timestamptz NOT NULL DEFAULT now())`);
   await q.query(`CREATE TABLE IF NOT EXISTS consent_requests (
     id text PRIMARY KEY, member_name text, kind text, payload jsonb, status text NOT NULL DEFAULT 'pending',
@@ -279,67 +270,8 @@ export async function getMember(name: string): Promise<(Member & { secret: strin
   return { ...rows[0], capabilities: rows[0].capabilities || [], secret: dec(rows[0].secret_enc) };
 }
 
-// ---- Brains (cached shareable snapshots) -----------------------------------
-export async function setBrain(member: string, content: string): Promise<void> {
-  await db().query(`INSERT INTO brains (member_name, content, updated_at) VALUES ($1,$2,now())
-    ON CONFLICT (member_name) DO UPDATE SET content=EXCLUDED.content, updated_at=now()`, [member, String(content).slice(0, 16000)]);
-}
-export async function getBrain(member: string): Promise<{ content: string; updatedAt: string | null }> {
-  const { rows } = await db().query<any>(`SELECT content, to_char(updated_at,'YYYY-MM-DD HH24:MI') AS updated_at FROM brains WHERE member_name=$1`, [member]);
-  return rows[0] ? { content: rows[0].content, updatedAt: rows[0].updated_at } : { content: '', updatedAt: null };
-}
-
-// ---- Conversations (transcript persisted each turn so the console watches live) ----
+// ---- Turn: shared transcript turn shape (the v1 conversation store was removed 2026-06-18) ----
 export interface Turn { speaker: string; text: string }
-export async function createConvo(id: string, topic: string, members: string[], kind = 'council'): Promise<void> {
-  await db().query(`INSERT INTO conversations (id, kind, topic, members, status, transcript) VALUES ($1,$2,$3,$4,'running','[]'::jsonb)`,
-    [id, kind, String(topic).slice(0, 4000), JSON.stringify(members)]);
-}
-export async function updateConvo(id: string, patch: { transcript?: Turn[]; status?: string; summary?: string }): Promise<void> {
-  await db().query(`UPDATE conversations SET transcript=COALESCE($2::jsonb,transcript), status=COALESCE($3,status),
-    summary=COALESCE($4,summary), updated_at=now() WHERE id=$1`,
-    [id, patch.transcript ? JSON.stringify(patch.transcript) : null, patch.status ?? null, patch.summary ?? null]);
-}
-function parseT(t: any): Turn[] { if (Array.isArray(t)) return t; try { return JSON.parse(t || '[]'); } catch { return []; } }
-export async function getConvo(id: string): Promise<any | null> {
-  const { rows } = await db().query<any>(`SELECT id, kind, topic, members, status, transcript, summary, archived, v2_meta,
-    to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
-    to_char(updated_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS updated_at FROM conversations WHERE id=$1`, [id]);
-  if (!rows[0]) return null;
-  return { ...rows[0], transcript: parseT(rows[0].transcript) };
-}
-export async function listConvos(limit = 40): Promise<any[]> {
-  const { rows } = await db().query<any>(`SELECT id, kind, topic, members, status, summary, archived,
-    to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at
-    FROM conversations ORDER BY created_at DESC LIMIT $1`, [limit]);
-  return rows;
-}
-/** Persist v2 meeting meta (turnCap + participants w/ brainVersion) — written once at meeting open. */
-export async function setConvoV2Meta(id: string, meta: any): Promise<void> {
-  await db().query(`UPDATE conversations SET v2_meta=$2 WHERE id=$1`, [id, JSON.stringify(meta ?? {})]);
-}
-export async function setConvoArchived(id: string, archived: boolean): Promise<boolean> {
-  const r = await db().query(`UPDATE conversations SET archived=$2 WHERE id=$1`, [id, archived]);
-  return (r.rowCount || 0) > 0;
-}
-
-// ---- Takeaways ("homework" each member downloads after a session) ----------
-export async function setTakeaways(member: string, convoId: string, items: string): Promise<void> {
-  await db().query(`INSERT INTO takeaways (id, member_name, convo_id, items) VALUES ($1,$2,$3,$4)`,
-    [crypto.randomUUID(), member, convoId, String(items).slice(0, 16000)]);
-}
-export async function getLatestTakeaways(member: string, limit = 3): Promise<any[]> {
-  const { rows } = await db().query<any>(`SELECT convo_id, items, to_char(created_at,'YYYY-MM-DD HH24:MI') AS created_at
-    FROM takeaways WHERE member_name=$1 ORDER BY created_at DESC LIMIT $2`, [member, limit]);
-  return rows;
-}
-/** True if a council conversation is running now or finished within the past `hours`. */
-export async function recentConvoActivity(hours = 3): Promise<boolean> {
-  const { rows } = await db().query<any>(`SELECT 1 FROM conversations
-    WHERE status='running' OR updated_at > now() - ($1 || ' hours')::interval LIMIT 1`, [String(hours)]);
-  return rows.length > 0;
-}
-
 // ---- Outbox (structured per-member notes; delivered at council open, cleared after ack) ----
 export interface OutboxItem { id: string; from_member: string; to_member: string; topic: string | null; note: string; priority: string; queued_at?: string; delivered_at?: string | null }
 export async function queueOutbox(from: string, to: string, topic: string, note: string, priority = 'normal'): Promise<string> {
