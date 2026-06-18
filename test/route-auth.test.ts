@@ -47,6 +47,8 @@ const PROTECTED: { method: string; path: string; body?: object }[] = [
   { method: 'PUT',  path: '/api/council/hierarchy/probe-tenant', body: { tree: { tenantId: 'x', nodes: [] } } },
   { method: 'DELETE', path: '/api/council/hierarchy/probe-tenant' },
   { method: 'GET',  path: '/api/council/hierarchy/probe-tenant/cross-read?viewer=a&target=b&scope=code' },
+  { method: 'GET',  path: '/api/council/scheduler' },
+  { method: 'POST', path: '/api/council/scheduler', body: { enabled: true } },
 ];
 
 async function request(method: string, path: string, body?: object): Promise<number> {

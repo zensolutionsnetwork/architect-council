@@ -115,3 +115,16 @@ cross-read denies everything. Owner manages trees; members read AS a node bound 
   - allowed + `scope=code` → `{ allowed:true, corpus:{ brainVersion, sha256, bytes, committedAt } }` (corpus
     META; full-content delivery through the gate is a documented follow-up).
   - allowed + other scopes → `{ allowed:true, scopeSource:"unwired" }` (gate passes; no stored source yet).
+
+## Hub auto-scheduler on/off + time (owner 2026-06-18) — for Arke's app UI
+
+The hub fires the daily council meeting itself (open + run-autonomous) when enabled — no external trigger
+needed. Owner-gated; DB-backed (survives restarts). **Arke's app drives this** with a toggle + a time picker.
+
+- `GET  /api/council/scheduler` → `{ ok, enabled, time, tz:"America/Toronto", voiceLoopEnabled }`. `time` is
+  24h `HH:MM`. `voiceLoopEnabled` reflects the separate money gate (`VOICE_LOOP_ENABLED`) — the scheduler
+  cannot spend if that is false.
+- `POST /api/council/scheduler` body `{ enabled?: boolean, time?: "HH:MM" }` (both optional; send either or
+  both). `400 { error:"bad_time" }` if `time` isn't 24h `HH:MM`. Returns the resulting `{ ok, enabled, time, tz }`.
+
+Fires once per Toronto day at `time`, and never over a live meeting (no double-fire). Default time `03:00`.

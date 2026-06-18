@@ -803,6 +803,29 @@ councilRouter.get('/council/hierarchy/:tenantId/cross-read', async (req, res) =>
       note: 'cross-read authorized; no stored source wired for this scope yet' });
   } catch (e) { internalError(res, e); }
 });
+
+// Hub-side auto-scheduler on/off (owner 2026-06-18) — DB-backed (app_settings) so it survives restarts and
+// is owner-toggleable without a redeploy. When 'on', the hub fires the daily meeting itself (see startScheduler).
+councilRouter.get('/council/scheduler', async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a || !a.admin) return res.status(401).json({ error: 'unauthorized' });
+    const v = await getSetting('hub_meeting_scheduler');
+    res.json({ ok: true, enabled: v === 'on', time: await getSchedTime(), tz: 'America/Toronto', voiceLoopEnabled: process.env.VOICE_LOOP_ENABLED === 'true' });
+  } catch (e) { internalError(res, e); }
+});
+councilRouter.post('/council/scheduler', async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a || !a.admin) return res.status(401).json({ error: 'unauthorized' });
+    const b = req.body || {};
+    if (typeof b.enabled === 'boolean') await setSetting('hub_meeting_scheduler', b.enabled ? 'on' : 'off');
+    if (b.time !== undefined) {
+      const t = String(b.time);
+      if (!VALID_HHMM.test(t)) return res.status(400).json({ error: 'bad_time', message: 'time must be 24h HH:MM (America/Toronto)' });
+      await setSetting('hub_meeting_time', t);
+    }
+    res.json({ ok: true, enabled: (await getSetting('hub_meeting_scheduler')) === 'on', time: await getSchedTime(), tz: 'America/Toronto' });
+  } catch (e) { internalError(res, e); }
+});
 // ===== AUTONOMOUS VOICE LOOP (HUB_AUTONOMOUS_VOICE_SPEC §4) — owner-gated, FAIL-CLOSED money gate =====
 // run-autonomous fires the hub-side voice loop for an open meeting. It SPENDS API tokens, so it is
 // disabled by default: VOICE_LOOP_ENABLED must be exactly 'true' in Railway env (set it only for a
@@ -1087,6 +1110,36 @@ councilRouter.get('/bridge/brain-content/:actor', async (req, res) => {
   } catch (e) { internalError(res, e); }
 });
 
+// ---------- Hub-side v2 auto-scheduler (owner 2026-06-18) ----------
+// Fires the SAME open + run-autonomous sequence the external trigger does, but from inside the hub on a
+// timer — so meeting-scheduling no longer depends on any computer being on. Two gates: the owner-toggleable
+// app_setting 'hub_meeting_scheduler'=='on' (default OFF; flip via POST /api/council/scheduler), AND the
+// existing money gate VOICE_LOOP_ENABLED. Once per Toronto day, and never over a live meeting (no double-fire).
+const SCHED_AGENDA = 'daily council meeting: code review, backlog, friction log, owner summaries, story updates';
+let lastSchedDate = '';
+async function schedulerEnabled(): Promise<boolean> {
+  try { return (await getSetting('hub_meeting_scheduler')) === 'on'; } catch { return false; }
+}
+const VALID_HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+async function getSchedTime(): Promise<string> {
+  try { const t = String(await getSetting('hub_meeting_time') || ''); return VALID_HHMM.test(t) ? t : '03:00'; } catch { return '03:00'; }
+}
+async function fireScheduledMeeting(): Promise<void> {
+  if (process.env.VOICE_LOOP_ENABLED !== 'true') { console.warn('[hub:sched] skip — VOICE_LOOP_ENABLED not true'); return; }
+  const tok = process.env.COUNCIL_ADMIN_TOKEN; if (!tok) { console.warn('[hub:sched] skip — no admin token'); return; }
+  try { const live = (await listMeetings()).some((mm: any) => mm.phase === 'rounds'); if (live) { console.warn('[hub:sched] skip — a meeting is already live'); return; } } catch { /* if the live-check fails, do NOT fire (fail closed) */ return; }
+  const base = `http://127.0.0.1:${process.env.PORT || '8080'}`;
+  const H = { 'x-admin-token': tok, 'content-type': 'application/json' };
+  try {
+    const openRes = await fetch(base + '/api/meeting/open', { method: 'POST', headers: H, body: JSON.stringify({ participants: MEETING_DEFAULT, agenda: SCHED_AGENDA }) });
+    if (!openRes.ok) { console.warn('[hub:sched] open failed ' + openRes.status); return; }
+    const open: any = await openRes.json();
+    const id = open.meetingId;
+    const runRes = await fetch(base + `/api/council/meeting/${id}/run-autonomous`, { method: 'POST', headers: H, body: JSON.stringify({}) });
+    console.log(`[hub:sched] opened ${id} + run-autonomous -> ${runRes.status}`);
+  } catch (e) { console.warn('[hub:sched] fire error: ' + (e as Error).message); }
+}
+
 export function startScheduler(): void {
   // On-boot stale-close (§3 robustness): any meeting still marked voice_running died with a prior
   // process (Railway redeploy/crash mid-loop). Mark them endedReason hub_restart so they never zombie.
@@ -1097,6 +1150,12 @@ export function startScheduler(): void {
       if (!COUNCIL_PAUSED()) {
         if (hhmm === '02:45' && lastPullDate !== date) { lastPullDate = date; await pullAllBrains(); }
         if (hhmm === '03:00' && lastRetroDate !== date) { lastRetroDate = date; await nightlyRetro(); }
+      }
+      // Hub-side v2 auto-scheduler (owner 2026-06-18) — independent of the dead v1 COUNCIL_PAUSED gate;
+      // its own app_setting + VOICE_LOOP_ENABLED gates. Fires at the app-configured time (default 03:00
+      // Toronto). Replaces the external trigger task.
+      if (lastSchedDate !== date && await schedulerEnabled()) {
+        if (hhmm === await getSchedTime()) { lastSchedDate = date; await fireScheduledMeeting(); }
       }
       // Daily outbox retention sweep (council 2026-06-07) — quiet hour, after the meeting window. Runs even while paused.
       if (hhmm === '04:30' && lastSweepDate !== date) { lastSweepDate = date; await sweepOutbox(); await sweepEnvTasks(); }
