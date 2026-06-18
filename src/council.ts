@@ -23,7 +23,7 @@ import {
   setVoiceRunning, closeStaleVoiceMeetings, usdSpentTodayUtc,
   createBrainUpload, getBrainUpload, putBrainChunk, brainReceived, assembleBrain,
   commitBrainV2, getBrainV2Meta, getBrainV2Content, sweepBrainUploads,
-  getSetting, setSetting,
+  getSetting, setSetting, getRecentBoots,
 } from './store.js';
 import { finalizeMeetingClose } from './finalize.js';
 
@@ -705,6 +705,15 @@ councilRouter.get('/council/meeting/:id/owner-report', async (req, res) => {
   } catch (e) { internalError(res, e); }
 });
 
+// Boot-stamp log readback (P1 #8) — owner-gated. Two consecutive rows with the same deploy_sha =
+// the container cycled without a deploy. secret_fp is a non-reversible fingerprint, never the secret.
+councilRouter.get('/council/boots', async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a || !a.admin) return res.status(401).json({ error: 'unauthorized' });
+    const limit = Number((req.query.limit as string) || 20);
+    res.json({ ok: true, boots: await getRecentBoots(limit) });
+  } catch (e) { internalError(res, e); }
+});
 // ===== AUTONOMOUS VOICE LOOP (HUB_AUTONOMOUS_VOICE_SPEC §4) — owner-gated, FAIL-CLOSED money gate =====
 // run-autonomous fires the hub-side voice loop for an open meeting. It SPENDS API tokens, so it is
 // disabled by default: VOICE_LOOP_ENABLED must be exactly 'true' in Railway env (set it only for a
@@ -937,6 +946,27 @@ councilRouter.post('/bridge/brain/:uploadId/commit', requireContract2, async (re
       if (!packMeta || String(packMeta.sha256).toLowerCase() !== wantPack) return res.status(409).json({ error: 'manifest_mismatch', kind: 'pack', expected: wantPack, got: packMeta ? String(packMeta.sha256).toLowerCase() : null });
       if (!corpusMeta || String(corpusMeta.sha256).toLowerCase() !== wantCorpus) return res.status(409).json({ error: 'manifest_mismatch', kind: 'corpus', expected: wantCorpus, got: corpusMeta ? String(corpusMeta.sha256).toLowerCase() : null });
     }
+    // Corpus floor-assert + delta-print (Nova's pattern, adopted 2026-06-18 from mtg e097ff64): surface a
+    // shrunk/truncated corpus LOUDLY at the commit boundary so a slow corpus leak can't land unnoticed.
+    // Non-blocking by design — the hub serves four packagers of varying size, so we WARN + return a
+    // corpusGuard field rather than reject, to avoid false-positives on a legitimate trim. env-overridable;
+    // read inside the handler (never at module top). Applies to corpus commits only (pack is small config).
+    let corpusGuard: any = undefined;
+    if ((up.kind || 'corpus') === 'corpus') {
+      const minBytes = Number(process.env.CORPUS_MIN_BYTES) || 50_000;
+      const shrinkWarnPct = Number(process.env.CORPUS_SHRINK_WARN_PCT) || 50;
+      let priorBytes: number | null = null;
+      try { const pm = await getBrainV2Meta(up.actor, 'corpus'); priorBytes = pm ? Number(pm.bytes) : null; } catch { /* prior-size read is best-effort; guard never fails the commit */ }
+      const newBytes = buf.length;
+      const deltaBytes = priorBytes == null ? null : newBytes - priorBytes;
+      const belowFloor = newBytes < minBytes;
+      const shrinkPct = (priorBytes && priorBytes > 0) ? Math.round((1 - newBytes / priorBytes) * 100) : 0;
+      const flagged = belowFloor || (priorBytes != null && shrinkPct >= shrinkWarnPct);
+      corpusGuard = { priorBytes, newBytes, deltaBytes, floor: minBytes, belowFloor, shrinkPct, flagged };
+      const sign = deltaBytes == null ? 'n/a' : (deltaBytes >= 0 ? '+' + deltaBytes : String(deltaBytes));
+      if (flagged) console.warn(`[corpus-guard] WARN actor=${up.actor} newBytes=${newBytes} priorBytes=${priorBytes} delta=${sign} floor=${minBytes} belowFloor=${belowFloor} shrinkPct=${shrinkPct}`);
+      else console.log(`[corpus-guard] ok actor=${up.actor} newBytes=${newBytes} delta=${sign}`);
+    }
     // Attribute the brain to the UPLOAD's actor (the target member), never to 'owner' on an admin upload.
     const brainVersion = `${up.actor}@sha256:${whole}`;
     await commitBrainV2(up.actor, String(up.brain_id || ''), brainVersion, whole, buf.length, buf, c, up.kind || 'corpus');
@@ -946,7 +976,7 @@ councilRouter.post('/bridge/brain/:uploadId/commit', requireContract2, async (re
     try { const cm = await getBrainV2Meta(up.actor, up.kind || 'corpus'); committedAt = cm ? cm.committed_at : null; } catch { /* echo is best-effort */ }
     // #28 + RESPONSE_SHAPES.md: ok + schemaVersion are additive. Clients gate on ok===true and branch on
     // schemaVersion; committedAt is the authoritative server time, sha256 is the whole-blob content hash.
-    res.json({ ok: true, schemaVersion: 1, brainVersion, actor: up.actor, kind: up.kind || 'corpus', sha256: whole, bytes: buf.length, committedAt });
+    res.json({ ok: true, schemaVersion: 1, brainVersion, actor: up.actor, kind: up.kind || 'corpus', sha256: whole, bytes: buf.length, committedAt, corpusGuard });
   } catch (e) { internalError(res, e); }
 });
 councilRouter.get('/bridge/brain-meta/:actor', async (req, res) => {

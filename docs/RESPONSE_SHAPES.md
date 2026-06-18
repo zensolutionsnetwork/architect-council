@@ -20,10 +20,20 @@ manifest actor).
   "kind": "corpus",                 // "pack" | "corpus"
   "sha256": "<whole-hex>",          // string — lowercase-hex sha256 of the whole committed blob (the content hash)
   "bytes": 123456,                  // integer — committed blob size
-  "committedAt": "2026-06-18T07:00:00Z" // string|null — SERVER-stamped commit time (commitBrainV2 writes now()).
+  "committedAt": "2026-06-18T07:00:00Z", // string|null — SERVER-stamped commit time (commitBrainV2 writes now()).
                                         // Best-effort echo: may be null if the post-commit meta read missed.
+  "corpusGuard": {                      // present on CORPUS commits only (omitted for pack/manifest). Advisory.
+    "priorBytes": 297514, "newBytes": 298001, "deltaBytes": 487,
+    "floor": 50000, "belowFloor": false, "shrinkPct": 0, "flagged": false
+  }
 }
 ```
+
+**`corpusGuard` (Nova's floor-assert + delta-print, adopted 2026-06-18):** a NON-blocking advisory on
+corpus commits. `flagged` is true when the new corpus is below `floor` (`CORPUS_MIN_BYTES`, default
+50000) or shrank by ≥ `CORPUS_SHRINK_WARN_PCT` (default 50) versus the prior committed corpus; the hub
+also emits a `[corpus-guard] WARN` server log. It NEVER rejects the commit (the hub serves four packagers
+of varying size) — a packager that wants hard enforcement should check `corpusGuard.flagged` client-side.
 
 **Client rules (agreed with Arke, msg `9b046dd4`):**
 - Consume `committedAt` **only when `ok === true`**, and **fail loud** if `committedAt` is missing/null

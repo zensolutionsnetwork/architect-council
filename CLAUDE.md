@@ -52,7 +52,18 @@ or ask Mathieu first.
 > transcript / owner-report shapes + Arke field-name reconciliation (`hash`→**`sha256`**; **no
 > `manifestId`** on the brain-commit endpoint — manifest is a separate `kind:"manifest"` commit). All
 > gates green: secret-scan/swallow clean · cost PASS · hierarchy PASS(15) · canon PASS(6) · route-auth
-> 25 gated/0 open + clean boot. **NEXT SESSION top 3:** (1) **morning ritual debriefs** of any new overnight
+> 25 gated/0 open + clean boot. **ALSO SHIPPED (afternoon batch, owner "do everything without stopping" — 3
+> unblocked solo items, all additive/low-risk):** (4) **corpus-commit floor-assert + delta-print** (Nova's
+> pattern, `src/council.ts`) — corpus commits now WARN-log + return advisory `corpusGuard {priorBytes,newBytes,
+> deltaBytes,floor,belowFloor,shrinkPct,flagged}`; NON-blocking (flags a shrunk/truncated corpus, never rejects
+> — four packagers of varying size); env `CORPUS_MIN_BYTES`(50000)/`CORPUS_SHRINK_WARN_PCT`(50). (5) **auth/gate
+> exhaustiveness-switch audit** — finding: `resolveActor` already fail-closed (admin→owner / member-secret /
+> else deny); the real silent-default was `brainKind()` in `src/store.ts` coercing any unknown kind→'corpus'
+> silently → now an exhaustiveness `switch` whose `default:` LOGS the unknown (safe default 'corpus' kept;
+> undefined/empty not logged). (6) **boot-stamp log (P1 #8)** — `boot_log` table + `recordBoot()` at server
+> start (deploy_sha + non-reversible 12-hex `secret_fp` of MASTER_KEY, NEVER the secret) + owner-gated
+> `GET /api/council/boots`; two rows same deploy_sha = container cycled without deploy. RESPONSE_SHAPES.md
+> updated for `corpusGuard`. **NEXT SESSION top 3:** (1) **morning ritual debriefs** of any new overnight
 > self-close (kairos-meeting-debrief skill); (2) **watch for Arke's `hierarchy.ts` rev2 mirror confirm**
 > → ONLY THEN wire hub-side `validateHierarchy` (#29, do not ship solo); also watch the **#28 echo live**
 > on the next manifest commit + Arke's `council-prep-upload.ts` wiring; (3) **my judged-ACCEPT homework**

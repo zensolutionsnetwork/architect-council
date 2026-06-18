@@ -149,6 +149,36 @@ export async function initDb(): Promise<void> {
   // notify email for the meeting-close report. Owner-gated at the route layer.
   await q.query(`CREATE TABLE IF NOT EXISTS app_settings (
     key text PRIMARY KEY, value text, updated_at timestamptz NOT NULL DEFAULT now())`);
+  // Boot-stamp log (P1 #8, Nova's pattern 4ef9e66b/0bdf1dd): one row per server start. deploy_sha +
+  // a sha256 FINGERPRINT of a secret (never the secret). Two consecutive rows with the same deploy_sha =
+  // the container cycled WITHOUT a new deploy (crash-loop / platform restart) — visibility the heartbeat
+  // + stale-close don't give. Owner-readable via GET /api/council/boots.
+  await q.query(`CREATE TABLE IF NOT EXISTS boot_log (
+    id bigserial PRIMARY KEY, booted_at timestamptz NOT NULL DEFAULT now(),
+    deploy_sha text, secret_fp text)`);
+}
+
+// ---- Boot-stamp log (P1 #8) -------------------------------------------------
+/** Insert one boot row. Reads deploy sha + a non-reversible fingerprint of a secret (NEVER the secret).
+ *  Best-effort: a failure here must never block server start. Called once from server boot, after initDb. */
+export async function recordBoot(): Promise<void> {
+  const deploySha = String(process.env.RAILWAY_GIT_COMMIT_SHA || process.env.DEPLOY_SHA || 'unknown').slice(0, 40);
+  let secretFp: string | null = null;
+  try {
+    const mk = process.env.MASTER_KEY || '';
+    // First 12 hex of sha256(secret): lets a secret rotation be SEEN across boots without the value ever
+    // leaving the process. Irreversible; never logged or returned in full elsewhere.
+    if (mk) secretFp = crypto.createHash('sha256').update(mk).digest('hex').slice(0, 12);
+  } catch { /* fingerprint is best-effort; never blocks boot */ }
+  try {
+    await db().query(`INSERT INTO boot_log (deploy_sha, secret_fp) VALUES ($1,$2)`, [deploySha, secretFp]);
+  } catch (e) { console.warn('[boot-log] recordBoot failed (non-fatal): ' + (e as Error).message); }
+}
+export async function getRecentBoots(limit = 20): Promise<any[]> {
+  const { rows } = await db().query<any>(`SELECT id,
+    to_char(booted_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS booted_at, deploy_sha, secret_fp
+    FROM boot_log ORDER BY id DESC LIMIT $1`, [Math.min(Math.max(Number(limit) || 20, 1), 200)]);
+  return rows;
 }
 
 // ---- Living backlog (Arke's super-admin panel; mirrors Nova's model) --------
@@ -446,7 +476,18 @@ export async function listMeetings(limit = 20): Promise<any[]> {
 // Artifact kinds: pack (curated voice prefix) | corpus (full code, default/back-compat) |
 // manifest (corpus-contract §6 atomic pack+corpus pairing, contract 2.1).
 export function brainKind(k: unknown): 'pack' | 'corpus' | 'manifest' {
-  return k === 'pack' ? 'pack' : k === 'manifest' ? 'manifest' : 'corpus';
+  // Exhaustiveness switch (Kairos auth/gate audit + Logos boundary-gate rule, 2026-06-18 mtg e097ff64):
+  // an UNRECOGNIZED kind must be surfaced, not silently swallowed. 'corpus' stays the safe back-compat
+  // default (a storage bucket, not a permission); undefined/empty is the legitimate no-kind caller and
+  // is NOT logged — only an actual unexpected value is.
+  switch (k) {
+    case 'pack': return 'pack';
+    case 'manifest': return 'manifest';
+    case 'corpus': return 'corpus';
+    default:
+      if (k !== undefined && k !== null && k !== '') console.warn(`[brain-kind] unknown kind ${JSON.stringify(k)} -> safe default 'corpus'`);
+      return 'corpus';
+  }
 }
 export async function createBrainUpload(uploadId: string, actor: string, brainId: string, totalBytes: number, chunkSize: number, sha256: string, manifest: any[], kind = 'corpus'): Promise<void> {
   await db().query(`INSERT INTO brain_uploads (upload_id, actor, brain_id, total_bytes, chunk_size, claimed_sha256, manifest, kind)

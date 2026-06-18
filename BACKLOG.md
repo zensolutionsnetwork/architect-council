@@ -25,7 +25,10 @@
   floor-assert + delta-print (Nova's pattern). **STUCK-MEETING CLEANUP DONE (Mathieu ok'd 06-18):** purged
   **25 empty/probe/smoke/test meeting rows** via `DELETE /api/meeting/:id` (owner directive 2026-06-15; rule
   = delete <=2-turn rows) — no `/close`, so no report emails/synth spend. **10 real council meetings remain**
-  (all >=3 turns, incl. #1 `6aef82f6`/83t). Recurring "retro-close stuck meetings" question RETIRED. Owner
+  (all >=3 turns, incl. #1 `6aef82f6`/83t). Recurring "retro-close stuck meetings" question RETIRED.
+  **AFTERNOON BATCH (3 unblocked solo ships, all CI-green):** corpus-commit floor-assert + delta-print
+  (advisory `corpusGuard`, non-blocking — Nova's pattern); `brainKind()` exhaustiveness switch w/ logged
+  default (auth/gate audit — `resolveActor` already fail-closed); boot-stamp log (P1 #8 DONE). Owner
   items otherwise unchanged (see WAITING ON).
 - **MORNING PREP (2026-06-18 06:00) — quiet overnight, all green, inbox cleared, one new autonomous
   meeting.** HEAD is `8214841` (the midnight nightly's backlog/handoff refresh commit, landed 04:28Z —
@@ -480,10 +483,11 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
 7. **Corpus-ready flag** (corpus-contract.md follow-up) — when it ships, register Logos's
    `/api/bridge/chronicle` corpus artifact as a BLOCKING subscriber (his ask `224b71ca`,
    2026-06-11): chronicle must confirm consumption before the flag flips. Design with Arke.
-8. **Boot-stamp log** (Nova's pattern, `4ef9e66b`) — `boot_log` table + recordBoot at server
-   start (deploy_sha + sha256 fingerprint of a secret, never the secret); consecutive rows with
-   same deploy_sha = container cycled without deploy. Hub already has voice heartbeat +
-   stale-close; adopt for cycle visibility when touching store.ts next. Her zen-ai impl `0bdf1dd`.
+8. ~~**Boot-stamp log** (Nova's pattern, `4ef9e66b`)~~ **DONE 2026-06-18 (afternoon batch).** `boot_log`
+   table + `recordBoot()` at server start (deploy_sha from `RAILWAY_GIT_COMMIT_SHA` + non-reversible
+   12-hex `secret_fp` = first 12 of sha256(MASTER_KEY), NEVER the secret) + owner-gated
+   `GET /api/council/boots`. Two consecutive rows with the same deploy_sha = container cycled without a
+   deploy. All gates green; deployed CI-green. (Her zen-ai impl `0bdf1dd`.)
 
 ## P2 — product arc + hygiene
 0. **Process standardization (STANDING GOAL, owner directive 2026-06-10)** — every member adopts

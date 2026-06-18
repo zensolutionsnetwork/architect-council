@@ -5,7 +5,7 @@
 import express from 'express';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { initDb, vaultReady } from './store.js';
+import { initDb, vaultReady, recordBoot } from './store.js';
 import { bridgeRouter, councilRouter, selfRegister, startScheduler } from './council.js';
 import { rateLimit } from './ratelimit.js';
 
@@ -84,7 +84,7 @@ app.get('/backlog', (_req, res) => {
 const port = Number(process.env.PORT) || 8080;
 app.listen(port, async () => {
   console.log(`🏛️  Architects Council on :${port}`);
-  try { await initDb(); await selfRegister(); startScheduler(); console.log('✓ db ready, self registered, scheduler armed (02:45 pull / 03:00 meeting, Toronto)'); }
+  try { await initDb(); await recordBoot(); await selfRegister(); startScheduler(); console.log('✓ db ready, boot stamped, self registered, scheduler armed (02:45 pull / 03:00 meeting, Toronto)'); }
   catch (e) { console.error('boot warning:', (e as Error).message); }
 });
 
