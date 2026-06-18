@@ -108,10 +108,17 @@ or ask Mathieu first.
 > owner-gated guarded `POST /api/council/member/:name/active` (a MEETING_DEFAULT seat can NEVER be
 > deactivated — verified: kairos→400); **retired `zen-ai` + `biblevoice`** (pre-true-name rows) → active
 > members = architect-council(hub-self) + kairos/arke/nova/logos. **Repo confirmed clean** (no dead
-> workflows/`.err`/`.log`; src all live). **FLAGGED for a deliberate refactor session (NOT ripped out tonight):
-> the dead v1 conversation system** — `COUNCIL_PAUSED`/`COUNCIL_V2_LIVE`/`nightlyRetro`/`runCouncil` +
-> `/converse`/`/convos` + the `conversations`/`takeaways` tables — fully obsolete since the v2 stack + the
-> hub scheduler, but removal touches many files + route-auth probes, so do it carefully not blind.
+> workflows/`.err`/`.log`; src all live). (13) **DEAD v1 CONVERSATION SYSTEM REMOVED** (`f56f12e`, owner
+> directive — "finish the cleanup") — **309 deletions / 7 insertions** across council.ts/architect.ts/store.ts/
+> route-auth.test.ts. Gone: `/council/converse/start`, `/council/convo/:id`, `/council/convos`,
+> `/council/convo/:id/archive`, the OLD conversations-based `/council/meeting/:id/transcript`,
+> `/council/takeaways/:member`, `/council/member/:name/brain`, `runCouncil`/`askMember`/`summarize`/
+> `extractTakeaways`, `pullAllBrains`/`nightlyRetro`/`COUNCIL_PAUSED` + the v1 scheduler block, and the v1
+> store fns + `brains`/`conversations`/`takeaways` table-creates. **KEPT:** `Turn` type, the bridge `ask`/
+> `review` Q&A API, and the entire v2 stack. Validated: all gates green + server boots clean (route-auth
+> 33/0); **prod-verified** removed routes -> 404, live routes (v2 transcript / members / dashboard / scheduler)
+> -> 200. `COUNCIL_V2_LIVE` is now a no-op env (nothing reads it). The orphan v1 prod tables remain
+> (harmless, unused; a DROP is a separate destructive step if ever wanted).
 > **STUCK-MEETING CLEANUP DONE (Mathieu ok'd 06-18, doesn't
 > need the old reports):** purged **25 empty/probe/smoke/test meeting rows** via `DELETE /api/meeting/:id`
 > (owner directive 2026-06-15; rule = delete any meeting with <=2 projection turns) — no `/close`, so NO
