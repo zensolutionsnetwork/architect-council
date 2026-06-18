@@ -63,19 +63,29 @@ or ask Mathieu first.
 > undefined/empty not logged). (6) **boot-stamp log (P1 #8)** — `boot_log` table + `recordBoot()` at server
 > start (deploy_sha + non-reversible 12-hex `secret_fp` of MASTER_KEY, NEVER the secret) + owner-gated
 > `GET /api/council/boots`; two rows same deploy_sha = container cycled without deploy. RESPONSE_SHAPES.md
-> updated for `corpusGuard`. **NEXT SESSION top 3:** (1) **morning ritual debriefs** of any new overnight
+> updated for `corpusGuard`. **#29 UNBLOCKED + STARTED (Arke's `hierarchy.ts` rev2 mirror landed/confirmed
+> msg `eeb797e5`; #28 client wiring confirmed live too):** (7) **hub-side `validateHierarchy` brought to
+> rev2 parity** (`src/hierarchy.ts`) matching Arke's mirror — `supervisor` NodeKind, optional
+> `PrivacyPolicy.canDirect`, invariants #6 (canDirect supervisor-only) + #7 (≤1 supervisor/tenant, no
+> nesting, supervisor chain must reach a human-owner root), `resolveEffectiveAuthority` (owner>supervisor>flat;
+> no presence=flat back-compat) + presence-gated subtree-scoped `canDirect`; `test/hierarchy.test.ts` now
+> 28 checks (was 15), CI-gated. The module is pure (no runtime endpoint yet by owner's chosen scope) —
+> **remaining #29 = the consent-gated cross-read endpoint + tenant persistence (P2 #7), a dedicated session.**
+> **NEXT SESSION top 3:** (1) **morning ritual debriefs** of any new overnight
 > self-close (kairos-meeting-debrief skill); (2) **watch for Arke's `hierarchy.ts` rev2 mirror confirm**
 > → ONLY THEN wire hub-side `validateHierarchy` (#29, do not ship solo); also watch the **#28 echo live**
 > on the next manifest commit + Arke's `council-prep-upload.ts` wiring; (3) **my judged-ACCEPT homework**
 > (sequenced): hub auth-layer exhaustiveness-`switch` audit (logged-deny default) + hub corpus-commit
-> floor-assert + delta-print (Nova's pattern). **STUCK-MEETING CLEANUP DONE (Mathieu ok'd 06-18, doesn't
+> floor-assert + delta-print (Nova's pattern). **#29 next = the consent-gated cross-read endpoint + tenant
+> persistence (P2 #7) — the validator is now at rev2 parity + CI-gated, so the runtime wiring is the only
+> remaining piece.** **STUCK-MEETING CLEANUP DONE (Mathieu ok'd 06-18, doesn't
 > need the old reports):** purged **25 empty/probe/smoke/test meeting rows** via `DELETE /api/meeting/:id`
 > (owner directive 2026-06-15; rule = delete any meeting with <=2 projection turns) — no `/close`, so NO
 > report emails + no synth spend. **10 real council meetings remain** (all >=3 turns, incl. #1 `6aef82f6`/83t,
 > #2 `d5d8da54`/4t, the 3 recent self-closed), kept as history at `report` phase. The recurring "retro-close
 > stuck meetings" question is RETIRED. (Note: the `/api/meetings` list is capped ~20 and omits `closed_at` —
-> do NOT infer stuck-ness from it; check `GET /api/meeting/:id/report` `closedAt` per-meeting.) **WAITING ON:** Arke
-> (hierarchy.ts rev2 mirror; #28 client wiring) · Nova (paired 2.1 manifest — still `none(no_manifest)`,
+> do NOT infer stuck-ness from it; check `GET /api/meeting/:id/report` `closedAt` per-meeting.) **WAITING ON:** ~~Arke (hierarchy.ts rev2 mirror; #28 client wiring)~~ **BOTH LANDED 06-18** (mirror
+> confirmed `eeb797e5`; #28 consumed live `314173e`) · Nova (paired 2.1 manifest — still `none(no_manifest)`,
 > 3/4 paired). Canonical backlog = `BACKLOG.md`. Bullets below this line are the 06-18 NIGHTLY snapshot (history).
 > **NIGHTLY 2026-06-18 (Kairos, automated). QUIET OVERNIGHT — no new hub code since the 06-17 day
 > session.** HEAD is `6939d3a` (the 06-17 18:18 "council agent onboarding prompt / starter kit" docs

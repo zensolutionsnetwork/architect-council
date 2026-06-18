@@ -15,9 +15,18 @@
  *  3. Nova prior-art: opt-in by default — a node grants cross-read only via an explicit shareEdge.
  *  4. Logos-vow HARD INVARIANT — a node bound to a guarded agent (biblevoice/logos) can never be
  *     configured to broaden its voice; the schema may RESTRICT, never EXPAND an intrinsic guardrail.
+ *
+ * rev2 — supervisor layer (owner-ratified 2026-06-17 `fab9fe6`; wired hub-side 2026-06-18 after Arke's
+ * standalone-client/src/hierarchy.ts mirror landed/confirmed, msg `eeb797e5`). Adds an OPTIONAL,
+ * presence-conditional `supervisor` node that DIRECTS its subtree when present (owner overrides it):
+ *  5. NodeKind adds `supervisor`; PrivacyPolicy gains optional `canDirect` (defaults false).
+ *  6. `canDirect` is supervisor-only — a non-supervisor node may not set canDirect.
+ *  7. At most ONE supervisor per tenant; no nested supervisors; a supervisor's parentId chain MUST
+ *     reach the owner (a human root). resolveEffectiveAuthority = owner > supervisor > flat; NO presence
+ *     object = flat peers (back-compat — the rev1 flat-peer base is untouched).
  */
 
-export type NodeKind = 'agent' | 'human' | 'group';
+export type NodeKind = 'agent' | 'human' | 'group' | 'supervisor';
 export type Visibility = 'tenant' | 'subtree' | 'private';
 export type ShareScope = 'code' | 'backlog' | 'frictionLog' | 'ownerSummary' | 'storyUpdate';
 export type ShareDirection = 'out' | 'in' | 'both';
@@ -29,6 +38,7 @@ export interface PrivacyPolicy {
   visibility: Visibility;
   crossReadAllowed: boolean;
   secretScan: 'required';
+  canDirect?: boolean;          // rev2: supervisor-only capability to direct its subtree. Defaults false.
 }
 export interface HierNode {
   nodeId: string;
@@ -83,6 +93,10 @@ export function validateHierarchy(t: Tenant): ValidationResult {
       if (n.agentRef) errors.push(`group ${n.nodeId}: must not bind an agentRef`);
       if (n.policy && (n.policy.canSpeak || n.policy.canListen)) errors.push(`group ${n.nodeId}: must not speak or listen`);
     }
+    // rev2 invariant #6: canDirect is supervisor-only.
+    if (n.policy && n.policy.canDirect === true && n.kind !== 'supervisor') {
+      errors.push(`node ${n.nodeId}: canDirect is supervisor-only (kind=${n.kind})`);
+    }
     // shareEdge sanity + opt-in (ruling 3): edge target must exist, scope valid
     for (const e of n.shareEdges || []) {
       if (!m.has(e.toNodeId)) errors.push(`node ${n.nodeId}: shareEdge.toNodeId ${e.toNodeId} not found`);
@@ -109,6 +123,19 @@ export function validateHierarchy(t: Tenant): ValidationResult {
     const chain = ancestorChain(t, n.nodeId);
     const last = chain[chain.length - 1];
     if (last && last.parentId !== null && m.has(last.parentId)) errors.push(`node ${n.nodeId}: cycle in parent chain`);
+  }
+  // rev2 invariant #7: at most ONE supervisor per tenant; no nested supervisors; each supervisor's
+  // parentId chain MUST reach the owner (a human root). The supervisor is presence-conditional and only
+  // ever directs DOWN its own subtree, so it must sit under the human owner, never above or beside.
+  const supervisors = t.nodes.filter((n) => n.kind === 'supervisor');
+  if (supervisors.length > 1) errors.push(`at most one supervisor per tenant (found ${supervisors.length})`);
+  for (const sup of supervisors) {
+    const chain = ancestorChain(t, sup.nodeId);
+    if (chain.slice(1).some((anc) => anc.kind === 'supervisor')) errors.push(`supervisor ${sup.nodeId}: nested supervisors are not allowed`);
+    const root = chain[chain.length - 1];
+    if (!root || root.parentId !== null || root.kind !== 'human') {
+      errors.push(`supervisor ${sup.nodeId}: parentId chain must reach the owner (a human root)`);
+    }
   }
   return { ok: errors.length === 0, errors };
 }
@@ -152,4 +179,35 @@ export function canCrossRead(t: Tenant, viewerId: string, targetId: string, scop
     const to = m.get(e.toNodeId);
     return !!to && to.kind === 'group' && viewerAncestors.has(e.toNodeId); // group fan-out to its subtree
   });
+}
+
+// ===== rev2: supervisor authority (mirrors Arke's standalone-client/src/hierarchy.ts) =================
+/** Presence = the set of nodeIds currently online. `undefined` means "no presence info" → flat peers
+ *  (back-compat). The hub builds this from whoever is actually connected for a given resolution. */
+export type Presence = Set<string>;
+export interface EffectiveAuthority { mode: 'owner' | 'supervisor' | 'flat'; directorId: string | null }
+
+/** Who directs, given who is present: owner (human root) > supervisor (presence-conditional) > flat.
+ *  No presence object = flat peers, untouched rev1 behavior. */
+export function resolveEffectiveAuthority(t: Tenant, presence?: Presence): EffectiveAuthority {
+  if (!presence) return { mode: 'flat', directorId: null };
+  const owner = t.nodes.find((n) => n.kind === 'human' && n.parentId === null && presence.has(n.nodeId));
+  if (owner) return { mode: 'owner', directorId: owner.nodeId };
+  const sup = t.nodes.find((n) => n.kind === 'supervisor' && presence.has(n.nodeId));
+  if (sup) return { mode: 'supervisor', directorId: sup.nodeId };
+  return { mode: 'flat', directorId: null };
+}
+
+/** May `directorId` direct `targetId` right now? Supervisor-only + presence-gated + target strictly
+ *  inside the supervisor's subtree. (Owner precedence is expressed by resolveEffectiveAuthority; this is
+ *  the capability check for a specific pair.) Fail-closed; no presence object = nobody directs. */
+export function canDirect(t: Tenant, presence: Presence | undefined, directorId: string, targetId: string): boolean {
+  if (!presence) return false;
+  const m = byId(t);
+  const d = m.get(directorId); const tgt = m.get(targetId);
+  if (!d || !tgt) return false;
+  if (d.kind !== 'supervisor') return false;     // supervisor-only
+  if (!presence.has(directorId)) return false;   // presence-gated
+  if (directorId === targetId) return false;     // never directs itself
+  return isAncestor(t, directorId, targetId);    // target must be inside the supervisor's subtree
 }

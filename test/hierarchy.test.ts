@@ -1,6 +1,6 @@
 /* Unit tests for the hierarchy enforcement primitives (contract 2.1, the four's ratified rulings).
  * Pure — no I/O. Run: npx tsx test/hierarchy.test.ts  (wired into npm + CI as hierarchy-test). */
-import { validateHierarchy, canSee, canCrossRead, ancestorChain, type Tenant, type HierNode, type PrivacyPolicy } from '../src/hierarchy.js';
+import { validateHierarchy, canSee, canCrossRead, ancestorChain, resolveEffectiveAuthority, canDirect, type Tenant, type HierNode, type PrivacyPolicy } from '../src/hierarchy.js';
 
 let pass = 0, fail = 0;
 const ok = (cond: boolean, msg: string) => { if (cond) { pass++; } else { fail++; console.error('  FAIL: ' + msg); } };
@@ -59,5 +59,34 @@ ok(canCrossRead(t, 'mgr', 'nova', 'code'), 'cross-read allowed: explicit edge + 
 ok(!canCrossRead(t, 'mgr', 'nova', 'backlog'), 'cross-read denied: no edge for that scope');
 ok(!canCrossRead(t, 'logos', 'nova', 'code'), 'cross-read denied: no edge to this viewer');
 
-console.log(`hierarchy enforcement (contract 2.1): ${fail === 0 ? 'PASS' : 'FAIL'} (${pass} checks)`);
+// --- rev2: supervisor layer ---
+const sup: Tenant = { tenantId: 'zen', nodes: [
+  node('owner', null, { kind: 'human' }),
+  node('sup', 'owner', { kind: 'supervisor', policy: pol({ canDirect: true }) }),
+  node('a', 'sup'),
+  node('b', 'owner'),
+]};
+ok(validateHierarchy(sup).ok, 'valid supervisor tree passes: ' + JSON.stringify(validateHierarchy(sup).errors));
+// invariant #6: canDirect supervisor-only
+ok(!validateHierarchy({ tenantId: 'x', nodes: [ node('owner', null, { kind: 'human' }),
+  node('a', 'owner', { policy: pol({ canDirect: true }) }) ]}).ok, 'non-supervisor canDirect rejected (#6)');
+// invariant #7: at most one supervisor
+ok(!validateHierarchy({ tenantId: 'x', nodes: [ node('owner', null, { kind: 'human' }),
+  node('s1', 'owner', { kind: 'supervisor' }), node('s2', 'owner', { kind: 'supervisor' }) ]}).ok, 'two supervisors rejected (#7)');
+// invariant #7: supervisor chain must reach a human owner root
+ok(!validateHierarchy({ tenantId: 'x', nodes: [ node('grp', null, { kind: 'group', policy: pol({ canSpeak: false, canListen: false }) }),
+  node('s', 'grp', { kind: 'supervisor' }) ]}).ok, 'supervisor not under human owner rejected (#7)');
+// resolveEffectiveAuthority: owner > supervisor > flat; no presence = flat
+ok(resolveEffectiveAuthority(sup).mode === 'flat', 'no presence => flat (back-compat)');
+ok(resolveEffectiveAuthority(sup, new Set(['owner', 'sup', 'a'])).mode === 'owner', 'owner present => owner directs');
+ok(resolveEffectiveAuthority(sup, new Set(['sup', 'a'])).mode === 'supervisor', 'supervisor present, owner absent => supervisor directs');
+ok(resolveEffectiveAuthority(sup, new Set(['a'])).mode === 'flat', 'neither owner nor supervisor present => flat');
+// canDirect: supervisor-only + presence-gated + subtree-scoped
+ok(canDirect(sup, new Set(['sup', 'a']), 'sup', 'a'), 'supervisor directs a descendant when present');
+ok(!canDirect(sup, new Set(['a']), 'sup', 'a'), 'supervisor absent => cannot direct (presence-gated)');
+ok(!canDirect(sup, new Set(['sup', 'b']), 'sup', 'b'), 'cannot direct a target outside the subtree');
+ok(!canDirect(sup, undefined, 'sup', 'a'), 'no presence object => cannot direct');
+ok(!canDirect(sup, new Set(['a', 'sup']), 'a', 'sup'), 'non-supervisor director => cannot direct');
+
+console.log(`hierarchy enforcement (contract 2.1 + rev2 supervisor): ${fail === 0 ? 'PASS' : 'FAIL'} (${pass} checks)`);
 process.exit(fail === 0 ? 0 : 1);

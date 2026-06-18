@@ -28,8 +28,12 @@
   (all >=3 turns, incl. #1 `6aef82f6`/83t). Recurring "retro-close stuck meetings" question RETIRED.
   **AFTERNOON BATCH (3 unblocked solo ships, all CI-green):** corpus-commit floor-assert + delta-print
   (advisory `corpusGuard`, non-blocking — Nova's pattern); `brainKind()` exhaustiveness switch w/ logged
-  default (auth/gate audit — `resolveActor` already fail-closed); boot-stamp log (P1 #8 DONE). Owner
-  items otherwise unchanged (see WAITING ON).
+  default (auth/gate audit — `resolveActor` already fail-closed); boot-stamp log (P1 #8 DONE).
+  **#29 UNBLOCKED + STARTED:** Arke's `hierarchy.ts` rev2 mirror landed/confirmed (`eeb797e5`) + #28
+  consumed live → brought hub-side `src/hierarchy.ts` to rev2 parity (supervisor kind, canDirect,
+  invariants #6/#7, `resolveEffectiveAuthority`, presence-gated `canDirect`; `hierarchy.test.ts` 28 checks,
+  CI-gated). Remaining #29 = the consent-gated cross-read endpoint + tenant persistence (P2 #7, dedicated
+  session). Owner items otherwise unchanged (see WAITING ON).
 - **MORNING PREP (2026-06-18 06:00) — quiet overnight, all green, inbox cleared, one new autonomous
   meeting.** HEAD is `8214841` (the midnight nightly's backlog/handoff refresh commit, landed 04:28Z —
   CI + Push-on-main both GREEN on it; no new CODE overnight). Working tree clean, in sync with
