@@ -20,7 +20,7 @@ import {
   queueEnvTask, listEnvTasks, getEnvTask, claimEnvTask, reportEnvTask, sweepEnvTasks,
   createMeeting, getMeeting, updateMeeting, listMeetings, listMeetingsForActor, setMeetingOwnerReport, deleteMeeting,
   setMeetingLedger, setMeetingManifestPins,
-  setVoiceRunning, closeStaleVoiceMeetings, usdSpentTodayUtc,
+  setVoiceRunning, closeStaleVoiceMeetings, usdSpentTodayUtc, vaultReady, listMeetingsForDashboard,
   createBrainUpload, getBrainUpload, putBrainChunk, brainReceived, assembleBrain,
   commitBrainV2, getBrainV2Meta, getBrainV2Content, sweepBrainUploads,
   getSetting, setSetting, getRecentBoots,
@@ -824,6 +824,36 @@ councilRouter.post('/council/scheduler', async (req, res) => {
       await setSetting('hub_meeting_time', t);
     }
     res.json({ ok: true, enabled: (await getSetting('hub_meeting_scheduler')) === 'on', time: await getSchedTime(), tz: 'America/Toronto' });
+  } catch (e) { internalError(res, e); }
+});
+
+// Owner dashboard aggregate (owner 2026-06-18) — ONE server-side gather of everything valuable, behind the
+// SAME owner login as /backlog (requireOwner = Google ID token OR console key). No token ever reaches the
+// page; all data is assembled here. Powers the private /dashboard board.
+councilRouter.get('/council/dashboard', requireOwner, async (_req, res) => {
+  try {
+    const memberStatus = async (): Promise<any[]> => {
+      const out: any[] = [];
+      for (const mm of await listMembers()) {
+        let corpus: any = null, pack: any = null, manifest: any = null;
+        try { corpus = await getBrainV2Meta(mm.name, 'corpus'); } catch { /* absent */ }
+        try { pack = await getBrainV2Meta(mm.name, 'pack'); } catch { /* absent */ }
+        try { manifest = await getBrainV2Meta(mm.name, 'manifest'); } catch { /* absent */ }
+        out.push({ actor: mm.name, corpusReady: !!corpus, packReady: !!pack, manifestReady: !!manifest,
+          corpusBuiltAt: corpus ? corpus.committed_at : null });
+      }
+      return out;
+    };
+    const [meetings, boots, backlogs, members, spentTodayUsd] = await Promise.all([
+      listMeetingsForDashboard(12).catch(() => []),
+      getRecentBoots(8).catch(() => []),
+      getAgentBacklogs().catch(() => []),
+      memberStatus().catch(() => []),
+      usdSpentTodayUtc().catch(() => 0),
+    ]);
+    const scheduler = { enabled: (await getSetting('hub_meeting_scheduler').catch(() => null)) === 'on',
+      time: await getSchedTime(), tz: 'America/Toronto', voiceLoopEnabled: process.env.VOICE_LOOP_ENABLED === 'true' };
+    res.json({ ok: true, ts: Date.now(), vault: vaultReady(), scheduler, spentTodayUsd, meetings, members, boots, backlogs });
   } catch (e) { internalError(res, e); }
 });
 // ===== AUTONOMOUS VOICE LOOP (HUB_AUTONOMOUS_VOICE_SPEC §4) — owner-gated, FAIL-CLOSED money gate =====

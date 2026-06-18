@@ -500,6 +500,16 @@ export async function listMeetings(limit = 20): Promise<any[]> {
     to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at FROM meetings ORDER BY created_at DESC LIMIT $1`, [limit]);
   return rows.map((r) => ({ ...r, participants: Array.isArray(r.participants) ? r.participants : [] }));
 }
+/** Richer meeting list for the owner dashboard — adds closed_at, ended_reason, and the ledger USD. */
+export async function listMeetingsForDashboard(limit = 12): Promise<any[]> {
+  const { rows } = await db().query<any>(`SELECT id, agenda, phase, turns_used, turn_cap, ended_reason,
+    (cost_ledger->>'usd')::numeric AS usd,
+    to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
+    to_char(closed_at  at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS closed_at
+    FROM meetings ORDER BY created_at DESC LIMIT $1`, [limit]);
+  return rows.map((r) => ({ id: r.id, agenda: r.agenda, phase: r.phase, turnsUsed: r.turns_used, turnCap: r.turn_cap,
+    endedReason: r.ended_reason || null, usd: r.usd == null ? null : Number(r.usd), createdAt: r.created_at, closedAt: r.closed_at }));
+}
 
 // ---- Brain-upload pipeline (resumable chunks; docs/CONTRACT_DELTAS_2.0.md a/e) ----
 // Artifact kinds: pack (curated voice prefix) | corpus (full code, default/back-compat) |
