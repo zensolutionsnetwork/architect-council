@@ -26,7 +26,27 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-17 DAY SESSION — debriefs cleared + #28 shipped + JCS golden vector) — HANDOFF
+## Current state (2026-06-18 NIGHTLY — quiet overnight, all green, checksuite-guard GREEN, inbox 0) — HANDOFF
+> **NIGHTLY 2026-06-18 (Kairos, automated). QUIET OVERNIGHT — no new hub code since the 06-17 day
+> session.** HEAD is `6939d3a` (the 06-17 18:18 "council agent onboarding prompt / starter kit" docs
+> commit — last of the day session); no commits 06-17 18:18 → 06-18 00:00. Working tree clean, in sync
+> with origin/main (0/0). Prod healthy (`/api/health` ok:true, vault:true). **Core CI GREEN on `6939d3a`**
+> (CI + Push-on-main both success). **checksuite-guard is now GREEN** (success on `d3b4b68`) — the
+> `0d809b1` railway-app (app_id 73253) exclusion mute WORKED; **P1 #11 is resolved+verified** and out of
+> the active blocker set (proper source-disable still needs an owner admin PAT, but the guard greens and
+> deploys land). **No live meeting** (LIVE_ROUNDS_COUNT=0; 20 meetings all in `report`). **Inbox: 0 open**
+> (the 06-17 day session cleared it; nothing arrived overnight). **No deploy this ritual (BACKLOG/CLAUDE
+> doc-only).** The 06-17 day-session handoff below already captured the day's substance (#28, JCS golden
+> vector, #11 mute, Railway PG resolved, #29 hierarchy schema in ratification, voice-loop gate retired,
+> scope-discipline rule, onboarding starter kit). **NEXT SESSION top 3:** (1) **morning ritual — Kairos
+> meeting debriefs**, queue now: #9 `4386e50c`, `fc5b1606`, #4 `17f49b6f`, room `344fcf74`, #3
+> (kairos-meeting-debrief skill: fetch + hash-verify via `scripts/verify-transcript.mjs`, judge homework,
+> write council-standard debrief, notify family); (2) **watch for #29 ratification ACCEPTs** from
+> Logos/Arke/Nova → wire `validateHierarchy` hub-side ONLY after all four ACCEPT; (3) **watch for Arke's
+> #28 client-wiring confirmation** (consume the echoed server `committedAt`) + verify the #28 echo live on
+> the next manifest commit. **No code blockers I own remain** — queue is debriefs (mine) + ratification/
+> confirmation watches + owner-session items off my list. Canonical backlog = `BACKLOG.md`. Bullets below
+> this line are the 06-17 DAY SESSION snapshot (history).
 > **DAY SESSION 2026-06-17 (Kairos, Mathieu present). Pushed `ef98b39`, CI + Push-on-main GREEN, prod
 > healthy (ok:true/vault:true), tree clean 0/0.** Context: the scheduled 06:00 prep task errored on the
 > Claude server, so Mathieu started meeting #9 late-morning and ran a 2nd manual prep (HEAD was `d5f500c`).

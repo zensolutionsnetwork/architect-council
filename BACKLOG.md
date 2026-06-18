@@ -2,10 +2,28 @@
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-17
-> (DAY SESSION: debriefs cleared + #28 shipped + JCS golden vector; pushed ef98b39, CI green; inbox 0).
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-18
+> (NIGHTLY: quiet overnight, all green, checksuite-guard now GREEN, inbox 0; HEAD 6939d3a).
 
 ## STATE AT A GLANCE
+- **NIGHTLY (2026-06-17 day → 2026-06-18 midnight) — quiet overnight, all green, inbox 0.** HEAD is
+  `6939d3a` (the 06-17 18:18 "council agent onboarding prompt / starter kit" docs commit — the last
+  commit of the 06-17 day session; **no overnight code**). Working tree clean, in sync with origin/main
+  (0/0). Prod healthy (`/api/health` ok:true, vault:true). **Core CI GREEN on `6939d3a`** (CI +
+  Push-on-main both success). **checksuite-guard is now GREEN** (success on `d3b4b68`) — the `0d809b1`
+  railway-app (app_id 73253) exclusion mute WORKED; the guard no longer reds on the phantom queued
+  suites. **P1 #11 is effectively resolved+verified** (proper source-disable still needs an owner admin
+  PAT, but the guard is green and deploys land — downgraded out of the active blocker set). **No live
+  meeting** (LIVE_ROUNDS_COUNT=0; 20 meetings all in `report` — safe to push). **Inbox: 0 open**
+  (confirmed live this run; the day session cleared it). The 06-17 day session (handoff below) already
+  captured the substance: #28 shipped (`ef98b39`/`517019b`), JCS golden vector + Logos correction, #11
+  mute (`0d809b1`), Railway PG backup resolved (daily + PITR), #29 hierarchy schema DRAFTED + in
+  ratification (`00d58ca`/`fab9fe6`, conditional Supervisor layer owner-ratified), voice-loop supervised
+  gate RETIRED, scope-discipline rule codified, and a paste-ready council-agent onboarding starter kit
+  (`6939d3a`). **No deploy this ritual (BACKLOG doc-only).** Top of queue unchanged: Kairos's pending
+  meeting debriefs (#9 `4386e50c`, `fc5b1606`, #4 `17f49b6f`, room `344fcf74`, #3) + #29 ratification
+  watch (Logos/Arke/Nova ACCEPT) + watch for Arke's #28 client-wiring confirmation + owner items
+  (Railway PG recurring backup / Google verification are off my list — Nova/owner-session).
 - **DAY SESSION (2026-06-17, Mathieu present) — debriefs cleared, #28 shipped, JCS golden vector. Pushed
   `ef98b39`, CI + Push-on-main GREEN, prod ok:true/vault:true, tree clean 0/0; inbox 0 all session.**
   **Debriefed the two new autonomous self-closes** (`council/KAIROS_DEBRIEF_2026-06-17.md`): `fc5b1606`
@@ -388,14 +406,16 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
    + directive trigger (env-task kind `directive`, §15).
 5. ~~Retire legacy single-row backlog endpoints~~ **DONE** (`3032593`, Arke `1a405574`) — see DONE.
 6. Rotate Nova + Logos member secrets once both confirm env storage (transited chat at onboarding).
-11. **checksuite-guard RED — Railway App phantom check suites (NEW 2026-06-13).** GitHub integration
-    "Railway App" (app_id 73253) creates a `queued` check suite on every commit that never completes;
-    present on 65a2bd8 / de027ea / ff4fabe / d01eba2 (all since 06-12, post the 06-09 FIX_EPOCH). NOT
-    blocking deploys today (deploys landing, prod healthy) but will stall a future Wait-for-CI deploy.
-    Remedy (per checksuite-guard.yml header): `PATCH /repos/zensolutionsnetwork/architect-council/check-suites/preferences`
-    `{auto_trigger_checks:[{app_id:73253,setting:false}]}` and VERIFY the response shows `setting:false`
-    (a bare 200 can be a silent no-op). Needs a GitHub admin token — day session / Mathieu. Investigate
-    what re-introduced it on 06-12 (Railway app reinstall? Wait-for-CI config touch?).
+11. ~~**checksuite-guard RED — Railway App phantom check suites (NEW 2026-06-13).**~~ **RESOLVED +
+    VERIFIED 2026-06-17/18 (`0d809b1`).** Muted by excluding `railway-app` (app_id 73253) from the
+    checksuite-guard filter — same pattern as the existing github-actions exclusion; its queued suites
+    are benign managed-integration noise (deploys land). **Confirmed GREEN: checksuite-guard succeeded on
+    `d3b4b68`** (the nightly 06-18 CI scan). The proper SOURCE-disable (`PATCH check-suites/preferences`
+    `{auto_trigger_checks:[{app_id:73253,setting:false}]}`) needs repo-ADMIN authority — the Actions
+    GITHUB_TOKEN can't reach admin endpoints (2 one-shot workflow runs failed even at read/write), only
+    an owner admin PAT could, so the guard-filter mute is the accepted fix. Dead `disable-railway-checks.yml`
+    removed. (Original note kept for history.) Owner can optionally flip the repo Workflow-permissions
+    setting back to read-only since the Actions approach is abandoned.
 13. ~~**Dependabot: 2 vulnerabilities (1 high, 1 low)**~~ **DONE 2026-06-15 (`a335199`).** `npm audit fix`
     bumped esbuild (transitive via tsx) → `npm audit` reports 0 vulnerabilities; `package.json` unchanged
     (lockfile-only). Both advisories were build/dev-time only (esbuild dev-server file-read on Windows /
