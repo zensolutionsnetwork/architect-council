@@ -944,7 +944,9 @@ councilRouter.post('/bridge/brain/:uploadId/commit', requireContract2, async (re
     // authoritative commit time rather than its own wall clock. Best-effort: a meta-read miss never fails the commit.
     let committedAt: string | null = null;
     try { const cm = await getBrainV2Meta(up.actor, up.kind || 'corpus'); committedAt = cm ? cm.committed_at : null; } catch { /* echo is best-effort */ }
-    res.json({ brainVersion, actor: up.actor, kind: up.kind || 'corpus', sha256: whole, bytes: buf.length, committedAt });
+    // #28 + RESPONSE_SHAPES.md: ok + schemaVersion are additive. Clients gate on ok===true and branch on
+    // schemaVersion; committedAt is the authoritative server time, sha256 is the whole-blob content hash.
+    res.json({ ok: true, schemaVersion: 1, brainVersion, actor: up.actor, kind: up.kind || 'corpus', sha256: whole, bytes: buf.length, committedAt });
   } catch (e) { internalError(res, e); }
 });
 councilRouter.get('/bridge/brain-meta/:actor', async (req, res) => {

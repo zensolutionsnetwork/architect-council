@@ -26,7 +26,41 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-18 NIGHTLY — quiet overnight, all green, checksuite-guard GREEN, inbox 0) — HANDOFF
+## Current state (2026-06-18 DAY SESSION — morning ritual done, e097ff64 debriefed, #28+JCS+RESPONSE_SHAPES shipped, inbox 0) — HANDOFF
+> **DAY SESSION 2026-06-18 (Kairos, Mathieu present). Morning ritual + one small CODE deploy. All 7
+> gates green pre-push; prod healthy; no live meeting (safe push).** Started from morning-prep HEAD
+> `d024485` (the 06:00 scheduled prep had already committed BACKLOG + sent morning-prep msg `adaf6cf2`,
+> which Arke replied to via `9b046dd4`). **DEBRIEF DONE — `council/KAIROS_DEBRIEF_2026-06-18.md`:** the
+> new overnight autonomous meeting **`e097ff64`** (closedAt 2026-06-18T07:13:56Z, owner-report 200, 16
+> turns/4 seats arke+nova+logos+kairos, $0.68770, endedReason `closing_cap`, 0 PASS / 0 repeat_guard) —
+> **3rd consecutive fully-autonomous self-close**, **`verify-transcript.mjs` PASS** (sha
+> `b30bc70540d70ef22bc1da6cb97b50c7917eebe83a5f201b0366c910ca02ad63`, projection-only). 3rd independent
+> #24/#12 close-finalizer proof. Voice integrity clean (one synthesizer overreach noted: the owner-report
+> narrated hierarchy 2.1 enforcement as "built" — it is NOT; pre-finalizer pack drift, corrected; Nova esp.
+> must re-pack vs main). **Family notified** (arke `8873f5f4` / nova `d11de7f9` / logos `8526fdef`), Arke
+> `9b046dd4` report-closed → **INBOX 0**. (PowerShell gotcha re-hit + fixed: env-task POST returns 400
+> "to is required" when the JSON body is malformed — non-ASCII em-dashes/smart-quotes in a here-string
+> broke `ConvertTo-Json`; keep council message bodies ASCII-only. memory-worthy.)
+> **SHIPPED this session (CODE deploy — debrief docs + 3 homework items):** (1) **#28** —
+> `POST /api/bridge/brain/:uploadId/commit` now returns additive **`ok:true` + `schemaVersion:1`**
+> (`src/council.ts`). KEY: the hub previously sent NO `ok`, so Arke's stated `ok===true` consume-gate was
+> actually blocked on me — this unblocks his client wiring (he consumes `committedAt` on ok, fail-loud on
+> missing; branches on schemaVersion). (2) **JCS "guard-the-guard"** (Logos homework, Kairos owns) —
+> `test/canon.test.ts` now re-derives `sha256(canon(1 speak + 1 pass))` and asserts the PUBLISHED
+> `docs/CANONICALIZATION.md` worked-example hex `4311fb3e…462851`; a canonicalizer/doc divergence now fails
+> CI loudly (6 vectors, canon-test PASS). (3) **`docs/RESPONSE_SHAPES.md`** — authoritative commit /
+> transcript / owner-report shapes + Arke field-name reconciliation (`hash`→**`sha256`**; **no
+> `manifestId`** on the brain-commit endpoint — manifest is a separate `kind:"manifest"` commit). All
+> gates green: secret-scan/swallow clean · cost PASS · hierarchy PASS(15) · canon PASS(6) · route-auth
+> 25 gated/0 open + clean boot. **NEXT SESSION top 3:** (1) **morning ritual debriefs** of any new overnight
+> self-close (kairos-meeting-debrief skill); (2) **watch for Arke's `hierarchy.ts` rev2 mirror confirm**
+> → ONLY THEN wire hub-side `validateHierarchy` (#29, do not ship solo); also watch the **#28 echo live**
+> on the next manifest commit + Arke's `council-prep-upload.ts` wiring; (3) **my judged-ACCEPT homework**
+> (sequenced): hub auth-layer exhaustiveness-`switch` audit (logged-deny default) + hub corpus-commit
+> floor-assert + delta-print (Nova's pattern). **To ask Mathieu:** retro-close the stuck legacy meetings
+> (`17f49b6f`/`344fcf74`/`a4644f78`/#3, all `closedAt:null`) or leave parked. **WAITING ON:** Arke
+> (hierarchy.ts rev2 mirror; #28 client wiring) · Nova (paired 2.1 manifest — still `none(no_manifest)`,
+> 3/4 paired). Canonical backlog = `BACKLOG.md`. Bullets below this line are the 06-18 NIGHTLY snapshot (history).
 > **NIGHTLY 2026-06-18 (Kairos, automated). QUIET OVERNIGHT — no new hub code since the 06-17 day
 > session.** HEAD is `6939d3a` (the 06-17 18:18 "council agent onboarding prompt / starter kit" docs
 > commit — last of the day session); no commits 06-17 18:18 → 06-18 00:00. Working tree clean, in sync

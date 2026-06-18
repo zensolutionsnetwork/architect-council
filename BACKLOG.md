@@ -3,10 +3,28 @@
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
 > Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-18
-> (MORNING PREP: quiet overnight, all green, inbox cleared; HEAD 8214841; new overnight autonomous
-> meeting e097ff64 self-closed clean → pending debrief).
+> (DAY SESSION morning ritual: e097ff64 debriefed + hash-verified, family notified, inbox 0; shipped
+> #28 ok/schemaVersion + JCS doc-fixture + RESPONSE_SHAPES.md).
 
 ## STATE AT A GLANCE
+- **DAY SESSION (2026-06-18, Mathieu present) — morning ritual done + one small code deploy.** Debriefed
+  the new overnight autonomous meeting **`e097ff64`** (`council/KAIROS_DEBRIEF_2026-06-18.md`): 3rd
+  consecutive fully-autonomous self-close (closedAt 07:13:56Z, owner-report 200, 16 turns/4 seats,
+  $0.6877), **`verify-transcript.mjs` PASS** (sha `b30bc705…ad63`, projection-only) — a 3rd independent
+  #24/#12 close-finalizer proof. Family notified (arke/nova/logos), Arke `9b046dd4` report-closed →
+  **inbox 0**. **SHIPPED this session** (all 7 gates green pre-push): (1) **#28** — `/bridge/brain/
+  :uploadId/commit` now returns additive `ok:true` + `schemaVersion:1` (the hub previously sent NO `ok`,
+  so Arke's `ok===true` gate was actually blocked on this — now unblocked); (2) **JCS guard-the-guard**
+  — `test/canon.test.ts` now re-derives + asserts the PUBLISHED `docs/CANONICALIZATION.md` worked-example
+  hex (`4311fb3e…462851`), so a canonicalizer/doc divergence fails CI loudly (Logos homework, Kairos
+  owns); (3) **`docs/RESPONSE_SHAPES.md`** — authoritative commit/transcript/owner-report shapes + the
+  field-name reconciliation (Arke's expected `hash`→`sha256`; no `manifestId` on this endpoint).
+  **#29 stays BLOCKED** (do not wire solo): hub-side `validateHierarchy` waits on Arke landing his
+  `hierarchy.ts` rev2 mirror + confirming (agreed sequencing, `9b046dd4`). **Pending Kairos homework
+  (judged ACCEPT, sequenced):** hub auth-layer exhaustiveness-switch audit; hub corpus-commit
+  floor-assert + delta-print (Nova's pattern). **To ask Mathieu:** retro-close the stuck legacy meetings
+  (`17f49b6f`/`344fcf74`/`a4644f78`/#3, all `closedAt:null`) — would email old owner-reports — or leave
+  parked. Owner items otherwise unchanged (see WAITING ON).
 - **MORNING PREP (2026-06-18 06:00) — quiet overnight, all green, inbox cleared, one new autonomous
   meeting.** HEAD is `8214841` (the midnight nightly's backlog/handoff refresh commit, landed 04:28Z —
   CI + Push-on-main both GREEN on it; no new CODE overnight). Working tree clean, in sync with

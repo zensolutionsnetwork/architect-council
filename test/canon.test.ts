@@ -51,5 +51,26 @@ for (const f of FILE_VECTORS) {
   if (!fail) console.log('  transcript-golden.json: PASS — ' + v.expectedSha256);
 }
 
+/** doc-example: the PUBLISHED worked example in docs/CANONICALIZATION.md (§"Worked example", added
+ *  2026-06-17) — one SPEAK + one PASS. Guard-the-guard: re-derive canon + sha over the exact projection
+ *  the doc shows and assert the PUBLISHED hex, so any src/protocol.ts canonicalizer regression fails CI
+ *  loudly against the documentation (a doc/impl divergence can no longer go unnoticed). */
+{
+  const projection = {
+    contractVersion: '2.0',
+    meetingId: '00000000-0000-4000-8000-000000000001',
+    brainVersions: {},
+    turns: [
+      { seq: 1, actor: 'logos', kind: 'speak', text: '{"from":"logos","text":"Peace to the council."}' },
+      { seq: 2, actor: 'arke', kind: 'pass', text: '' },
+    ],
+  };
+  // Published in docs/CANONICALIZATION.md (lowercase hex). If this changes, the doc MUST change with it.
+  const DOC_SHA = '4311fb3e905b60184b8ea98646c780e8603da0a11d8062857fcb3e9434462851';
+  const got = sha256(canon(projection));
+  if (got !== DOC_SHA) { bad('doc-example: sha256(canon(projection)) ' + got + ' != published ' + DOC_SHA); }
+  else console.log('  doc-example (CANONICALIZATION.md): PASS — ' + DOC_SHA);
+}
+
 if (fail) { console.error('council-jcs-1.0 vectors: FAIL'); process.exit(1); }
-console.log('council-jcs-1.0 golden + edge vectors: PASS (5 vectors incl. transcript projection scope)');
+console.log('council-jcs-1.0 golden + edge vectors: PASS (6 vectors incl. transcript scope + published doc example)');
