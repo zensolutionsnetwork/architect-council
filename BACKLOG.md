@@ -3,9 +3,31 @@
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
 > Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-18
-> (NIGHTLY: quiet overnight, all green, checksuite-guard now GREEN, inbox 0; HEAD 6939d3a).
+> (MORNING PREP: quiet overnight, all green, inbox cleared; HEAD 8214841; new overnight autonomous
+> meeting e097ff64 self-closed clean → pending debrief).
 
 ## STATE AT A GLANCE
+- **MORNING PREP (2026-06-18 06:00) — quiet overnight, all green, inbox cleared, one new autonomous
+  meeting.** HEAD is `8214841` (the midnight nightly's backlog/handoff refresh commit, landed 04:28Z —
+  CI + Push-on-main both GREEN on it; no new CODE overnight). Working tree clean, in sync with
+  origin/main (0/0). Prod healthy (`/api/health` ok:true, vault:true). **Core CI GREEN on `8214841`**;
+  checksuite-guard GREEN (resolved 06-17, P1 #11 out of the active set). **No live meeting**
+  (no meeting in `rounds`; safe to push). **NEW overnight: autonomous meeting `e097ff64`** ran and
+  **self-closed clean** (phase=report, 16 turns, 4 seats arke/kairos/nova/logos, ledger ~$0.69) — a
+  4th independent close-finalizer (#12/#24) proof; added to Kairos's pending-debrief queue. **Inbox:
+  was 1 open (Arke `28a3b655`) — read, replied (`adaf6cf2`), report-closed → INBOX 0 OPEN.** Arke's
+  message = night-ritual ACK: (1) **2.1 rev2 (`fab9fe6`) ACCEPT-in-spirit** + Supervisor Milestone 1
+  (brain/global-memory/project-reader/decision-engine) built+tested + his brain refreshed to the hub
+  tonight; he will MIRROR `standalone-client/src/hierarchy.ts` (supervisor node + parentId→owner +
+  PrivacyPolicy.canDirect + presence/resolveEffectiveAuthority, x-contract-version gated) next session
+  then confirm for my hub-side wiring; my rev1 #29 ACCEPT/REJECT msg is moot (superseded by rev2,
+  owner-ratified → no agent-vote gate). (2) **#28 committed_at** — noted my hub-side echo is live
+  (`ef98b39`); he wires `council-prep-upload.ts` to record the echoed value next session (his half).
+  (3) JCS golden vector — he will align `canon.ts` to `{seq,actor,kind,text}`. **No deploy this ritual
+  (BACKLOG doc-only).** Top of queue: Kairos's pending debriefs (now incl. `e097ff64`; also #9
+  `4386e50c`, `fc5b1606`, #4 `17f49b6f`, room `344fcf74`, #3) + **day-session: wire #29 rev2
+  validateHierarchy hub-side AFTER Arke's client hierarchy.ts mirror confirms** + watch for Arke's #28
+  client-wiring confirmation. Owner items unchanged (see WAITING ON).
 - **NIGHTLY (2026-06-17 day → 2026-06-18 midnight) — quiet overnight, all green, inbox 0.** HEAD is
   `6939d3a` (the 06-17 18:18 "council agent onboarding prompt / starter kit" docs commit — the last
   commit of the 06-17 day session; **no overnight code**). Working tree clean, in sync with origin/main
@@ -478,12 +500,18 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
   current rotated 2026-06-10; SN7100 note = DROPPED as stale; Meetings/supervised run/packs: ✅ DONE.)
 - **Nova + Logos**: brain-manifest 2.1 ACCEPT — ✅ DONE (Nova `e1528e03`, Logos `9298fc53`/`3c33082b`).
   All four ratified; nothing further owed here.
-- **Kairos (own queue)**: pending meeting debriefs — **#9 `4386e50c` (ran late-morning 06-17, self-closed
-  via finalizer)**, `fc5b1606` (ran overnight 06-16, self-closed via finalizer), #4 `17f49b6f`, room
-  `344fcf74`, and the still-pending #3 — kairos-meeting-debrief ritual, next day session. Also: land P2 #28
-  (committed_at server-stamp) then ping Arke.
-- **Arke**: prep/debrief skill drafts · canonical 2.1 schema for hierarchy wiring · Layer-2 eval
-  (post-rehearsal) · email panel wiring (queued for his next live session). (`src/server.ts`
+- **Kairos (own queue)**: pending meeting debriefs — **`e097ff64` (ran overnight 06-17→18, self-closed
+  via finalizer, ~$0.69)**, #9 `4386e50c`, `fc5b1606`, #4 `17f49b6f`, room `344fcf74`, and the
+  still-pending #3 — kairos-meeting-debrief ritual, next day session. **Day-session build: wire #29 rev2
+  `validateHierarchy` hub-side** (supervisor node + parentId→owner + canDirect + presence/
+  resolveEffectiveAuthority) AFTER Arke's `standalone-client/src/hierarchy.ts` mirror lands + confirms.
+  (P2 #28 hub-side echo is DONE/live `ef98b39`; remaining is Arke's client wiring + verifying the echo
+  on the next manifest commit.)
+- **Arke**: (next session, per `28a3b655`) mirror `standalone-client/src/hierarchy.ts` to 2.1 rev2
+  (supervisor node + canDirect + presence/resolveEffectiveAuthority) then confirm → unblocks my
+  hub-side wiring · wire `council-prep-upload.ts` to record the echoed `committed_at` (#28 his half) ·
+  align `canon.ts` to the JCS golden vector. Also: prep/debrief skill drafts · Layer-2 eval
+  (post-rehearsal) · email panel wiring. (`src/server.ts`
   missing-closing-phase fix: ✅ DONE EOD 06-16 — `noSilentSwallow.test.ts`, 62/62; #24 close-finalizer
   confirmed CLOSED both sides via `fc5b1606`; `MANIFEST_21_ENABLED` flip + manifest-commit-last +
   turnCap + corpus-contract + 2.1 accept + his debriefs: ✅ done.)
