@@ -96,6 +96,14 @@ or ask Mathieu first.
 > (default 03:00), never over a live meeting. **App-controllable:** owner GET/POST `/api/council/scheduler`
 > `{enabled,time}` (RESPONSE_SHAPES.md; Arke wiring the toggle+time-picker UI, `99960cca`). **Owner shutting
 > down the external task** so only the hub fires. `COUNCIL_V2_LIVE` stays OFF (dead v1 flag). route-auth 34/0.
+> (11) **OWNER DASHBOARD merged into the `/backlog` board** (`862c2d4`/`377ba7c`) — owner asked for one page.
+> `GET /api/council/dashboard` (requireOwner = Google login OR console key) aggregates health, scheduler
+> (on/time/next-fire/voice-loop), recent meetings + cost, per-member brain/pack/manifest status (surfaces
+> Nova's missing manifest at a glance), and the boot log; `backlog.html` renders these live ops panels ABOVE
+> the per-agent backlog. No token ever in the page. route-auth 35/0. **Fixed a latent bug the dashboard
+> surfaced:** `usdSpentTodayUtc` + the dashboard cost read `cost_ledger->>'usd'` but USD lives at
+> `cost_ledger.total.usd` → "spent today" was ALWAYS $0; now correct (`377ba7c`). Open at
+> `https://architectscouncil.com/backlog`.
 > **STUCK-MEETING CLEANUP DONE (Mathieu ok'd 06-18, doesn't
 > need the old reports):** purged **25 empty/probe/smoke/test meeting rows** via `DELETE /api/meeting/:id`
 > (owner directive 2026-06-15; rule = delete any meeting with <=2 projection turns) — no `/close`, so NO
