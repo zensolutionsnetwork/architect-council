@@ -529,12 +529,14 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
 - **Mathieu**: (1) **Layer-1 Manager + agenda/directive channel** — go/no-go on building each. Per owner
   2026-06-18 I am CONSULTING ARKE FIRST (msg `fd5fe481`): does his owner-app/supervisor project already
   cover part of it, build hub-side vs in-app. Hold both until Arke replies + owner decides. (2)
-  **`COUNCIL_V2_LIVE` is NOT a clean flip (code-checked 2026-06-18).** The flag only un-pauses the OLD v1
-  `nightlyRetro→runCouncil` path at 03:00 Toronto — NOT the v2 voice-loop meeting. The v2 nightly meetings
-  (`e097ff64` etc.) are fired by something ELSE (Arke's app? — asked in `fd5fe481`); neither Kairos Cowork
-  task starts a meeting. Owner wants meeting-scheduling to live IN the hub (24/7, self-contained) → that
-  needs a scheduler REWIRE (`nightlyRetro` → `/meeting/open` + `run-autonomous`) + Arke coordination to
-  avoid double-firing. **Do NOT flip COUNCIL_V2_LIVE as-is.** (3) checksuite-guard/Railway app_id 73253
+  **hub-side v2 auto-scheduler SHIPPED + ACTIVATED 2026-06-18 (`beeac4c`).** The external trigger ran on
+  Mathieu's OTHER computer (owner confirmed); replaced it with a hub-side scheduler that fires open +
+  run-autonomous itself, 24/7, gated by app_setting `hub_meeting_scheduler`='on' (ACTIVATED) +
+  `VOICE_LOOP_ENABLED` (=true, verified), once per Toronto day at an app-configurable time (default 03:00),
+  never over a live meeting. **Owner-controllable from Arke's app:** GET/POST `/api/council/scheduler`
+  `{enabled,time}` (in RESPONSE_SHAPES.md; Arke wiring the toggle + time picker, asked `99960cca`).
+  **OWNER ACTION: shut down the external trigger task on the other computer** (in progress) so only the hub
+  fires. `COUNCIL_V2_LIVE` stays OFF — it is the dead v1 flag, do NOT set it. (3) checksuite-guard/Railway app_id 73253
   source-disable (owner admin PAT) + Railway PG recurring-backup + Google verification = short browser
   walkthroughs. (autonomous-spend #22 = KEEP RUNNING ✅; stuck/test meetings ERASED ✅; SN7100/SSD = DONE
   per owner 06-18, space cleared; #29 owner call RESOLVED — Kairos owns it, validator + cross-read shipped.)

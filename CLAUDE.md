@@ -89,7 +89,14 @@ or ask Mathieu first.
 > cross-read DENIED 403 (no edge); invalid tree 422; smoke tenants DELETEd → tenants=0. Arke notified
 > (`32ca701f`). #29 now functionally complete; **remaining = full-corpus delivery through the gate (reuse
 > getBrainV2Content under canCrossRead) + first acting node = daily code-review agent (BOTH joint w/ Arke
-> — blocked on co-design, not solo).** **STUCK-MEETING CLEANUP DONE (Mathieu ok'd 06-18, doesn't
+> — blocked on co-design, not solo).** (10) **HUB-SIDE v2 AUTO-SCHEDULER SHIPPED + ACTIVATED** (`beeac4c`)
+> — the nightly meeting trigger ran on Mathieu's OTHER computer; replaced it with a hub-side scheduler that
+> fires open+run-autonomous itself (24/7, no machine needed), gated by app_setting `hub_meeting_scheduler`='on'
+> (ACTIVATED via owner POST) + `VOICE_LOOP_ENABLED`(=true verified), once/Toronto-day at an app-set time
+> (default 03:00), never over a live meeting. **App-controllable:** owner GET/POST `/api/council/scheduler`
+> `{enabled,time}` (RESPONSE_SHAPES.md; Arke wiring the toggle+time-picker UI, `99960cca`). **Owner shutting
+> down the external task** so only the hub fires. `COUNCIL_V2_LIVE` stays OFF (dead v1 flag). route-auth 34/0.
+> **STUCK-MEETING CLEANUP DONE (Mathieu ok'd 06-18, doesn't
 > need the old reports):** purged **25 empty/probe/smoke/test meeting rows** via `DELETE /api/meeting/:id`
 > (owner directive 2026-06-15; rule = delete any meeting with <=2 projection turns) — no `/close`, so NO
 > report emails + no synth spend. **10 real council meetings remain** (all >=3 turns, incl. #1 `6aef82f6`/83t,
