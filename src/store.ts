@@ -156,6 +156,12 @@ export async function initDb(): Promise<void> {
   await q.query(`CREATE TABLE IF NOT EXISTS boot_log (
     id bigserial PRIMARY KEY, booted_at timestamptz NOT NULL DEFAULT now(),
     deploy_sha text, secret_fp text)`);
+  // Hierarchy tenants (P2 #7) — one validated tenant tree per tenantId. The whole tree is stored as
+  // jsonb; the route layer validates it with validateHierarchy BEFORE writing (fail-closed), so an
+  // invalid/guardrail-violating tree can never be persisted. Opt-in by default: with no row, the
+  // consent-gated cross-read denies everything.
+  await q.query(`CREATE TABLE IF NOT EXISTS hierarchies (
+    tenant_id text PRIMARY KEY, tree jsonb NOT NULL, updated_at timestamptz NOT NULL DEFAULT now(), updated_by text)`);
 }
 
 // ---- Boot-stamp log (P1 #8) -------------------------------------------------
@@ -179,6 +185,25 @@ export async function getRecentBoots(limit = 20): Promise<any[]> {
     to_char(booted_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS booted_at, deploy_sha, secret_fp
     FROM boot_log ORDER BY id DESC LIMIT $1`, [Math.min(Math.max(Number(limit) || 20, 1), 200)]);
   return rows;
+}
+
+// ---- Hierarchy tenants (P2 #7) ----------------------------------------------
+export async function getHierarchy(tenantId: string): Promise<{ tree: any; updatedAt: string | null; updatedBy: string | null } | null> {
+  const { rows } = await db().query<any>(`SELECT tree,
+    to_char(updated_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS updated_at, updated_by
+    FROM hierarchies WHERE tenant_id=$1`, [tenantId]);
+  return rows[0] ? { tree: rows[0].tree, updatedAt: rows[0].updated_at, updatedBy: rows[0].updated_by } : null;
+}
+export async function setHierarchy(tenantId: string, tree: any, updatedBy: string): Promise<void> {
+  await db().query(`INSERT INTO hierarchies (tenant_id, tree, updated_by) VALUES ($1,$2::jsonb,$3)
+    ON CONFLICT (tenant_id) DO UPDATE SET tree=EXCLUDED.tree, updated_at=now(), updated_by=EXCLUDED.updated_by`,
+    [tenantId, JSON.stringify(tree), updatedBy]);
+}
+export async function listHierarchies(): Promise<Array<{ tenantId: string; updatedAt: string | null; updatedBy: string | null }>> {
+  const { rows } = await db().query<any>(`SELECT tenant_id,
+    to_char(updated_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS updated_at, updated_by
+    FROM hierarchies ORDER BY tenant_id`);
+  return rows.map((r) => ({ tenantId: r.tenant_id, updatedAt: r.updated_at, updatedBy: r.updated_by }));
 }
 
 // ---- Living backlog (Arke's super-admin panel; mirrors Nova's model) --------

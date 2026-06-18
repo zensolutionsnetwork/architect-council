@@ -40,6 +40,12 @@ const PROTECTED: { method: string; path: string; body?: object }[] = [
   { method: 'POST', path: '/api/council/notify-email', body: { email: 'x@y.com' } },
   { method: 'POST', path: '/api/council/notify-email/test', body: {} },
   { method: 'DELETE', path: '/api/meeting/route-auth-probe-id' },
+  { method: 'GET',  path: '/api/bridge/corpus-status?actor=logos' },
+  { method: 'GET',  path: '/api/council/boots' },
+  { method: 'GET',  path: '/api/council/hierarchy' },
+  { method: 'GET',  path: '/api/council/hierarchy/probe-tenant' },
+  { method: 'PUT',  path: '/api/council/hierarchy/probe-tenant', body: { tree: { tenantId: 'x', nodes: [] } } },
+  { method: 'GET',  path: '/api/council/hierarchy/probe-tenant/cross-read?viewer=a&target=b&scope=code' },
 ];
 
 async function request(method: string, path: string, body?: object): Promise<number> {

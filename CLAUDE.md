@@ -76,9 +76,16 @@ or ask Mathieu first.
 > → ONLY THEN wire hub-side `validateHierarchy` (#29, do not ship solo); also watch the **#28 echo live**
 > on the next manifest commit + Arke's `council-prep-upload.ts` wiring; (3) **my judged-ACCEPT homework**
 > (sequenced): hub auth-layer exhaustiveness-`switch` audit (logged-deny default) + hub corpus-commit
-> floor-assert + delta-print (Nova's pattern). **#29 next = the consent-gated cross-read endpoint + tenant
-> persistence (P2 #7) — the validator is now at rev2 parity + CI-gated, so the runtime wiring is the only
-> remaining piece.** **STUCK-MEETING CLEANUP DONE (Mathieu ok'd 06-18, doesn't
+> floor-assert + delta-print (Nova's pattern). **EVENING SHIPS (owner "do everything solo"):** (8) **P1 #7
+> corpus-ready signal** — `GET /api/bridge/corpus-status?actor=` -> `{actor,corpus_ready,corpus_version,
+> built_at,etag}` (member-gated, `aae6c03`) UNBLOCKS Logos's `chronicleCorpusGate` (ask `a53f0b7b`);
+> smoke-confirmed + "VERIFIED LIVE" posted + blocker closed. (9) **P2 #7 cross-read endpoint + tenant
+> persistence** (`6...`) — `hierarchies` table (validated FAIL-CLOSED on write) + owner GET/PUT/list
+> `/api/council/hierarchy[/:tenantId]` + `GET /:tenantId/cross-read?viewer=&target=&scope=` enforcing
+> `canCrossRead` (member reads AS own node; owner any); delivers backlog content + code(corpus) META, other
+> scopes gate-pass `scopeSource:"unwired"`; route-auth now **31 gated/0 open** (added probes for
+> corpus-status, boots, all hierarchy routes). #29 now functionally complete; **remaining = full-corpus
+> delivery through the gate + first acting node (joint w/ Arke).** **STUCK-MEETING CLEANUP DONE (Mathieu ok'd 06-18, doesn't
 > need the old reports):** purged **25 empty/probe/smoke/test meeting rows** via `DELETE /api/meeting/:id`
 > (owner directive 2026-06-15; rule = delete any meeting with <=2 projection turns) — no `/close`, so NO
 > report emails + no synth spend. **10 real council meetings remain** (all >=3 turns, incl. #1 `6aef82f6`/83t,

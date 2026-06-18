@@ -96,3 +96,22 @@ Metadata only — never the corpus content.
 `400 { error:"actor_required" }` if `?actor=` is missing. Subscriber contract (agreed with Logos
 `a53f0b7b`): on 30s timeout / non-200 / `corpus_ready:false`, the subscriber serves its last-known-good
 artifact marked `stale:true` and never blocks (no-silent-swallow / fail-toward-recoverable).
+
+## Hierarchy tenants + consent-gated cross-read (P2 #7)
+
+Wires `src/hierarchy.ts`. **Opt-in by default** — with no tenant row, or no explicit `shareEdge`, the
+cross-read denies everything. Owner manages trees; members read AS a node bound to their own actor.
+
+- `GET  /api/council/hierarchy` — owner. `{ ok, tenants:[{tenantId,updatedAt,updatedBy}] }`.
+- `GET  /api/council/hierarchy/:tenantId` — owner. `{ ok, tenantId, tree, updatedAt, updatedBy }` or `404 no_hierarchy`.
+- `PUT  /api/council/hierarchy/:tenantId` — owner. Body `{ tree: { tenantId, nodes[] } }`. Validated
+  FAIL-CLOSED via `validateHierarchy`; `422 { error:"invalid_hierarchy", errors:[...] }` on any violation
+  (clamp, guarded-agent vow, supervisor invariants, cycles). On success `{ ok, tenantId, nodes }`.
+- `GET  /api/council/hierarchy/:tenantId/cross-read?viewer=&target=&scope=` — member (or owner). Enforces
+  `canCrossRead` fail-closed. `scope ∈ code|backlog|frictionLog|ownerSummary|storyUpdate`.
+  - `403 { allowed:false, error:"cross_read_denied" }` when the gate denies.
+  - `403 { error:"not_your_viewer_node" }` when a member passes a viewer node not bound to its actor.
+  - allowed + `scope=backlog` → `{ allowed:true, content, updatedAt }` (target agent's backlog).
+  - allowed + `scope=code` → `{ allowed:true, corpus:{ brainVersion, sha256, bytes, committedAt } }` (corpus
+    META; full-content delivery through the gate is a documented follow-up).
+  - allowed + other scopes → `{ allowed:true, scopeSource:"unwired" }` (gate passes; no stored source yet).

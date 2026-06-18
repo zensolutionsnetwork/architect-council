@@ -24,7 +24,9 @@ import {
   createBrainUpload, getBrainUpload, putBrainChunk, brainReceived, assembleBrain,
   commitBrainV2, getBrainV2Meta, getBrainV2Content, sweepBrainUploads,
   getSetting, setSetting, getRecentBoots,
+  getHierarchy, setHierarchy, listHierarchies,
 } from './store.js';
+import { validateHierarchy, canCrossRead, type Tenant, type ShareScope } from './hierarchy.js';
 import { finalizeMeetingClose } from './finalize.js';
 
 const clip = (s: any, n: number) => String(s ?? '').slice(0, n);
@@ -730,6 +732,67 @@ councilRouter.get('/council/boots', async (req, res) => {
     const a = await resolveActor(req); if (!a || !a.admin) return res.status(401).json({ error: 'unauthorized' });
     const limit = Number((req.query.limit as string) || 20);
     res.json({ ok: true, boots: await getRecentBoots(limit) });
+  } catch (e) { internalError(res, e); }
+});
+
+// ===== HIERARCHY TENANTS + consent-gated cross-read (P2 #7) — wires src/hierarchy.ts ==================
+// Owner manages tenant trees (validated FAIL-CLOSED on write — an invalid/guardrail-violating tree can
+// never persist). Members exercise the cross-read AS a node bound to their own actor (owner may act as
+// any viewer). Opt-in by default: no tenant row, or no explicit shareEdge, denies everything.
+const CROSS_READ_SCOPES = new Set<ShareScope>(['code', 'backlog', 'frictionLog', 'ownerSummary', 'storyUpdate']);
+councilRouter.get('/council/hierarchy', async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a || !a.admin) return res.status(401).json({ error: 'unauthorized' });
+    res.json({ ok: true, tenants: await listHierarchies() });
+  } catch (e) { internalError(res, e); }
+});
+councilRouter.get('/council/hierarchy/:tenantId', async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a || !a.admin) return res.status(401).json({ error: 'unauthorized' });
+    const h = await getHierarchy(req.params.tenantId); if (!h) return res.status(404).json({ error: 'no_hierarchy' });
+    res.json({ ok: true, tenantId: req.params.tenantId, ...h });
+  } catch (e) { internalError(res, e); }
+});
+councilRouter.put('/council/hierarchy/:tenantId', async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a || !a.admin) return res.status(401).json({ error: 'unauthorized' });
+    const tree = (req.body || {}).tree as Tenant;
+    if (!tree || !Array.isArray(tree.nodes)) return res.status(400).json({ error: 'bad_request', message: 'body.tree { tenantId, nodes[] } required' });
+    const v = validateHierarchy(tree);
+    if (!v.ok) return res.status(422).json({ error: 'invalid_hierarchy', errors: v.errors });
+    await setHierarchy(req.params.tenantId, tree, a.actor);
+    res.json({ ok: true, tenantId: req.params.tenantId, nodes: tree.nodes.length });
+  } catch (e) { internalError(res, e); }
+});
+councilRouter.get('/council/hierarchy/:tenantId/cross-read', async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
+    const h = await getHierarchy(req.params.tenantId); if (!h) return res.status(404).json({ error: 'no_hierarchy' });
+    const tree = h.tree as Tenant;
+    const viewer = String(req.query.viewer || ''); const target = String(req.query.target || ''); const scope = String(req.query.scope || '');
+    if (!viewer || !target || !scope) return res.status(400).json({ error: 'bad_request', message: 'viewer, target, scope query params required' });
+    if (!CROSS_READ_SCOPES.has(scope as ShareScope)) return res.status(400).json({ error: 'bad_scope', message: 'scope must be code|backlog|frictionLog|ownerSummary|storyUpdate' });
+    const vNode = tree.nodes.find((n) => n.nodeId === viewer);
+    const tNode = tree.nodes.find((n) => n.nodeId === target);
+    if (!vNode || !tNode) return res.status(404).json({ error: 'node_not_found' });
+    // a member may only cross-read AS a node bound to its own actor; owner may act as any viewer.
+    if (!a.admin && vNode.agentRef !== a.actor) return res.status(403).json({ error: 'not_your_viewer_node', expected: vNode.agentRef || null, you: a.actor });
+    if (!canCrossRead(tree, viewer, target, scope as ShareScope)) {
+      return res.status(403).json({ allowed: false, error: 'cross_read_denied', viewer, target, scope });
+    }
+    const targetActor = tNode.agentRef || null;
+    if (scope === 'backlog') {
+      const row = (await getAgentBacklogs()).find((r: any) => r.actor === targetActor);
+      return res.json({ allowed: true, scope, viewer, target, targetActor, content: row ? row.content : null, updatedAt: row ? row.updatedAt : null });
+    }
+    if (scope === 'code') {
+      const meta = targetActor ? await getBrainV2Meta(targetActor, 'corpus') : null;
+      return res.json({ allowed: true, scope, viewer, target, targetActor,
+        corpus: meta ? { brainVersion: meta.brain_version, sha256: meta.sha256, bytes: Number(meta.bytes), committedAt: meta.committed_at } : null });
+    }
+    // frictionLog / ownerSummary / storyUpdate: the gate passes, but no stored source is wired yet.
+    return res.json({ allowed: true, scope, viewer, target, targetActor, scopeSource: 'unwired',
+      note: 'cross-read authorized; no stored source wired for this scope yet' });
   } catch (e) { internalError(res, e); }
 });
 // ===== AUTONOMOUS VOICE LOOP (HUB_AUTONOMOUS_VOICE_SPEC §4) — owner-gated, FAIL-CLOSED money gate =====

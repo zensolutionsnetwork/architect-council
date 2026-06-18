@@ -484,9 +484,12 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
     of a live loop (synthesize + store + email the owner report on that path too). Pairs with Arke's
     own `src/server.ts` missing-closing-phase fix (LIVE_PHASES + unknown→logSwallow+holdLive). Day
     session; do NOT deploy over a live meeting.
-7. **Corpus-ready flag** (corpus-contract.md follow-up) — when it ships, register Logos's
-   `/api/bridge/chronicle` corpus artifact as a BLOCKING subscriber (his ask `224b71ca`,
-   2026-06-11): chronicle must confirm consumption before the flag flips. Design with Arke.
+7. ~~**Corpus-ready flag**~~ **DONE 2026-06-18 (`aae6c03`).** Shipped `GET /api/bridge/corpus-status?actor=`
+   → `{actor, corpus_ready, corpus_version, built_at, etag}` (member-gated; etag = corpus sha256 for
+   change-detection), contract frozen in `RESPONSE_SHAPES.md`. Logos's `chronicleCorpusGate` consumes it
+   fail-closed (his ask `a53f0b7b`/`224b71ca`): on 30s timeout / non-200 / not-ready → last-known-good
+   `stale:true`, never block. Smoke-confirmed `corpus_ready=true` for logos; "VERIFIED LIVE" posted, he is
+   clear to flip the gate on.
 8. ~~**Boot-stamp log** (Nova's pattern, `4ef9e66b`)~~ **DONE 2026-06-18 (afternoon batch).** `boot_log`
    table + `recordBoot()` at server start (deploy_sha from `RAILWAY_GIT_COMMIT_SHA` + non-reversible
    12-hex `secret_fp` = first 12 of sha256(MASTER_KEY), NEVER the secret) + owner-gated
@@ -498,9 +501,13 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
    the optimal working process. Teaching material `docs/DAILY_RITUAL_PATTERN.md`; agenda item queued
    for the first real meeting (Kairos teaches morning/close rituals, each agent maps their version,
    four ratify). Metric: every agent's hub backlog row updates daily unprompted.
-7. **Hierarchy: WIRE the enforcement** — land the canonical 2.1 schema in the contract (with Arke +
-   the four), then wire `src/hierarchy.ts` into a consent-gated cross-read endpoint + persist tenants.
-   Primitives + tests already built (`46d9b16`). Then first acting node = daily code-review agent.
+7. **Hierarchy: WIRE the enforcement** — schema landed + rev2 supervisor parity (06-18). **Cross-read
+   endpoint + tenant persistence DONE 2026-06-18:** `hierarchies` table (validated FAIL-CLOSED on write) +
+   owner GET/PUT/list `/api/council/hierarchy[/:tenantId]` + `GET /:tenantId/cross-read?viewer=&target=&scope=`
+   enforcing `canCrossRead` (member reads AS own node; owner acts as any). Delivers backlog content +
+   code(corpus) META; other scopes gate-pass with `scopeSource:"unwired"`. **REMAINING:** full-corpus
+   delivery through the gate (reuse getBrainV2Content) + the first acting node = daily code-review agent
+   (joint design w/ Arke). Primitives/tests at 28 checks; routes route-auth-gated (31/0).
 8. Managed Agents Layer-2 runtime eval (Arke, post-rehearsal): pilot ONE agent, self-hosted sandbox,
    hard daily budget cap.
 9. Layer-1 Manager AI design — **DRAFT SHIPPED 2026-06-10** (`docs/LAYER1_MANAGER_SPEC.md`:
