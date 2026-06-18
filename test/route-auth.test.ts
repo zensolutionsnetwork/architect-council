@@ -45,6 +45,7 @@ const PROTECTED: { method: string; path: string; body?: object }[] = [
   { method: 'GET',  path: '/api/council/hierarchy' },
   { method: 'GET',  path: '/api/council/hierarchy/probe-tenant' },
   { method: 'PUT',  path: '/api/council/hierarchy/probe-tenant', body: { tree: { tenantId: 'x', nodes: [] } } },
+  { method: 'DELETE', path: '/api/council/hierarchy/probe-tenant' },
   { method: 'GET',  path: '/api/council/hierarchy/probe-tenant/cross-read?viewer=a&target=b&scope=code' },
 ];
 

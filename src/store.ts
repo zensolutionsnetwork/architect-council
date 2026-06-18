@@ -199,6 +199,10 @@ export async function setHierarchy(tenantId: string, tree: any, updatedBy: strin
     ON CONFLICT (tenant_id) DO UPDATE SET tree=EXCLUDED.tree, updated_at=now(), updated_by=EXCLUDED.updated_by`,
     [tenantId, JSON.stringify(tree), updatedBy]);
 }
+export async function deleteHierarchy(tenantId: string): Promise<boolean> {
+  const { rowCount } = await db().query(`DELETE FROM hierarchies WHERE tenant_id=$1`, [tenantId]);
+  return (rowCount ?? 0) > 0;
+}
 export async function listHierarchies(): Promise<Array<{ tenantId: string; updatedAt: string | null; updatedBy: string | null }>> {
   const { rows } = await db().query<any>(`SELECT tenant_id,
     to_char(updated_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS updated_at, updated_by

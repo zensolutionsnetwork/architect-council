@@ -24,7 +24,7 @@ import {
   createBrainUpload, getBrainUpload, putBrainChunk, brainReceived, assembleBrain,
   commitBrainV2, getBrainV2Meta, getBrainV2Content, sweepBrainUploads,
   getSetting, setSetting, getRecentBoots,
-  getHierarchy, setHierarchy, listHierarchies,
+  getHierarchy, setHierarchy, listHierarchies, deleteHierarchy,
 } from './store.js';
 import { validateHierarchy, canCrossRead, type Tenant, type ShareScope } from './hierarchy.js';
 import { finalizeMeetingClose } from './finalize.js';
@@ -762,6 +762,14 @@ councilRouter.put('/council/hierarchy/:tenantId', async (req, res) => {
     if (!v.ok) return res.status(422).json({ error: 'invalid_hierarchy', errors: v.errors });
     await setHierarchy(req.params.tenantId, tree, a.actor);
     res.json({ ok: true, tenantId: req.params.tenantId, nodes: tree.nodes.length });
+  } catch (e) { internalError(res, e); }
+});
+councilRouter.delete('/council/hierarchy/:tenantId', async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a || !a.admin) return res.status(401).json({ error: 'unauthorized' });
+    const deleted = await deleteHierarchy(req.params.tenantId);
+    if (!deleted) return res.status(404).json({ error: 'no_hierarchy' });
+    res.json({ ok: true, deleted: req.params.tenantId });
   } catch (e) { internalError(res, e); }
 });
 councilRouter.get('/council/hierarchy/:tenantId/cross-read', async (req, res) => {
