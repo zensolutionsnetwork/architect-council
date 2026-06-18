@@ -83,9 +83,13 @@ or ask Mathieu first.
 > persistence** (`6...`) — `hierarchies` table (validated FAIL-CLOSED on write) + owner GET/PUT/list
 > `/api/council/hierarchy[/:tenantId]` + `GET /:tenantId/cross-read?viewer=&target=&scope=` enforcing
 > `canCrossRead` (member reads AS own node; owner any); delivers backlog content + code(corpus) META, other
-> scopes gate-pass `scopeSource:"unwired"`; route-auth now **31 gated/0 open** (added probes for
-> corpus-status, boots, all hierarchy routes). #29 now functionally complete; **remaining = full-corpus
-> delivery through the gate + first acting node (joint w/ Arke).** **STUCK-MEETING CLEANUP DONE (Mathieu ok'd 06-18, doesn't
+> scopes gate-pass `scopeSource:"unwired"`. Owner CRUD completed with **DELETE** (`94947bc`); route-auth
+> **32 gated/0 open** (probes for corpus-status, boots, all hierarchy routes incl. DELETE). **PROD-SMOKE
+> PASS** (`388ab32`/`94947bc`): PUT valid tree 200; backlog cross-read ALLOWED + content delivered; code
+> cross-read DENIED 403 (no edge); invalid tree 422; smoke tenants DELETEd → tenants=0. Arke notified
+> (`32ca701f`). #29 now functionally complete; **remaining = full-corpus delivery through the gate (reuse
+> getBrainV2Content under canCrossRead) + first acting node = daily code-review agent (BOTH joint w/ Arke
+> — blocked on co-design, not solo).** **STUCK-MEETING CLEANUP DONE (Mathieu ok'd 06-18, doesn't
 > need the old reports):** purged **25 empty/probe/smoke/test meeting rows** via `DELETE /api/meeting/:id`
 > (owner directive 2026-06-15; rule = delete any meeting with <=2 projection turns) — no `/close`, so NO
 > report emails + no synth spend. **10 real council meetings remain** (all >=3 turns, incl. #1 `6aef82f6`/83t,
