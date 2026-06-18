@@ -76,6 +76,24 @@ bridgeRouter.post('/bridge/ask', requireMemberSecret, async (req, res) => {
   } catch (e) { internalError(res, e); }
 });
 bridgeRouter.get('/bridge/brain', requireMemberSecret, (_req, res) => res.json({ project: SELF, brain: councilBrain(), updatedAt: new Date().toISOString() }));
+// Corpus-ready signal (P1 #7, Logos ask `a53f0b7b`/`224b71ca`): a fail-closed status flag a downstream
+// subscriber (Logos's chronicleCorpusGate) polls before serving. Returns whether an actor's full-code
+// corpus is committed + a stable etag (the corpus sha256) for change-detection. Metadata only — never
+// the corpus content (that is the gated cross-read path). Contract is frozen in docs/RESPONSE_SHAPES.md.
+bridgeRouter.get('/bridge/corpus-status', requireMemberSecret, async (req, res) => {
+  try {
+    const actor = String(req.query.actor || '');
+    if (!actor) return res.status(400).json({ error: 'actor_required', message: 'query param ?actor= is required' });
+    const meta = await getBrainV2Meta(actor, 'corpus');
+    res.json({
+      actor,
+      corpus_ready: !!meta,                               // false => subscriber serves last-known-good, stale:true
+      corpus_version: meta ? meta.brain_version : null,   // "<actor>@sha256:<hash>"
+      built_at: meta ? meta.committed_at : null,          // server-stamped commit time (UTC ISO) or null
+      etag: meta ? String(meta.sha256) : null,            // corpus content hash; compare to detect a new build
+    });
+  } catch (e) { internalError(res, e); }
+});
 bridgeRouter.post('/bridge/review', requireMemberSecret, async (req, res) => {
   try { res.json(await reviewProposal(req.body || {})); } catch (e) { internalError(res, e); }
 });

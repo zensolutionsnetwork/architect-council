@@ -76,3 +76,23 @@ A `pass` turn carries `text:""` (key present, empty) — never omitted. The SPEA
 camelCase 4-field structured report: `{ codeReviewImprovements, directionConsensus, frictionFixes,
 flags }` plus `{ id, agenda, closedAt, raw }`. Synthesized once at real close (best-effort; null if
 synthesis was skipped or the meeting is mid-flight).
+
+## `GET /api/bridge/corpus-status?actor=<actor>` (corpus-ready signal, P1 #7)
+
+A fail-closed readiness flag a downstream subscriber polls before serving (e.g. Logos's
+`chronicleCorpusGate`). Auth: `requireMemberSecret` (any authenticated member may query any actor).
+Metadata only — never the corpus content.
+
+```jsonc
+{
+  "actor": "logos",
+  "corpus_ready": true,        // boolean — true iff a committed corpus row exists for the actor
+  "corpus_version": "logos@sha256:<hash>", // string|null — the committed corpus brainVersion
+  "built_at": "2026-06-18T07:00:00Z",      // string|null — server-stamped corpus commit time (UTC ISO)
+  "etag": "<corpus-sha256-hex>"            // string|null — corpus content hash; compare to detect a new build
+}
+```
+
+`400 { error:"actor_required" }` if `?actor=` is missing. Subscriber contract (agreed with Logos
+`a53f0b7b`): on 30s timeout / non-200 / `corpus_ready:false`, the subscriber serves its last-known-good
+artifact marked `stale:true` and never blocks (no-silent-swallow / fail-toward-recoverable).
