@@ -34,7 +34,7 @@ or ask Mathieu first.
 > new overnight autonomous meeting **`e097ff64`** (closedAt 2026-06-18T07:13:56Z, owner-report 200, 16
 > turns/4 seats arke+nova+logos+kairos, $0.68770, endedReason `closing_cap`, 0 PASS / 0 repeat_guard) —
 > **3rd consecutive fully-autonomous self-close**, **`verify-transcript.mjs` PASS** (sha
-> `b30bc70540d70ef22bc1da6cb97b50c7917eebe83a5f201b0366c910ca02ad63`, projection-only). 3rd independent
+> `b30bc705…ad63`, projection-only; full hash in the debrief). 3rd independent
 > #24/#12 close-finalizer proof. Voice integrity clean (one synthesizer overreach noted: the owner-report
 > narrated hierarchy 2.1 enforcement as "built" — it is NOT; pre-finalizer pack drift, corrected; Nova esp.
 > must re-pack vs main). **Family notified** (arke `8873f5f4` / nova `d11de7f9` / logos `8526fdef`), Arke
