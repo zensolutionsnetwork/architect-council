@@ -486,7 +486,7 @@ export async function closeStaleVoiceMeetings(): Promise<number> {
 /** Sum of USD spent across meetings created today (UTC) — for the DAILY_MEETING_BUDGET_USD gate. */
 export async function usdSpentTodayUtc(): Promise<number> {
   const { rows } = await db().query<any>(
-    `SELECT COALESCE(SUM((cost_ledger->>'usd')::numeric),0) AS usd
+    `SELECT COALESCE(SUM((cost_ledger->'total'->>'usd')::numeric),0) AS usd
      FROM meetings WHERE cost_ledger IS NOT NULL AND (created_at at time zone 'UTC')::date = (now() at time zone 'UTC')::date`);
   return Number(rows[0]?.usd || 0);
 }
@@ -503,7 +503,7 @@ export async function listMeetings(limit = 20): Promise<any[]> {
 /** Richer meeting list for the owner dashboard — adds closed_at, ended_reason, and the ledger USD. */
 export async function listMeetingsForDashboard(limit = 12): Promise<any[]> {
   const { rows } = await db().query<any>(`SELECT id, agenda, phase, turns_used, turn_cap, ended_reason,
-    (cost_ledger->>'usd')::numeric AS usd,
+    (cost_ledger->'total'->>'usd')::numeric AS usd,
     to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
     to_char(closed_at  at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS closed_at
     FROM meetings ORDER BY created_at DESC LIMIT $1`, [limit]);
