@@ -832,14 +832,16 @@ councilRouter.post('/council/scheduler', async (req, res) => {
 // page; all data is assembled here. Powers the private /dashboard board.
 councilRouter.get('/council/dashboard', requireOwner, async (_req, res) => {
   try {
+    // Only the 4 canonical council seats (MEETING_DEFAULT) — never the hub-self member
+    // (architect-council) or the retired pre-true-name rows (zen-ai, biblevoice).
     const memberStatus = async (): Promise<any[]> => {
       const out: any[] = [];
-      for (const mm of await listMembers()) {
+      for (const name of MEETING_DEFAULT) {
         let corpus: any = null, pack: any = null, manifest: any = null;
-        try { corpus = await getBrainV2Meta(mm.name, 'corpus'); } catch { /* absent */ }
-        try { pack = await getBrainV2Meta(mm.name, 'pack'); } catch { /* absent */ }
-        try { manifest = await getBrainV2Meta(mm.name, 'manifest'); } catch { /* absent */ }
-        out.push({ actor: mm.name, corpusReady: !!corpus, packReady: !!pack, manifestReady: !!manifest,
+        try { corpus = await getBrainV2Meta(name, 'corpus'); } catch { /* absent */ }
+        try { pack = await getBrainV2Meta(name, 'pack'); } catch { /* absent */ }
+        try { manifest = await getBrainV2Meta(name, 'manifest'); } catch { /* absent */ }
+        out.push({ actor: name, corpusReady: !!corpus, packReady: !!pack, manifestReady: !!manifest,
           corpusBuiltAt: corpus ? corpus.committed_at : null });
       }
       return out;
