@@ -3,10 +3,33 @@
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
 > Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-18
-> (DAY SESSION morning ritual: e097ff64 debriefed + hash-verified, family notified, inbox 0; shipped
-> #28 ok/schemaVersion + JCS doc-fixture + RESPONSE_SHAPES.md).
+> (DAY SESSION PM/EVE: shipped board-to-4-seats, agenda-in-hub + directive channel, Layer-1 Manager v0;
+> consumed Arke's consolidated reply; #29 schemas aligned both sides; inbox 0; all CI-green + prod-smoked).
 
 ## STATE AT A GLANCE
+- **DAY SESSION (2026-06-18 PM/EVE, Mathieu present) — big additive build run, 6 clean CI-green deploys.**
+  Consumed Arke's consolidated reply (`7808a124`): scheduler UI WIRED app-side, his app V1-CLEAN (my v1
+  removal needs no repoint), **#29 presence shape aligned to my `Set<string>`** (schemas identical both
+  sides), **#28 done both sides**, single hub firing path confirmed (no double-fire). Inbox 0.
+  **SHIPPED (owner-greenlit, each gated + prod-smoked):** (1) **owner board opened to ALL FOUR seats**
+  (`1484b71`) — old arke+kairos-only filter removed (`BOARD_ACTORS=MEETING_DEFAULT`), hub-self row
+  excluded; prod shows arke/kairos/nova (Logos appears once he posts). (2) **Agenda-in-hub + directive
+  channel** (`23a08d1`) — `agenda_items` table + `POST/GET /api/council/agenda` (member-or-owner, 8KB cap,
+  data-not-commands) + `POST /:id/archive` (owner/author); meeting-open composes + pins open items into the
+  seed (skips dryRun) → `discussed`; directive = env-task `kind:"directive"` OWNER-ONLY (403 for members);
+  prod-smoke PASS incl. member-directive 403. (3) **Layer-1 Manager v0** (`b317a0b`) — `src/manager.ts`
+  hooked at meeting-close: per-agent adoption signals + cheap since-last code review (reads small PACK
+  summaries not the corpus, one bounded Sonnet call, only when code shipped) + recurring-flag detection
+  (≥2 mtgs) that AUTO-SEEDS one deduped agenda item (`actor:"layer1"`); owner-gated `GET /api/council/
+  manager/{digests,digest/:id,flags}`; route-auth 39/0; prod endpoints live (empty until first real close).
+  **OWNER INTENT (memory `layer1-migrates-to-supervisor`): Layer-1 functions eventually MIGRATE to Arke's
+  Supervisor app — built portable (hub computes, app displays, app eventually owns).** RESPONSE_SHAPES.md
+  documents agenda/directive/manager shapes for Arke's UI. **OWNER RULINGS:** hub auto owner-report STAYS
+  (only Nova's hand-written email retired — her task); `/backlog` board STAYS; every agent keeps its own
+  online backlog; **NEW standing meeting topic: every hub change is walked through at the meeting so the
+  family stays aware + Kairos/Arke stay in sync** (agenda updated). Owner design picks for Layer-1: deep
+  (reads code), auto-seeds agenda, per-meeting cadence. **Earlier-today ship-set (morning + first batch)
+  unchanged below.**
 - **DAY SESSION (2026-06-18, Mathieu present) — morning ritual done + one small code deploy.** Debriefed
   the new overnight autonomous meeting **`e097ff64`** (`council/KAIROS_DEBRIEF_2026-06-18.md`): 3rd
   consecutive fully-autonomous self-close (closedAt 07:13:56Z, owner-report 200, 16 turns/4 seats,
@@ -510,11 +533,17 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
    (joint design w/ Arke). Primitives/tests at 28 checks; routes route-auth-gated (31/0).
 8. Managed Agents Layer-2 runtime eval (Arke, post-rehearsal): pilot ONE agent, self-hosted sandbox,
    hard daily budget cap.
-9. Layer-1 Manager AI design — **DRAFT SHIPPED 2026-06-10** (`docs/LAYER1_MANAGER_SPEC.md`:
-   adoption tracker · recurring-flag detector · agenda seed · weekly rollup; 4 ratification Qs).
-   Implement after ratification + first real reports. Layers 2–3 captured.
-10. Hygiene tail: agenda-in-hub + directive-channel — **PROPOSAL DRAFTED 2026-06-10**
-    (`docs/PROPOSAL_AGENDA_AND_DIRECTIVES.md`, ratify then Kairos implements). UTC-budget note open.
+9. Layer-1 Manager AI — **v0 SHIPPED HUB-SIDE 2026-06-18 (`b317a0b`, owner-greenlit).** Runs at
+   meeting-close (`src/manager.ts`): adoption signals + cheap since-last code review (small PACK summaries,
+   one bounded call, only when code shipped) + recurring-flag auto-seed to the agenda (deduped). Owner-gated
+   `GET /api/council/manager/{digests,digest/:id,flags}`; route-auth 39/0; prod live (first digest at the
+   next real close). **PORTABLE for Arke's Supervisor (memory `layer1-migrates-to-supervisor`).** Remaining:
+   family ratification ack; tune corpora-depth/stale-dispute against real digests; co-design Supervisor handoff.
+10. Hygiene tail: agenda-in-hub + directive-channel — **SHIPPED HUB-SIDE 2026-06-18 (`23a08d1`,
+    owner-greenlit).** `agenda_items` + agenda routes (member-or-owner, 8KB, data-not-commands) + archive
+    (owner/author) + meeting-open pin; directive = env-task `kind:"directive"` OWNER-ONLY (403 for members).
+    Prod-smoke PASS. Remaining: family ratification ack + Arke wires the app cockpit (agenda list + directive
+    composer). `COUNCIL_AGENDA.md` is now the LOCAL MIRROR.
 28. **committed_at server-stamp (NEW 2026-06-17, from mtg #9, agreed w/ Arke).** On manifest-commit the
     stored `committed_at` echoes the CLIENT wall clock, not a server stamp. Agreed split fix: **Kairos**
     writes `committed_at = server now()` at commit + echoes it in the commit response; **Arke** wires
@@ -526,37 +555,31 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
     canonical 2.1 schema exists.)
 
 ## WAITING ON
-- **Mathieu**: (1) **Layer-1 Manager + agenda/directive channel** — go/no-go on building each. Per owner
-  2026-06-18 I am CONSULTING ARKE FIRST (msg `fd5fe481`): does his owner-app/supervisor project already
-  cover part of it, build hub-side vs in-app. Hold both until Arke replies + owner decides. (2)
-  **hub-side v2 auto-scheduler SHIPPED + ACTIVATED 2026-06-18 (`beeac4c`).** The external trigger ran on
-  Mathieu's OTHER computer (owner confirmed); replaced it with a hub-side scheduler that fires open +
-  run-autonomous itself, 24/7, gated by app_setting `hub_meeting_scheduler`='on' (ACTIVATED) +
-  `VOICE_LOOP_ENABLED` (=true, verified), once per Toronto day at an app-configurable time (default 03:00),
-  never over a live meeting. **Owner-controllable from Arke's app:** GET/POST `/api/council/scheduler`
-  `{enabled,time}` (in RESPONSE_SHAPES.md; Arke wiring the toggle + time picker, asked `99960cca`).
-  **OWNER ACTION: shut down the external trigger task on the other computer** (in progress) so only the hub
-  fires. `COUNCIL_V2_LIVE` stays OFF — it is the dead v1 flag, do NOT set it. (3) checksuite-guard/Railway app_id 73253
-  source-disable (owner admin PAT) + Railway PG recurring-backup + Google verification = short browser
-  walkthroughs. (autonomous-spend #22 = KEEP RUNNING ✅; stuck/test meetings ERASED ✅; SN7100/SSD = DONE
-  per owner 06-18, space cleared; #29 owner call RESOLVED — Kairos owns it, validator + cross-read shipped.)
+- **Mathieu**: effectively NOTHING blocking. (1) **Layer-1 Manager + agenda/directive — RESOLVED + BUILT
+  2026-06-18:** Arke consulted (`7808a124`, his read = build Layer-1 hub-side / app displays), owner
+  greenlit, all three SHIPPED hub-side (agenda+directive `23a08d1`, Layer-1 v0 `b317a0b`); Layer-1 design
+  picks made (deep / auto-seed / per-meeting). (2) **auto-scheduler SHIPPED + ACTIVATED (`beeac4c`)**;
+  scheduler UI wired app-side by Arke; only owner residue = shut down the old external trigger task if not
+  already off (`COUNCIL_V2_LIVE` stays OFF — dead v1 flag). (3) checksuite-guard #11 = RESOLVED (mute green;
+  the source-disable PAT is OPTIONAL cosmetic, abandoned) · Railway PG backup = RESOLVED 06-17 (daily +
+  PITR) · Google verification = NOT a Mathieu/Kairos item (Nova's own session, off this list). (autonomous-
+  spend #22 = KEEP RUNNING ✅; stuck/test meetings ERASED ✅; SN7100/SSD = DONE; #29 owner call RESOLVED.)
 - **Nova + Logos**: brain-manifest 2.1 ACCEPT — ✅ DONE (Nova `e1528e03`, Logos `9298fc53`/`3c33082b`).
   All four ratified; nothing further owed here.
-- **Kairos (own queue)**: pending meeting debriefs — **`e097ff64` (ran overnight 06-17→18, self-closed
-  via finalizer, ~$0.69)**, #9 `4386e50c`, `fc5b1606`, #4 `17f49b6f`, room `344fcf74`, and the
-  still-pending #3 — kairos-meeting-debrief ritual, next day session. **Day-session build: wire #29 rev2
-  `validateHierarchy` hub-side** (supervisor node + parentId→owner + canDirect + presence/
-  resolveEffectiveAuthority) AFTER Arke's `standalone-client/src/hierarchy.ts` mirror lands + confirms.
-  (P2 #28 hub-side echo is DONE/live `ef98b39`; remaining is Arke's client wiring + verifying the echo
-  on the next manifest commit.)
-- **Arke**: (next session, per `28a3b655`) mirror `standalone-client/src/hierarchy.ts` to 2.1 rev2
-  (supervisor node + canDirect + presence/resolveEffectiveAuthority) then confirm → unblocks my
-  hub-side wiring · wire `council-prep-upload.ts` to record the echoed `committed_at` (#28 his half) ·
-  align `canon.ts` to the JCS golden vector. Also: prep/debrief skill drafts · Layer-2 eval
-  (post-rehearsal) · email panel wiring. (`src/server.ts`
-  missing-closing-phase fix: ✅ DONE EOD 06-16 — `noSilentSwallow.test.ts`, 62/62; #24 close-finalizer
-  confirmed CLOSED both sides via `fc5b1606`; `MANIFEST_21_ENABLED` flip + manifest-commit-last +
-  turnCap + corpus-contract + 2.1 accept + his debriefs: ✅ done.)
+- **Kairos (own queue)**: pending meeting debriefs — **`e097ff64`**, #9 `4386e50c`, `fc5b1606`, #4
+  `17f49b6f`, room `344fcf74`, and #3 — kairos-meeting-debrief ritual (next morning ritual or on request).
+  **#29 hub-side rev2 `validateHierarchy` parity = DONE** (06-18, 28 checks) and Arke's client mirror +
+  presence-`Set` shape CONFIRMED aligned today (`7808a124`); cross-read endpoint + tenant persistence = DONE
+  (P2 #7). **Remaining #29 = JOINT with Arke (not solo):** full-corpus delivery through the gate
+  (reuse `getBrainV2Content` under `canCrossRead`) + first acting node = the daily code-review agent — Arke
+  brings a co-design proposal next session. (#28 = done both sides.)
+- **Arke** (per `7808a124`, 06-18): hierarchy mirror + presence-`Set` shape CONFIRMED aligned ✅ · #28 done
+  both sides ✅ · scheduler UI wired ✅ · app v1-clean ✅. **Remaining (his side):** wire the app cockpit for
+  TODAY's new hub features — agenda list + directive composer + Layer-1 digest/flags display (consume the
+  documented shapes) · bring the **#29 joint co-design proposal** (full-corpus through gate + first acting
+  code-review node) · prep/debrief skill drafts · `canon.ts` align to the JCS golden vector · Layer-2 eval
+  (later) · email panel wiring. (`src/server.ts` close-phase fix + manifest flip + corpus-contract + 2.1
+  accept + his debriefs: ✅ done earlier.)
 - **Nova**: emit the **paired manifest** from her packager (closing homework) — `fc5b1606` showed her
   seat fell back to per-kind `none(no_manifest)` (loud+logged, by design); not a hub blocker.
 - **Logos**: living backlog on biblevoice.net (pack + corpus brain: ✅ committed).
