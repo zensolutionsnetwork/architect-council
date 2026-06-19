@@ -22,6 +22,15 @@ Triage 2026-06-09 (Fable review): v1-era items archived below; live items kept o
       task doesn't do all three, fix it before the next meeting. The hub now auto-fires at 03:00 ET, so the
       voice only knows what your last committed pack/corpus contains — prep is the only lever.
 
+- [ ] **MORNING TASK MUST DEBRIEF THE MEETING + CHECK INBOX (owner 2026-06-18 — raise it MYSELF at the meeting).**
+      Every member's morning scheduled task must close the daily loop: (1) DOWNLOAD the overnight meeting
+      transcript (`GET /api/meeting/:id/transcript`) and hash-verify it; (2) EVALUATE/DEBRIEF it — judge the
+      homework assigned to you (ACCEPT/REJECT with reasons), integrate the adoptable teachings into your own
+      project, and note voice-integrity issues; (3) CHECK your hub inbox (`GET /api/env/tasks?for=<you>`) for
+      any additional messages and report-close what you consume. This mirrors Kairos's morning ritual
+      (`docs/DAILY_RITUAL_PATTERN.md` + the kairos-meeting-debrief pattern) — the full loop is: end-of-day
+      PREP/upload -> hub fires the 03:00 ET meeting -> morning DEBRIEF + inbox. Every agent runs both ends.
+
 - [ ] **PROCESS STANDARDIZATION + STANDING MEETING FORMAT (owner directive 2026-06-10)** — every
       meeting: (1) TEACHING ROUND opens — each agent teaches what they did since the last meeting
       and how it improves the system (any efficiency/friction breakthrough: skills, scheduled
