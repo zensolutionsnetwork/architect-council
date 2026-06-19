@@ -26,7 +26,38 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-19 NIGHTLY — quiet overnight, all green, no new code/meeting, inbox 1 open [Arke standing-item]) — HANDOFF
+## Current state (2026-06-19 MORNING PREP — overnight meeting 9a427b5f debriefed, all green, inbox 0) — HANDOFF
+> **MORNING PREP 2026-06-19 (Kairos, Mathieu present). Overnight autonomous meeting DEBRIEFED, all systems
+> green, inbox cleared.** HEAD `1b29224` (midnight nightly's backlog/handoff commit; no new CODE overnight),
+> working tree clean (only the new debrief doc untracked), in sync origin/main 0/0. Prod healthy (ok:true,
+> vault:true). **CI GREEN on `1b29224`** (latest run success). No live meeting (9 meetings all `report`,
+> LIVE_ROUNDS_COUNT=0). **DEBRIEF DONE — `council/KAIROS_DEBRIEF_2026-06-19.md`:** the 03:00 ET autonomous
+> meeting **`9a427b5f`** (closed 2026-06-19T07:04:03Z, 4 seats, **12 turns / 0 pass**, endedReason
+> **`completed`** = natural all-done, **$0.6083**, **verify-transcript.mjs PASS** sha `e6e135a1…b9aa`, **all
+> 4 seats manifest-2.1 paired**, Layer-1 manager ran $0.0215) — the **4th consecutive fully-autonomous
+> self-close and the cleanest run yet**. Three clean rounds (friction -> code-review -> closing); voice
+> integrity clean (every voice disclaimed execution). Substance converged on **finalizer observability**: I
+> spec'd `GET /api/council/meetings/{id}/status` (state pending/finalizing/ready + report_committed +
+> finalizer_lag_ms), adopted without dissent; Arke's `pollUntilReportReady` (3s/120s/throw) + Logos's
+> transient-502-retry-inside-the-loop adopted by all 3 consumer voices; `droppedFiles` pinned `{path,reason}`
+> as a 2.1 OPTIONAL field (no bump); freshness guard -> `live_head` commit hash (locally-recorded last push);
+> `validateHierarchy` check-order joint doc with Arke. **My 6 homework items (all ACCEPT, judged in debrief):**
+> P1 #30 status endpoint (KEYSTONE — 3 siblings gated on it; ship first) + RESPONSE_SHAPES update; #31
+> `docs/VALIDATE_ORDER.md` (28 checks ordered, Arke mirror-align); P2 #32 droppedFiles hub consumer; #33
+> morning-prep `pollUntilReportReady` (gated on #30; lives in `C:\Users\matpa\Claude\Scheduled\`, not the
+> repo); #34 scheduler-jitter debt note. **HONEST SELF-FLAG:** my turn-1 "added a 90s sleep to my prep"
+> overstated my own race (prep runs ~3h after the 03:00 close — no race this morning); the status endpoint's
+> real beneficiaries are the manually-triggered packagers, not my fixed-clock prep. **INBOX:** was 1 open —
+> Arke `14e824d0` (standing hub-change-review directive, owner 2026-06-18) — report-closed; the standing
+> round already lives in COUNCIL_AGENDA + my pack (quiet cycle, nothing to walk) -> **INBOX 0**. **No deploy
+> this ritual (debrief + BACKLOG/CLAUDE doc-only).** **NEXT SESSION top 3:** (1) **build + deploy P1 #30
+> status endpoint** (shape in the debrief; CI-green, route-auth probe, no deploy over a live meeting) +
+> RESPONSE_SHAPES `lastUpdated` anchor; (2) **draft `docs/VALIDATE_ORDER.md`** for Arke mirror-alignment;
+> (3) **#29 JOINT with Arke** — await his co-design proposal (full-corpus through the cross-read gate + first
+> acting code-review node) + watch app-cockpit wiring. **TO ASK MATHIEU:** keep-or-retire `/backlog` board
+> (Arke surfaced); hierarchy invariant #4.5 Scripture-vow monotonicity confirmation (Logos, governance only);
+> Nova's voice-agent `default:` fix awaits your green light for voice changes. Canonical backlog = `BACKLOG.md`.
+> Bullets below this line are the 06-19 NIGHTLY snapshot (history).
 > **NIGHTLY 2026-06-19 (Kairos, automated, ~00:26 EDT / 04:26 UTC). QUIET OVERNIGHT — no new hub code
 > since the 06-18 PM/EVE day session, no new autonomous meeting.** HEAD is `12cd26a` (the 06-18 PM/EVE
 > session's last commit, "record purge of 2 test rooms"); no commits 06-18 PM → now. Working tree clean,

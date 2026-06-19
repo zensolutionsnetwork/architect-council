@@ -3,35 +3,42 @@
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
 > Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-19
-> (NIGHTLY: quiet overnight, no new code/meeting, all CI-green, prod healthy; 1 open inbox item = Arke's
-> standing "walk hub changes in-meeting" directive, left open for the day session + captured as a standing
-> prep item).
+> (MORNING PREP: overnight meeting 9a427b5f debriefed — hash-verify PASS, $0.608, clean all-done close;
+> inbox cleared; all systems green; 6 new self-assigned homework items from the meeting, status endpoint
+> is the P1 keystone).
 
 ## STATE AT A GLANCE
+- **MORNING PREP (2026-06-19 06:00, Mathieu present) — overnight meeting debriefed, all green, inbox 0.**
+  HEAD is `1b29224` (the midnight nightly's "backlog refresh + handoff 2026-06-19" commit — landed
+  overnight, no new CODE). Working tree clean (only the new debrief doc untracked), in sync with origin/main
+  (0/0). Prod healthy (`/api/health` ok:true, vault:true). **Core CI GREEN on `1b29224`** (latest CI run
+  conclusion=success). **No live meeting** (9 meetings all `phase=report`; LIVE_ROUNDS_COUNT=0 — safe to
+  push). **DEBRIEFED the new overnight autonomous meeting `9a427b5f`** (`council/KAIROS_DEBRIEF_2026-06-19.md`):
+  closed 2026-06-19T07:04:03Z, 4 seats, **12 turns / 0 pass**, **endedReason `completed` (natural all-done)**,
+  **$0.6083** (well under the $1.30–2 envelope), **verify-transcript.mjs PASS** (sha `e6e135a1…b9aa`), **all
+  4 seats manifest-2.1 paired**, Layer-1 manager ran ($0.0215) — the **4th consecutive fully-autonomous
+  self-close and the cleanest run to date**. Voice integrity clean (every voice explicitly disclaimed
+  execution). One honest self-flag: my turn-1 "added a 90s sleep" framing overstated my own race (prep runs
+  3h after the 03:00 close); the status endpoint's real beneficiaries are the manually-triggered packagers.
+  **Inbox: was 1 OPEN — Arke `14e824d0` (standing hub-change-review directive) — report-closed; standing
+  round already lives in COUNCIL_AGENDA + my pack, nothing to walk this quiet cycle → INBOX 0 OPEN.**
+  **The meeting produced 6 self-assigned homework items (all ACCEPT, judged in the debrief)** — the big new
+  build is **P1 #30: `GET /api/council/meetings/{id}/status`** (finalizer-observability keystone; three
+  siblings' `pollUntilReportReady` wrappers are gated on it). **No deploy this ritual (debrief + BACKLOG/
+  CLAUDE doc-only).** **NEXT SESSION top 3:** (1) **build + deploy P1 #30 status endpoint** (shape spec'd in
+  the debrief; CI-green, route-auth probe, no deploy over a live meeting) + RESPONSE_SHAPES update; (2) **draft
+  `docs/VALIDATE_ORDER.md`** (28 hierarchy checks in execution order) for Arke mirror-alignment; (3) **#29
+  JOINT with Arke** — await his co-design proposal (full-corpus through the cross-read gate + first acting
+  code-review node) + watch the app-cockpit wiring. No solo code blockers remain. Canonical backlog = this
+  file. Bullets below this line are the 06-19 NIGHTLY + 06-18 snapshots (history).
 - **NIGHTLY (2026-06-18 PM/EVE → 2026-06-19 00:26 EDT) — quiet overnight, all green, no new code, no new
-  meeting.** HEAD is `12cd26a` (the 06-18 PM/EVE session's last commit — "record purge of 2 test rooms";
-  no commits overnight). Working tree clean, in sync with origin/main (0/0). Prod healthy (`/api/health`
-  ok:true, vault:true). **Core CI GREEN on `12cd26a`** (CI + Push-on-main both success). **No live meeting**
-  (8 genuine council meetings, all `phase=report`; LIVE_ROUNDS_COUNT=0 — safe to push). **No new autonomous
-  meeting overnight** (still the same 8 — no debrief owed). **Inbox: 1 OPEN — Arke `14e824d0`, left OPEN for
-  the day session (coordination, not pure-FYI).** It is an OWNER DIRECTIVE (2026-06-18) restated by Arke:
-  Kairos + Arke must walk ALL hub changes (every endpoint/contract/env var added/changed/removed since the
-  last meeting) at EVERY meeting as a dedicated standing round before homework, so Nova/Logos stay aware and
-  Kairos/Arke stay in sync. Both bring a "hub changes since last meeting" changelog in their brain pack;
-  Arke added it to COUNCIL_AGENDA. **This already overlaps the standing agenda item `d02e397` (every hub
-  change reviewed in-meeting)** — captured here + reinforced in my pack's "what I owe THIS meeting" section.
-  My standing duty: carry a hub-side changelog (commits + endpoint/contract/env deltas) into each meeting.
-  **No deploy this ritual (BACKLOG/CLAUDE doc-only + brain re-pack).** The 06-18 PM/EVE day-session handoff
-  below already captured the day's substance (board-to-4-seats, agenda-in-hub + directive channel, Layer-1
-  Manager v0, auto-scheduler, v1-conversation removal, dashboard, #29 rev2 parity + cross-read/tenant
-  persistence, test-room purge → 8 genuine meetings). **NEXT SESSION top 3:** (1) **morning ritual** —
-  debrief any NEW overnight autonomous meeting (none yet tonight) + check inbox; (2) **reply to Arke
-  `14e824d0`** — confirm adoption of the standing hub-changelog round + that I'll carry the hub-side
-  changelog (then report-close); (3) **#29 JOINT with Arke** — await his co-design proposal (full-corpus
-  through the cross-read gate + first acting code-review node); plus wire the app cockpit watch (agenda
-  list / directive composer / Layer-1 digest display consume the documented shapes). No solo code blockers
-  I own remain. Canonical backlog = this file. Bullets below this line are the 06-18 PM/EVE snapshot
-  (history).
+  meeting.** HEAD was `12cd26a` at the nightly; the midnight ritual then committed `1b29224` (backlog/handoff
+  refresh) + re-packed my brain. **No new autonomous meeting overnight at nightly time** (the 03:00 ET meeting
+  `9a427b5f` fired after — debriefed this morning, see above). Inbox at nightly: 1 OPEN (Arke `14e824d0`,
+  the standing hub-change-review directive) — now closed. The 06-18 PM/EVE day-session handoff below already
+  captured the day's substance (board-to-4-seats, agenda-in-hub + directive channel, Layer-1 Manager v0,
+  auto-scheduler, v1-conversation removal, dashboard, #29 rev2 parity + cross-read/tenant persistence,
+  test-room purge → 8 genuine meetings; now 9 with `9a427b5f`).
 - **DAY SESSION (2026-06-18 PM/EVE, Mathieu present) — big additive build run, 6 clean CI-green deploys.**
   Consumed Arke's consolidated reply (`7808a124`): scheduler UI WIRED app-side, his app V1-CLEAN (my v1
   removal needs no repoint), **#29 presence shape aligned to my `Set<string>`** (schemas identical both
@@ -543,6 +550,21 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
    12-hex `secret_fp` = first 12 of sha256(MASTER_KEY), NEVER the secret) + owner-gated
    `GET /api/council/boots`. Two consecutive rows with the same deploy_sha = container cycled without a
    deploy. All gates green; deployed CI-green. (Her zen-ai impl `0bdf1dd`.)
+30. **Finalizer-status endpoint (NEW 2026-06-19, mtg `9a427b5f`, my homework — KEYSTONE).** Build + deploy
+    `GET /api/council/meetings/{id}/status` → `{id, state:"pending"|"finalizing"|"ready", report_committed,
+    report_committed_at, finalizer_lag_ms}`; 404 on unknown id; a crashed finalizer holds `finalizing`
+    **indefinitely** (NO silent flip to ready on a partial write — the consumer's polling timeout is the
+    page-someone signal). `finalizer_lag_ms = closed_at → report_committed_at`; log it to a lightweight table
+    for P99 data. **Gates THREE siblings' homework** (Arke/Nova/Logos all wire `pollUntilReportReady` —
+    3s/120s, throw-on-timeout, Logos's transient-502 retry inside the loop — behind `COUNCIL_STATUS_ENDPOINT_URL`
+    until this is live). Ship FIRST. Additive, owner/member-gated read, CI-green, route-auth probe, no deploy
+    over a live meeting. **Bundle:** update `docs/RESPONSE_SHAPES.md` with the status shape + add a top-of-file
+    `lastUpdated` commit-hash annotation (mechanical anchor for Arke's doc-matches-live check).
+31. **`docs/VALIDATE_ORDER.md` (NEW 2026-06-19, mtg `9a427b5f`, joint w/ Arke).** Number all 28 hierarchy
+    invariant checks in execution order so the hub + Arke's `hierarchy.ts` mirror return an identical
+    first-error on a multi-violation tree. Pure doc. Per the no-substance-DM rule (owner 2026-06-18): commit
+    it, raise "drafted at <sha>, please mirror-align" via my pack + COUNCIL_AGENDA (a bare file-pointer
+    report-note is the most I'd send). Arke confirms his mirror matches before either side ships against it.
 
 ## P2 — product arc + hygiene
 0. **Process standardization (STANDING GOAL, owner directive 2026-06-10)** — every member adopts
@@ -577,7 +599,20 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
 29. **Hierarchy schema has no owner (NEW 2026-06-17, OWNER CALL).** Kairos raised the need; Nova + Logos
     both declined to draft; Arke routed it to Mathieu. Needs an owner decision: Mathieu owns it himself,
     assigns a drafter, or defers. Surfaced in the morning brief. (Blocks P2 #7 hierarchy wiring until a
-    canonical 2.1 schema exists.)
+    canonical 2.1 schema exists.) NOTE: a 2.1 schema DID land (`00d58ca`/rev2) — this item is effectively
+    superseded; keep until Mathieu confirms ownership disposition.
+32. **`droppedFiles` hub manifest consumer (NEW 2026-06-19, mtg `9a427b5f`, my homework).** Accept an optional
+    `droppedFiles: {path, reason}[]` (two strings, nothing more) on the manifest when present; schema-validate;
+    surface on the dashboard per-member pack panel. **2.1 OPTIONAL extension — NO version bump.** Consumer can
+    land ahead of the producers (Nova/Arke/Logos packagers emit it via their `declared-shrink.json` homework).
+33. **Morning-prep `pollUntilReportReady` (NEW 2026-06-19, mtg `9a427b5f`, my homework — gated on #30).**
+    Replace the (claimed) 90s sleep in my morning-prep script with `pollUntilReportReady` (120s/3s,
+    throw-on-timeout, Logos's transient-502 retry). Fail closed → skip narrative embed, leave last-known-good.
+    **First VERIFY whether the sleep actually exists** (self-flag: this morning had no race, 3h gap). NOTE:
+    the prep script lives under `C:\Users\matpa\Claude\Scheduled\`, NOT the repo. Gated on #30 being live.
+34. **Scheduler jitter debt (NEW 2026-06-19, mtg `9a427b5f`, trivial).** The 03:00 ET auto-scheduler
+    (`beeac4c`) has no jitter — fine at single-tenant, a thundering-herd risk only if the hub goes
+    multi-tenant. Record as explicit debt in the dev log; not a fix.
 
 ## WAITING ON
 - **Mathieu**: effectively NOTHING blocking. (1) **Layer-1 Manager + agenda/directive — RESOLVED + BUILT
@@ -591,7 +626,11 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
   spend #22 = KEEP RUNNING ✅; stuck/test meetings ERASED ✅; SN7100/SSD = DONE; #29 owner call RESOLVED.)
 - **Nova + Logos**: brain-manifest 2.1 ACCEPT — ✅ DONE (Nova `e1528e03`, Logos `9298fc53`/`3c33082b`).
   All four ratified; nothing further owed here.
-- **Kairos (own queue)**: **meeting debriefs — QUEUE RETIRED 2026-06-18.** Audit found the carried queue
+- **Kairos (own queue)**: **meeting `9a427b5f` DEBRIEFED 2026-06-19** (`KAIROS_DEBRIEF_2026-06-19.md`,
+  hash-verify PASS) → 6 self-assigned homework items folded in (P1 #30 status endpoint keystone, #31
+  VALIDATE_ORDER doc, P2 #32 droppedFiles consumer, #33 prep-script poll, #34 scheduler-jitter debt).
+  Next-session build queue = #30 (ship first, unblocks 3 siblings) → #31 → #32. **Older debrief
+  queue — QUEUE RETIRED 2026-06-18.** Audit found the carried queue
   was STALE: `17f49b6f`/`344fcf74` (06-15 doc), `fc5b1606`/`4386e50c` (06-17 doc), `e097ff64` (06-18 doc),
   #1 `6aef82f6` (06-11 doc) were ALL already debriefed. The five with no individual doc (`6868e491`,
   `d5d8da54`=#2, `8da9d704`, + TEST rooms `ba2a3137`/`a9329a70`) are covered by the consolidated
@@ -612,7 +651,8 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
   accept + his debriefs: ✅ done earlier.) **NEW standing ask (`14e824d0`, owner directive 06-18):** both
   Kairos + Arke bring a "hub changes since last meeting" changelog to EVERY meeting and walk it as a
   dedicated round before homework (so Nova/Logos stay aware). Overlaps standing agenda item `d02e397`.
-  Reply to `14e824d0` confirming adoption next session, then report-close.
+  **`14e824d0` REPORT-CLOSED 2026-06-19** — adopted: standing hub-change-review round already lives in
+  COUNCIL_AGENDA + my pack; I carry the hub-side changelog into each meeting (quiet cycle, nothing to walk).
 - **Nova**: emit the **paired manifest** from her packager (closing homework) — `fc5b1606` showed her
   seat fell back to per-kind `none(no_manifest)` (loud+logged, by design); not a hub blocker.
 - **Logos**: living backlog on biblevoice.net (pack + corpus brain: ✅ committed).
