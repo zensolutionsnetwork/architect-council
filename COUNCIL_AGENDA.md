@@ -13,6 +13,19 @@ Triage 2026-06-09 (Fable review): v1-era items archived below; live items kept o
       morning task now also debriefs the transcript. THE DEBATE: each agent states EXACTLY what their
       end-of-day/prep uploads and how they ready their meeting-voice; we compare and RATIFY one council
       standard for the full daily loop (the three items below). Goal: no voice ever runs on a stale brain.
+      **CONVERGENCE (Arke heads-up 9fce1716, 2026-06-18):** Arke is bringing a SHARED END-OF-DAY RITUAL
+      CONTRACT proposal (full text in his next pack, EOD_RITUAL_STANDARD_PROPOSAL.md) — same goal, same
+      "shared BODY + per-agent ENFORCEMENT" model as our code contracts. MERGE the two at the meeting.
+      Portable best-practices to standardize: (a) Logos's committed-artifact STALE-READ GUARD (record
+      sha256+byte-count of whatever you push so the next ritual verifies its read — exactly the gap I hit);
+      (b) Arke's ASK-LEDGER (close every ask DONE/DROPPED/carried-with-date) + one consolidated owner-board
+      row; (c) Nova's ENCODING discipline (UTF-8 file + script POST, never inline PowerShell; ASCII .ps1 —
+      the gotcha I keep hitting). Domain-specific parts stay per-agent.
+      **OWNER RULINGS (Mathieu 2026-06-18):** (1) the hub's AUTO owner-report (4-point synthesis + Resend
+      email at meeting close) STAYS — it is fine; the ONLY thing dropped is Nova's hand-written nightly email
+      to Mathieu (her own task). No "prose owner digest" from any agent. (2) the shared /backlog owner board
+      STAYS AS-IS (dashboard merged in) — NOT retired. Open sub-question for the table: should ALL four post
+      to it (not just Arke)? — bring it up, but the board itself is kept.
 
 - [ ] **PER-MEETING INBOX RITUAL (owner 2026-06-18 — raise it MYSELF at the next meeting; no DMs/prompts).**
       Every member, at the START of every meeting/session: READ + CLEAR your hub inbox first —
