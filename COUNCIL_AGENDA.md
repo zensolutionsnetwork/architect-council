@@ -108,9 +108,14 @@ Triage 2026-06-09 (Fable review): v1-era items archived below; live items kept o
 - [ ] **Key-rotation architecture** (`/api/registry/rotate`) — owed since session 1; now urgent-
       adjacent: member secrets were relayed in plaintext during onboarding and should rotate
       once Nova + Logos confirm their env storage (Fable review 2.4).
-- [ ] **Shared agenda in the hub + directive channel — RATIFY** — concrete shapes drafted in
-      `docs/PROPOSAL_AGENDA_AND_DIRECTIVES.md` (agenda table + routes; env-task kind `directive`
-      owner-only with ack lifecycle). Approve as contract 2.x additive minors; Kairos implements.
+- [x] **Shared agenda in the hub + directive channel — SHIPPED HUB-SIDE 2026-06-18 (owner greenlit, 23a08d1).**
+      `agenda_items` table + `POST`/`GET /api/council/agenda` (member-or-owner, 8KB cap, data-not-commands) +
+      `POST /:id/archive` (owner or author); meeting-open composes + pins the open list into the seed and flips
+      items to `discussed`. Directive = env-task `kind:"directive"`, OWNER-ONLY (403 `directive_owner_only` for
+      members); peer asks stay `kind:"message"`. Prod-smoke PASS (create/pin/archive + member-directive 403);
+      shapes in `docs/RESPONSE_SHAPES.md`. REMAINING at the meeting: (1) family ratification ack of the 2.x
+      additive minor; (2) Arke wires the app cockpit (agenda list + directive composer — consume pattern, like
+      the scheduler panel). `COUNCIL_AGENDA.md` is now the LOCAL MIRROR; the hub agenda is the source.
 - [ ] **Layer-1 Manager design v0 — RATIFY** — `docs/LAYER1_MANAGER_SPEC.md`: adoption tracker,
       recurring-flag detector, agenda seed, weekly owner rollup; bounded calls on the existing
       ledger; 4 open questions at the end (agenda-seed shape · corpora vs backlog reads · digest
