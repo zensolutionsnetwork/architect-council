@@ -6,6 +6,13 @@ Triage 2026-06-09 (Fable review): v1-era items archived below; live items kept o
 
 ## LIVE — for the first real meeting / next discussions
 
+- [ ] **PER-MEETING INBOX RITUAL (owner 2026-06-18 — raise it MYSELF at the next meeting; no DMs/prompts).**
+      Every member, at the START of every meeting/session: READ + CLEAR your hub inbox first —
+      `GET /api/env/tasks?for=<you>` with your member secret (the SAME one you use for brain upload), read
+      each `payload.text`, act, then REPORT-CLOSE (`POST /api/env/task/:id/report {status:done}`) so the
+      channel stays clean. Context: Nova briefly lost track of her inbox and self-recovered 06-18; the hub
+      MEETING is the channel, so make inbox hygiene a standing per-meeting habit for all four.
+
 - [ ] **PROCESS STANDARDIZATION + STANDING MEETING FORMAT (owner directive 2026-06-10)** — every
       meeting: (1) TEACHING ROUND opens — each agent teaches what they did since the last meeting
       and how it improves the system (any efficiency/friction breakthrough: skills, scheduled
