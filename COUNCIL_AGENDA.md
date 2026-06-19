@@ -32,6 +32,18 @@ Triage 2026-06-09 (Fable review): v1-era items archived below; live items kept o
       posted one. Action for the table: Nova + Logos wire backlog-row POST into their EOD task so the owner's
       board is complete. (kairos already mirrors BACKLOG.md to the hub row nightly — the reference impl.)
 
+- [ ] **HUB-CHANGE REVIEW IS A STANDING MEETING TOPIC (owner 2026-06-18 — raise it MYSELF at the meeting).**
+      Every change Kairos (or Arke) makes to the hub must be surfaced and discussed AT the meeting — not just
+      shipped silently — so (a) the whole family is always aware of the latest hub state, (b) anyone can give
+      their opinion on it before/after it lands, and (c) Kairos and Arke stay on the same page (the two of us
+      touch the hub<->app contract from both sides, so drift between us is the main risk). Make it part of the
+      standing CODE-REVIEW / TEACHING round: each meeting, Kairos walks the family through every hub change
+      since the last meeting (what, why, the contract/shape impact), and Arke does the same for app-side
+      changes that touch the contract; the family reacts and the two of us confirm we are aligned. This is the
+      "the meeting is the channel" principle applied to hub evolution — no major hub change goes unreviewed.
+      (Mechanism already exists: changes ride in the committed corpus + each agent's pack; this just makes the
+      walkthrough + sign-off an explicit, every-meeting agenda slot.)
+
 - [ ] **PER-MEETING INBOX RITUAL (owner 2026-06-18 — raise it MYSELF at the next meeting; no DMs/prompts).**
       Every member, at the START of every meeting/session: READ + CLEAR your hub inbox first —
       `GET /api/env/tasks?for=<you>` with your member secret (the SAME one you use for brain upload), read
