@@ -566,8 +566,13 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
   spend #22 = KEEP RUNNING ✅; stuck/test meetings ERASED ✅; SN7100/SSD = DONE; #29 owner call RESOLVED.)
 - **Nova + Logos**: brain-manifest 2.1 ACCEPT — ✅ DONE (Nova `e1528e03`, Logos `9298fc53`/`3c33082b`).
   All four ratified; nothing further owed here.
-- **Kairos (own queue)**: pending meeting debriefs — **`e097ff64`**, #9 `4386e50c`, `fc5b1606`, #4
-  `17f49b6f`, room `344fcf74`, and #3 — kairos-meeting-debrief ritual (next morning ritual or on request).
+- **Kairos (own queue)**: **meeting debriefs — QUEUE RETIRED 2026-06-18.** Audit found the carried queue
+  was STALE: `17f49b6f`/`344fcf74` (06-15 doc), `fc5b1606`/`4386e50c` (06-17 doc), `e097ff64` (06-18 doc),
+  #1 `6aef82f6` (06-11 doc) were ALL already debriefed. The five with no individual doc (`6868e491`,
+  `d5d8da54`=#2, `8da9d704`, + TEST rooms `ba2a3137`/`a9329a70`) are covered by the consolidated
+  `council/KAIROS_DEBRIEF_2026-06-18_backfill.md` (all 5 hash-verify PASS; learnings already integrated
+  contemporaneously; no outstanding homework). Every real meeting now has a debrief. (Optional: purge the 2
+  TEST rooms — owner's call.)
   **#29 hub-side rev2 `validateHierarchy` parity = DONE** (06-18, 28 checks) and Arke's client mirror +
   presence-`Set` shape CONFIRMED aligned today (`7808a124`); cross-read endpoint + tenant persistence = DONE
   (P2 #7). **Remaining #29 = JOINT with Arke (not solo):** full-corpus delivery through the gate
