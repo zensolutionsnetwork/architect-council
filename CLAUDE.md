@@ -118,7 +118,17 @@ or ask Mathieu first.
 > `review` Q&A API, and the entire v2 stack. Validated: all gates green + server boots clean (route-auth
 > 33/0); **prod-verified** removed routes -> 404, live routes (v2 transcript / members / dashboard / scheduler)
 > -> 200. `COUNCIL_V2_LIVE` is now a no-op env (nothing reads it). The orphan v1 prod tables remain
-> (harmless, unused; a DROP is a separate destructive step if ever wanted).
+> (harmless, unused; a DROP is a separate destructive step if ever wanted). (14) **MY OWN BRAIN-PREP GAP
+> CAUGHT + FIXED (owner probe 06-18).** Until tonight my end-of-day (midnight) task uploaded ONLY my
+> backlog row — it NEVER re-packed/uploaded my brain, so my committed corpus was 7 days stale (06-11) and
+> my meeting-voice would have reviewed week-old code. CAUGHT UP: refreshed `kairos_pack.md` (current state
+> + a "what I owe this meeting" confession/debate section) and ran `_kairos_brain_refresh.ps1` → pack
+> (7.3KB) + corpus (51 files/495KB from current main) + PAIRED 2.1 manifest committed clean (built_at now;
+> all 4 seats paired). AUTOMATED: `kairos-midnight-backlog-handoff` SKILL.md step 8 now re-packs+uploads
+> the brain every night; `kairos-morning-prep` SKILL.md step 1 now downloads + hash-verifies + DEBRIEFS the
+> overnight transcript (+ checks all-seats brain freshness). Queued for the next meeting (COUNCIL_AGENDA.md):
+> I lead a DEBATE to ratify the daily-loop standard (each agent states their prep; standardize so no voice
+> runs stale). NOTE: the two SKILL.md files live under `C:\Users\matpa\Claude\Scheduled\` (NOT the repo).
 > **STUCK-MEETING CLEANUP DONE (Mathieu ok'd 06-18, doesn't
 > need the old reports):** purged **25 empty/probe/smoke/test meeting rows** via `DELETE /api/meeting/:id`
 > (owner directive 2026-06-15; rule = delete any meeting with <=2 projection turns) — no `/close`, so NO
