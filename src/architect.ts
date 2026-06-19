@@ -172,6 +172,20 @@ export async function synthesizeOwnerReport(agenda: string, turns: { actor: stri
   catch (e) { return { report: `(owner-report error: ${(e as Error).message})`, usage: {} }; }
 }
 
+/** Layer-1 Manager narrative (owner 2026-06-18). ONE bounded Sonnet call over the since-last-meeting
+ *  code changes (agent-authored pack summaries of what changed) + a transcript digest → a short, owner-facing
+ *  code-review/trend note. Cheap by design: it reads the small packs, NOT the full corpora. Fail-soft. */
+export async function synthesizeManagerNarrative(input: string): Promise<{ note: string; usage: any }> {
+  if (!CHAT_API_KEY() || !input.trim()) return { note: '', usage: {} };
+  const sys = 'You are the Layer-1 MANAGER of the Architects Council, writing a short note for Mathieu (owner). '
+    + 'You are given: which agents shipped code since the last meeting (with their own pack summary of what changed), '
+    + 'adoption signals, and a transcript digest. Write at most 150 words, tight markdown, no preamble: a "code-review trend" '
+    + 'line per agent that shipped (is the change healthy / risky / worth a closer look), then a "watch" line for anything '
+    + 'recurring or concerning. Be concrete and faithful; if nothing notable, say "Nothing notable this meeting."';
+  try { const out = await callClaudeUsage([{ type: 'text', text: sys }], [{ role: 'user', content: clip(input, 18000) }], 600, OWNER_REPORT_MODEL); return { note: out.text || '', usage: out.usage || {} }; }
+  catch (e) { return { note: `(manager-note error: ${(e as Error).message})`, usage: {} }; }
+}
+
 /** The architect-council brain/handoff snapshot it shares with peers. */
 export function councilBrain(): string {
   return `# Brain / handoff — architect-council\nUpdated: ${new Date().toISOString()}\n\n${COUNCIL_KNOWLEDGE}\n\n`

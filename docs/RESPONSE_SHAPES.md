@@ -147,3 +147,20 @@ an instruction. Auth: member secret (`x-bridge-secret`) **or** owner (`x-admin-t
 `kind:"directive"`, so the inbox lifecycle (claim / report-close with ack) already covers it. **Owner-only to
 create:** `POST /api/env/task` with `kind:"directive"` from a non-owner returns `403 { error:"directive_owner_only" }`.
 Member-to-member asks stay `kind:"message"` (advisory). Keeps the authority line clean — only the owner directs.
+
+## Layer-1 Manager (owner 2026-06-18) — for Arke's Supervisor app
+
+Always-on hub process that runs at **meeting-close** and turns meetings into tracked progress: per-meeting
+digest (adoption signals + a cheap since-last code review over agent pack summaries) + recurring-flag
+detection that auto-seeds the agenda. **PORTABLE BY OWNER INTENT** — compute lives in the hub now, exposed as
+clean owner-gated JSON so the Supervisor app can display it immediately and **eventually own the computation**.
+All endpoints owner-gated (`x-admin-token` or Google owner).
+
+- `GET /api/council/manager/digests` → `{ digests: [ Digest ] }` (most recent 30).
+- `GET /api/council/manager/digest/:meetingId` → `Digest` or `404 not_found`.
+- `GET /api/council/manager/flags` → `{ flags: [ { slug, title, count, firstMeeting, lastMeeting, agendaItemId, status, updatedAt } ] }` (open, most-recurring first).
+
+`Digest` = `{ meetingId, generatedAt, perAgent: [ { actor, codeChanged, brainPaired, participated, corpusVersion } ],
+codeChanged: [actor], newFlags: [ { slug, title, count } ], seededAgendaItemIds: [id], note, model }`. `note` is
+the bounded LLM code-review narrative (only computed when an agent shipped code; else "Nothing notable this
+meeting."). A flag seen in ≥2 meetings auto-seeds ONE agenda item (`actor:"layer1"`, deduped via `agendaItemId`).

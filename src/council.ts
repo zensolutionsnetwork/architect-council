@@ -26,6 +26,7 @@ import {
   getSetting, setSetting, getRecentBoots,
   getHierarchy, setHierarchy, listHierarchies, deleteHierarchy,
   createAgendaItem, listOpenAgenda, getAgendaItem, archiveAgendaItem, pinOpenAgendaToMeeting,
+  getManagerDigest, listManagerDigests, listManagerFlags,
 } from './store.js';
 import { validateHierarchy, canCrossRead, type Tenant, type ShareScope } from './hierarchy.js';
 import { finalizeMeetingClose } from './finalize.js';
@@ -335,6 +336,23 @@ councilRouter.post('/council/agenda/:id/archive', async (req, res) => {
     if (!item) return res.status(404).json({ error: 'not_found' });
     if (!actor.admin && actor.actor !== item.actor) return res.status(403).json({ error: 'forbidden', message: 'only the owner or the item author may archive it' });
     res.json({ ok: true, archived: await archiveAgendaItem(req.params.id) });
+  } catch (e) { internalError(res, e); }
+});
+
+// ---------- Layer-1 Manager (owner 2026-06-18) — owner-gated read surface ----------
+// Compute runs at meeting-close (src/manager.ts); these endpoints expose it as clean JSON. PORTABLE:
+// Arke's Supervisor app consumes these now (display) and may eventually own the computation itself.
+councilRouter.get('/council/manager/digests', requireOwner, async (_req, res) => {
+  try { res.json({ digests: await listManagerDigests(30) }); } catch (e) { internalError(res, e); }
+});
+councilRouter.get('/council/manager/flags', requireOwner, async (_req, res) => {
+  try { res.json({ flags: await listManagerFlags() }); } catch (e) { internalError(res, e); }
+});
+councilRouter.get('/council/manager/digest/:meetingId', requireOwner, async (req, res) => {
+  try {
+    const d = await getManagerDigest(req.params.meetingId);
+    if (!d) return res.status(404).json({ error: 'not_found' });
+    res.json(d);
   } catch (e) { internalError(res, e); }
 });
 

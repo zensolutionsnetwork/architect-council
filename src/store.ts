@@ -160,6 +160,16 @@ export async function initDb(): Promise<void> {
     id bigserial PRIMARY KEY, actor text NOT NULL, title text NOT NULL, body text NOT NULL DEFAULT '',
     priority text NOT NULL DEFAULT 'normal', status text NOT NULL DEFAULT 'open', meeting_id text,
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now())`);
+  // Layer-1 Manager (owner 2026-06-18): an always-on hub process that runs at meeting-close and turns
+  // meetings into tracked progress — per-meeting digest (adoption signals + since-last code-change review)
+  // + recurring-flag detection that auto-seeds the agenda. PORTABLE BY DESIGN: compute lives here for now
+  // but is exposed as clean owner-gated JSON so Arke's Supervisor app can display it and EVENTUALLY OWN it.
+  await q.query(`CREATE TABLE IF NOT EXISTS manager_digests (
+    meeting_id text PRIMARY KEY, digest jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT now())`);
+  await q.query(`CREATE TABLE IF NOT EXISTS manager_flags (
+    slug text PRIMARY KEY, title text NOT NULL, count int NOT NULL DEFAULT 1,
+    first_meeting text, last_meeting text, agenda_item_id text, status text NOT NULL DEFAULT 'open',
+    updated_at timestamptz NOT NULL DEFAULT now())`);
 }
 
 // ---- Boot-stamp log (P1 #8) -------------------------------------------------
@@ -245,6 +255,54 @@ export async function pinOpenAgendaToMeeting(meetingId: string): Promise<any[]> 
      RETURNING id, actor, title, body, priority, status, meeting_id,
        to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at`, [meetingId]);
   return rows.map(mapAgenda).sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : Number(a.id) - Number(b.id)));
+}
+
+// ---- Layer-1 Manager (portable; Arke's Supervisor will consume/own) ---------
+export async function setManagerDigest(meetingId: string, digest: any): Promise<void> {
+  await db().query(`INSERT INTO manager_digests (meeting_id, digest) VALUES ($1,$2::jsonb)
+    ON CONFLICT (meeting_id) DO UPDATE SET digest=EXCLUDED.digest, created_at=now()`,
+    [meetingId, JSON.stringify(digest)]);
+}
+export async function getManagerDigest(meetingId: string): Promise<any | null> {
+  const { rows } = await db().query<any>(`SELECT meeting_id, digest,
+    to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at
+    FROM manager_digests WHERE meeting_id=$1`, [meetingId]);
+  return rows[0] ? { meetingId: rows[0].meeting_id, ...rows[0].digest, createdAt: rows[0].created_at } : null;
+}
+export async function listManagerDigests(limit = 20): Promise<any[]> {
+  const { rows } = await db().query<any>(`SELECT meeting_id, digest,
+    to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at
+    FROM manager_digests ORDER BY created_at DESC LIMIT $1`, [Math.min(Math.max(Number(limit) || 20, 1), 200)]);
+  return rows.map((r) => ({ meetingId: r.meeting_id, ...r.digest, createdAt: r.created_at }));
+}
+/** brain_versions of the most recent REAL meeting created before this one (for code-change diffing). */
+export async function getPriorMeetingBrainVersions(meetingId: string): Promise<Record<string, any> | null> {
+  const { rows } = await db().query<any>(
+    `SELECT brain_versions FROM meetings
+     WHERE dry_run = false AND created_at < (SELECT created_at FROM meetings WHERE id=$1)
+     ORDER BY created_at DESC LIMIT 1`, [meetingId]);
+  return rows[0] ? (rows[0].brain_versions || {}) : null;
+}
+/** Upsert a recurring flag; bumps count + last_meeting, sets first_meeting on creation. Returns the row. */
+export async function upsertManagerFlag(slug: string, title: string, meetingId: string): Promise<any> {
+  const { rows } = await db().query<any>(
+    `INSERT INTO manager_flags (slug, title, count, first_meeting, last_meeting)
+     VALUES ($1,$2,1,$3,$3)
+     ON CONFLICT (slug) DO UPDATE SET count = manager_flags.count + 1, last_meeting = EXCLUDED.last_meeting,
+       title = EXCLUDED.title, status='open', updated_at = now()
+     RETURNING slug, title, count, first_meeting, last_meeting, agenda_item_id, status`,
+    [slug, title, meetingId]);
+  return rows[0];
+}
+export async function setFlagAgendaItem(slug: string, agendaItemId: string): Promise<void> {
+  await db().query(`UPDATE manager_flags SET agenda_item_id=$2, updated_at=now() WHERE slug=$1`, [slug, agendaItemId]);
+}
+export async function listManagerFlags(): Promise<any[]> {
+  const { rows } = await db().query<any>(`SELECT slug, title, count, first_meeting, last_meeting, agenda_item_id, status,
+    to_char(updated_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS updated_at
+    FROM manager_flags WHERE status='open' ORDER BY count DESC, updated_at DESC`);
+  return rows.map((r) => ({ slug: r.slug, title: r.title, count: r.count, firstMeeting: r.first_meeting,
+    lastMeeting: r.last_meeting, agendaItemId: r.agenda_item_id || null, status: r.status, updatedAt: r.updated_at }));
 }
 
 // ---- Living backlog (Arke's super-admin panel; mirrors Nova's model) --------

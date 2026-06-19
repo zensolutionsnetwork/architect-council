@@ -116,5 +116,15 @@ export async function finalizeMeetingClose(m: any, opts: { report?: string } = {
   }
   base.emailSent = !!emailResult.sent;
   base.emailReason = emailResult.reason || null;
+
+  // Layer-1 Manager (owner 2026-06-18): turn this meeting into tracked progress — adoption signals +
+  // since-last code review + recurring-flag auto-seed to the agenda. Best-effort, never fails the close,
+  // never spends on a dry-run (the module guards that itself). Imported lazily to avoid any import cycle.
+  if (!m.dry_run) {
+    try {
+      const { runLayer1Manager } = await import('./manager.js');
+      await runLayer1Manager(m);
+    } catch (e) { console.warn('[layer1] manager pass failed (non-fatal): ' + (e as Error).message); }
+  }
   return base;
 }
