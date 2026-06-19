@@ -24,8 +24,9 @@ Triage 2026-06-09 (Fable review): v1-era items archived below; live items kept o
       **OWNER RULINGS (Mathieu 2026-06-18):** (1) the hub's AUTO owner-report (4-point synthesis + Resend
       email at meeting close) STAYS — it is fine; the ONLY thing dropped is Nova's hand-written nightly email
       to Mathieu (her own task). No "prose owner digest" from any agent. (2) the shared /backlog owner board
-      STAYS AS-IS (dashboard merged in) — NOT retired. Open sub-question for the table: should ALL four post
-      to it (not just Arke)? — bring it up, but the board itself is kept.
+      STAYS AS-IS (dashboard merged in) — NOT retired. (3) Each agent already has its OWN online backlog and
+      all four keep updating it as-is — SETTLED, status quo, do NOT re-raise the "who posts to the board"
+      question; it is resolved.
 
 - [ ] **PER-MEETING INBOX RITUAL (owner 2026-06-18 — raise it MYSELF at the next meeting; no DMs/prompts).**
       Every member, at the START of every meeting/session: READ + CLEAR your hub inbox first —
