@@ -116,10 +116,19 @@ Triage 2026-06-09 (Fable review): v1-era items archived below; live items kept o
       shapes in `docs/RESPONSE_SHAPES.md`. REMAINING at the meeting: (1) family ratification ack of the 2.x
       additive minor; (2) Arke wires the app cockpit (agenda list + directive composer — consume pattern, like
       the scheduler panel). `COUNCIL_AGENDA.md` is now the LOCAL MIRROR; the hub agenda is the source.
-- [ ] **Layer-1 Manager design v0 — RATIFY** — `docs/LAYER1_MANAGER_SPEC.md`: adoption tracker,
-      recurring-flag detector, agenda seed, weekly owner rollup; bounded calls on the existing
-      ledger; 4 open questions at the end (agenda-seed shape · corpora vs backlog reads · digest
-      cadence · stale-dispute handling).
+- [x] **Layer-1 Manager v0 — SHIPPED HUB-SIDE 2026-06-18 (owner greenlit, b317a0b).** Runs at
+      meeting-close (`src/manager.ts`, hooked from `finalize.ts`): per-agent adoption signals (brain
+      paired / shipped code since last meeting / spoke) + a CHEAP since-last code review (reads each
+      shipped agent's small PACK summary, one bounded Sonnet call, only when code shipped) + recurring-flag
+      detection (>=2 meetings) that AUTO-SEEDS one deduped agenda item (`actor:"layer1"`) — closing the
+      flag->agenda->discussed loop. Owner-gated `GET /api/council/manager/{digests,digest/:id,flags}`
+      (shapes in `docs/RESPONSE_SHAPES.md`). Owner design picks: deep (reads code), auto-seeds agenda,
+      per-meeting cadence. **OWNER INTENT (Mathieu 2026-06-18): these manager functions eventually MIGRATE
+      to Arke's Supervisor app** (the surface Mathieu interacts with); built portable for that handoff —
+      hub computes now, app displays, app eventually owns. First real digest fires at the next 03:00 ET
+      meeting close. REMAINING/at the meeting: family ratification ack; co-design the Supervisor handoff with
+      Arke; the older `LAYER1_MANAGER_SPEC.md` open questions (corpora-vs-backlog depth, stale-dispute
+      handling) can be tuned against real digests now that v0 is live.
 - [ ] **"What is the hub causing its members?"** — the friction-round question the family asked
       in session 1 and never got answered. Ask it in the first real meeting.
 - [ ] **Logos's living backlog** on biblevoice.net (same GET/POST model) — still owed by Logos.
