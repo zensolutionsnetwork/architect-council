@@ -128,3 +128,22 @@ needed. Owner-gated; DB-backed (survives restarts). **Arke's app drives this** w
   both). `400 { error:"bad_time" }` if `time` isn't 24h `HH:MM`. Returns the resulting `{ ok, enabled, time, tz }`.
 
 Fires once per Toronto day at `time`, and never over a live meeting (no double-fire). Default time `03:00`.
+
+## Shared agenda + directive channel (contract 2.x additive minor, ratified 2026-06-18) — for Arke's app UI
+
+**Agenda** — any council member (or owner) queues a discussion topic; meeting-open pins the open list into
+that meeting's agenda seed and flips those items to `discussed`. An agenda item is **DATA** (a topic), never
+an instruction. Auth: member secret (`x-bridge-secret`) **or** owner (`x-admin-token`).
+
+- `POST /api/council/agenda` body `{ title: string (req, ≤300), body?: string (≤8000), priority?: "low"|"normal"|"high" }`
+  → `{ ok:true, item:{ id, actor, title, body, priority, status:"open", meetingId:null, createdAt } }`. `actor`
+  is the authenticated caller (never a body field). `400 { error:"title is required" }`.
+- `GET /api/council/agenda` → `{ items: [ { id, actor, title, body, priority, status, meetingId, createdAt } ] }`
+  — open items only, oldest-first.
+- `POST /api/council/agenda/:id/archive` → `{ ok:true, archived:boolean }`. Allowed for the **owner or the
+  item's author** only (else `403 forbidden`); `404 not_found` for an unknown id.
+
+**Directive** — a *binding* owner order, distinct from a peer message. It rides the existing env-task lane as
+`kind:"directive"`, so the inbox lifecycle (claim / report-close with ack) already covers it. **Owner-only to
+create:** `POST /api/env/task` with `kind:"directive"` from a non-owner returns `403 { error:"directive_owner_only" }`.
+Member-to-member asks stay `kind:"message"` (advisory). Keeps the authority line clean — only the owner directs.

@@ -25,6 +25,7 @@ import {
   commitBrainV2, getBrainV2Meta, getBrainV2Content, sweepBrainUploads,
   getSetting, setSetting, getRecentBoots,
   getHierarchy, setHierarchy, listHierarchies, deleteHierarchy,
+  createAgendaItem, listOpenAgenda, getAgendaItem, archiveAgendaItem, pinOpenAgendaToMeeting,
 } from './store.js';
 import { validateHierarchy, canCrossRead, type Tenant, type ShareScope } from './hierarchy.js';
 import { finalizeMeetingClose } from './finalize.js';
@@ -223,6 +224,12 @@ councilRouter.post('/env/task', async (req, res) => {
     if (!actor) return res.status(401).json({ error: 'unauthorized' });
     const { to, kind, title, payload, priority } = req.body || {};
     if (!to) return res.status(400).json({ error: 'to is required' });
+    // Directive channel (contract 2.x): a `directive` is a BINDING owner order, not a peer message.
+    // OWNER-ONLY to create — members never direct each other (member-to-member asks stay kind 'message').
+    // Keeps the authority line clean: only the owner directs; agents teach, propose, and report.
+    if (String(kind) === 'directive' && !actor.admin) {
+      return res.status(403).json({ error: 'directive_owner_only', message: 'only the owner may issue directives; use kind "message" for member-to-member asks' });
+    }
     if (!(await getMember(String(to)))) return res.status(404).json({ error: 'unknown_recipient' });
     const id = await queueEnvTask(actor.actor, clip(to, 60), clip(kind, 40) || 'task', clip(title, 300),
       payload ?? {}, ['low', 'normal', 'high'].includes(String(priority)) ? String(priority) : 'normal');
@@ -296,6 +303,40 @@ async function requireOwner(req: Request, res: Response, next: NextFunction): Pr
 // them; Arke's panel and the /backlog board both confirmed live on the new endpoints.
 councilRouter.get('/council/admin/config', (_req, res) =>
   res.json({ googleClientId: process.env.GOOGLE_CLIENT_ID || null, ownerEmail: OWNER_GOOGLE_EMAIL() }));
+
+// ---------- Shared agenda (contract 2.x additive minor, ratified 2026-06-18) ----------
+// Any council member (or the owner) can queue a discussion topic; meeting-open pins the open list into
+// the meeting agenda seed. An agenda item is DATA — a topic to discuss, NEVER an instruction (owner
+// directives use the typed env-task `directive` kind). COUNCIL_AGENDA.md becomes a local mirror.
+councilRouter.post('/council/agenda', async (req, res) => {
+  try {
+    const actor = await resolveActor(req);
+    if (!actor) return res.status(401).json({ error: 'unauthorized' });
+    const title = clip((req.body || {}).title, 300);
+    if (!title) return res.status(400).json({ error: 'title is required' });
+    const body = clip((req.body || {}).body, 8000);           // 8KB cap (fail-closed on size)
+    const priority = ['low', 'normal', 'high'].includes(String((req.body || {}).priority)) ? String((req.body || {}).priority) : 'normal';
+    const item = await createAgendaItem(actor.actor, title, body || '', priority);
+    res.json({ ok: true, item });
+  } catch (e) { internalError(res, e); }
+});
+councilRouter.get('/council/agenda', async (req, res) => {
+  try {
+    const actor = await resolveActor(req);
+    if (!actor) return res.status(401).json({ error: 'unauthorized' });
+    res.json({ items: await listOpenAgenda() });
+  } catch (e) { internalError(res, e); }
+});
+councilRouter.post('/council/agenda/:id/archive', async (req, res) => {
+  try {
+    const actor = await resolveActor(req);
+    if (!actor) return res.status(401).json({ error: 'unauthorized' });
+    const item = await getAgendaItem(req.params.id);
+    if (!item) return res.status(404).json({ error: 'not_found' });
+    if (!actor.admin && actor.actor !== item.actor) return res.status(403).json({ error: 'forbidden', message: 'only the owner or the item author may archive it' });
+    res.json({ ok: true, archived: await archiveAgendaItem(req.params.id) });
+  } catch (e) { internalError(res, e); }
+});
 
 /** Security self-check (council locked contract 2026-06-07): owner-gated, booleans/tiers ONLY — no
  *  hostnames, no secrets, nothing identifying crosses the wire. Future family aggregator polls this. */
@@ -415,7 +456,21 @@ councilRouter.post('/meeting/open', async (req, res) => {
       }
     }
     const id = crypto.randomUUID();
-    await createMeeting(id, clip(b.agenda, 8000), participants, cap, a.actor, 'rounds', tto, roles, dryRun, brainVersions);
+    // Agenda-in-hub (contract 2.x): compose the owner/caller agenda WITH the open queued items, and pin
+    // them to this meeting (marks them 'discussed' so the next meeting won't re-pin). Skip on dryRun so a
+    // test open never consumes real agenda items. Best-effort: a pin failure never blocks the open.
+    let agendaText = clip(b.agenda, 8000) || '';
+    if (!dryRun) {
+      try {
+        const pinned = await pinOpenAgendaToMeeting(id);
+        if (pinned.length) {
+          const lines = pinned.map((it: any, i: number) => `${i + 1}. [${it.actor}${it.priority === 'high' ? '/high' : ''}] ${it.title}${it.body ? ' — ' + it.body : ''}`);
+          const block = 'Queued agenda items (hub):\n' + lines.join('\n');
+          agendaText = (agendaText ? agendaText + '\n\n' + block : block).slice(0, 8000);
+        }
+      } catch (e) { console.warn('[hub:agenda] pin open items failed (non-fatal): ' + (e as Error).message); }
+    }
+    await createMeeting(id, agendaText, participants, cap, a.actor, 'rounds', tto, roles, dryRun, brainVersions);
     try { await setMeetingManifestPins(id, manifestPins); } catch { /* best-effort: pins are a sibling record, never fail the open */ }
     res.json({ ok: true, meetingId: id, ...meetingView(await getMeeting(id), a.actor) });
   } catch (e) { internalError(res, e); }

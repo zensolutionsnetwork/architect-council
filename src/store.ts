@@ -153,6 +153,13 @@ export async function initDb(): Promise<void> {
   // consent-gated cross-read denies everything.
   await q.query(`CREATE TABLE IF NOT EXISTS hierarchies (
     tenant_id text PRIMARY KEY, tree jsonb NOT NULL, updated_at timestamptz NOT NULL DEFAULT now(), updated_by text)`);
+  // Shared agenda (contract 2.x additive minor, ratified 2026-06-18). Any member can queue a discussion
+  // topic for the council; meeting-open pins the open list into the meeting agenda seed. An agenda item is
+  // DATA (a discussion topic) — never an instruction. status: open|discussed|archived.
+  await q.query(`CREATE TABLE IF NOT EXISTS agenda_items (
+    id bigserial PRIMARY KEY, actor text NOT NULL, title text NOT NULL, body text NOT NULL DEFAULT '',
+    priority text NOT NULL DEFAULT 'normal', status text NOT NULL DEFAULT 'open', meeting_id text,
+    created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now())`);
 }
 
 // ---- Boot-stamp log (P1 #8) -------------------------------------------------
@@ -199,6 +206,45 @@ export async function listHierarchies(): Promise<Array<{ tenantId: string; updat
     to_char(updated_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS updated_at, updated_by
     FROM hierarchies ORDER BY tenant_id`);
   return rows.map((r) => ({ tenantId: r.tenant_id, updatedAt: r.updated_at, updatedBy: r.updated_by }));
+}
+
+// ---- Shared agenda (contract 2.x additive minor) ----------------------------
+const AGENDA_SELECT = `SELECT id, actor, title, body, priority, status, meeting_id,
+  to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at`;
+function mapAgenda(r: any) {
+  return { id: String(r.id), actor: r.actor, title: r.title, body: r.body, priority: r.priority,
+    status: r.status, meetingId: r.meeting_id || null, createdAt: r.created_at };
+}
+export async function createAgendaItem(actor: string, title: string, body: string, priority: string): Promise<any> {
+  const { rows } = await db().query<any>(
+    `INSERT INTO agenda_items (actor, title, body, priority) VALUES ($1,$2,$3,$4) RETURNING id, actor, title, body, priority, status, meeting_id,
+      to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at`,
+    [actor, title, body, priority]);
+  return mapAgenda(rows[0]);
+}
+export async function listOpenAgenda(): Promise<any[]> {
+  const { rows } = await db().query<any>(`${AGENDA_SELECT} FROM agenda_items WHERE status='open' ORDER BY created_at ASC, id ASC`);
+  return rows.map(mapAgenda);
+}
+export async function getAgendaItem(id: string): Promise<any | null> {
+  const n = Number(id); if (!Number.isFinite(n)) return null;
+  const { rows } = await db().query<any>(`${AGENDA_SELECT} FROM agenda_items WHERE id=$1`, [n]);
+  return rows[0] ? mapAgenda(rows[0]) : null;
+}
+export async function archiveAgendaItem(id: string): Promise<boolean> {
+  const n = Number(id); if (!Number.isFinite(n)) return false;
+  const { rowCount } = await db().query(
+    `UPDATE agenda_items SET status='archived', updated_at=now() WHERE id=$1 AND status<>'archived'`, [n]);
+  return (rowCount ?? 0) > 0;
+}
+/** Meeting-open pin: mark all open items 'discussed' against this meeting and return them (oldest-first).
+ *  Atomic so a concurrent open can't double-pin the same item. */
+export async function pinOpenAgendaToMeeting(meetingId: string): Promise<any[]> {
+  const { rows } = await db().query<any>(
+    `UPDATE agenda_items SET status='discussed', meeting_id=$1, updated_at=now() WHERE status='open'
+     RETURNING id, actor, title, body, priority, status, meeting_id,
+       to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at`, [meetingId]);
+  return rows.map(mapAgenda).sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : Number(a.id) - Number(b.id)));
 }
 
 // ---- Living backlog (Arke's super-admin panel; mirrors Nova's model) --------

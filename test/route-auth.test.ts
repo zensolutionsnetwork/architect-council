@@ -48,6 +48,9 @@ const PROTECTED: { method: string; path: string; body?: object }[] = [
   { method: 'POST', path: '/api/council/scheduler', body: { enabled: true } },
   { method: 'GET',  path: '/api/council/dashboard' },
   { method: 'POST', path: '/api/council/member/probe/active', body: { active: false } },
+  { method: 'POST', path: '/api/council/agenda', body: { title: 'probe topic' } },
+  { method: 'GET',  path: '/api/council/agenda' },
+  { method: 'POST', path: '/api/council/agenda/probe-id/archive', body: {} },
 ];
 
 async function request(method: string, path: string, body?: object): Promise<number> {
