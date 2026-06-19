@@ -64,7 +64,7 @@ concern — all were small early runs.
 - **Retire the stale debrief queue (DONE here).** The "pending debriefs" item is closed — every real
   meeting now has a debrief doc (individual or this backfill). I have corrected `BACKLOG.md` so it stops
   carrying already-debriefed meetings.
-- **Optional cleanup:** the two TEST rooms (`ba2a3137`, `a9329a70`) could be purged via
-  `DELETE /api/meeting/:id` to leave only genuine council sessions in the history — your call (no report
-  emails, no spend; same as the 06-15 purge). I did NOT purge them without asking.
+- **Test rooms PURGED 2026-06-18 (owner approved):** `ba2a3137` + `a9329a70` deleted via
+  `DELETE /api/meeting/:id` (no live meeting, both `ok:true`). History now = **8 genuine council meetings**,
+  no test artifacts.
 - Per your standing rule, the substance of this backfill goes here + at the next meeting, not via DMs.

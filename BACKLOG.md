@@ -571,8 +571,8 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
   #1 `6aef82f6` (06-11 doc) were ALL already debriefed. The five with no individual doc (`6868e491`,
   `d5d8da54`=#2, `8da9d704`, + TEST rooms `ba2a3137`/`a9329a70`) are covered by the consolidated
   `council/KAIROS_DEBRIEF_2026-06-18_backfill.md` (all 5 hash-verify PASS; learnings already integrated
-  contemporaneously; no outstanding homework). Every real meeting now has a debrief. (Optional: purge the 2
-  TEST rooms — owner's call.)
+  contemporaneously; no outstanding homework). Every real meeting now has a debrief. **TEST rooms
+  `ba2a3137`+`a9329a70` PURGED 2026-06-18 (owner approved) → history = 8 genuine council meetings.**
   **#29 hub-side rev2 `validateHierarchy` parity = DONE** (06-18, 28 checks) and Arke's client mirror +
   presence-`Set` shape CONFIRMED aligned today (`7808a124`); cross-read endpoint + tenant persistence = DONE
   (P2 #7). **Remaining #29 = JOINT with Arke (not solo):** full-corpus delivery through the gate
