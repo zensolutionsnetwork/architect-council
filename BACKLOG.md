@@ -2,11 +2,36 @@
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-18
-> (DAY SESSION PM/EVE: shipped board-to-4-seats, agenda-in-hub + directive channel, Layer-1 Manager v0;
-> consumed Arke's consolidated reply; #29 schemas aligned both sides; inbox 0; all CI-green + prod-smoked).
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-19
+> (NIGHTLY: quiet overnight, no new code/meeting, all CI-green, prod healthy; 1 open inbox item = Arke's
+> standing "walk hub changes in-meeting" directive, left open for the day session + captured as a standing
+> prep item).
 
 ## STATE AT A GLANCE
+- **NIGHTLY (2026-06-18 PM/EVE → 2026-06-19 00:26 EDT) — quiet overnight, all green, no new code, no new
+  meeting.** HEAD is `12cd26a` (the 06-18 PM/EVE session's last commit — "record purge of 2 test rooms";
+  no commits overnight). Working tree clean, in sync with origin/main (0/0). Prod healthy (`/api/health`
+  ok:true, vault:true). **Core CI GREEN on `12cd26a`** (CI + Push-on-main both success). **No live meeting**
+  (8 genuine council meetings, all `phase=report`; LIVE_ROUNDS_COUNT=0 — safe to push). **No new autonomous
+  meeting overnight** (still the same 8 — no debrief owed). **Inbox: 1 OPEN — Arke `14e824d0`, left OPEN for
+  the day session (coordination, not pure-FYI).** It is an OWNER DIRECTIVE (2026-06-18) restated by Arke:
+  Kairos + Arke must walk ALL hub changes (every endpoint/contract/env var added/changed/removed since the
+  last meeting) at EVERY meeting as a dedicated standing round before homework, so Nova/Logos stay aware and
+  Kairos/Arke stay in sync. Both bring a "hub changes since last meeting" changelog in their brain pack;
+  Arke added it to COUNCIL_AGENDA. **This already overlaps the standing agenda item `d02e397` (every hub
+  change reviewed in-meeting)** — captured here + reinforced in my pack's "what I owe THIS meeting" section.
+  My standing duty: carry a hub-side changelog (commits + endpoint/contract/env deltas) into each meeting.
+  **No deploy this ritual (BACKLOG/CLAUDE doc-only + brain re-pack).** The 06-18 PM/EVE day-session handoff
+  below already captured the day's substance (board-to-4-seats, agenda-in-hub + directive channel, Layer-1
+  Manager v0, auto-scheduler, v1-conversation removal, dashboard, #29 rev2 parity + cross-read/tenant
+  persistence, test-room purge → 8 genuine meetings). **NEXT SESSION top 3:** (1) **morning ritual** —
+  debrief any NEW overnight autonomous meeting (none yet tonight) + check inbox; (2) **reply to Arke
+  `14e824d0`** — confirm adoption of the standing hub-changelog round + that I'll carry the hub-side
+  changelog (then report-close); (3) **#29 JOINT with Arke** — await his co-design proposal (full-corpus
+  through the cross-read gate + first acting code-review node); plus wire the app cockpit watch (agenda
+  list / directive composer / Layer-1 digest display consume the documented shapes). No solo code blockers
+  I own remain. Canonical backlog = this file. Bullets below this line are the 06-18 PM/EVE snapshot
+  (history).
 - **DAY SESSION (2026-06-18 PM/EVE, Mathieu present) — big additive build run, 6 clean CI-green deploys.**
   Consumed Arke's consolidated reply (`7808a124`): scheduler UI WIRED app-side, his app V1-CLEAN (my v1
   removal needs no repoint), **#29 presence shape aligned to my `Set<string>`** (schemas identical both
@@ -584,7 +609,10 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
   documented shapes) · bring the **#29 joint co-design proposal** (full-corpus through gate + first acting
   code-review node) · prep/debrief skill drafts · `canon.ts` align to the JCS golden vector · Layer-2 eval
   (later) · email panel wiring. (`src/server.ts` close-phase fix + manifest flip + corpus-contract + 2.1
-  accept + his debriefs: ✅ done earlier.)
+  accept + his debriefs: ✅ done earlier.) **NEW standing ask (`14e824d0`, owner directive 06-18):** both
+  Kairos + Arke bring a "hub changes since last meeting" changelog to EVERY meeting and walk it as a
+  dedicated round before homework (so Nova/Logos stay aware). Overlaps standing agenda item `d02e397`.
+  Reply to `14e824d0` confirming adoption next session, then report-close.
 - **Nova**: emit the **paired manifest** from her packager (closing homework) — `fc5b1606` showed her
   seat fell back to per-kind `none(no_manifest)` (loud+logged, by design); not a hub blocker.
 - **Logos**: living backlog on biblevoice.net (pack + corpus brain: ✅ committed).

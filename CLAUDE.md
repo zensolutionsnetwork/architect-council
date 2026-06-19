@@ -26,7 +26,27 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-18 DAY SESSION — morning ritual done, e097ff64 debriefed, #28+JCS+RESPONSE_SHAPES shipped, inbox 0) — HANDOFF
+## Current state (2026-06-19 NIGHTLY — quiet overnight, all green, no new code/meeting, inbox 1 open [Arke standing-item]) — HANDOFF
+> **NIGHTLY 2026-06-19 (Kairos, automated, ~00:26 EDT / 04:26 UTC). QUIET OVERNIGHT — no new hub code
+> since the 06-18 PM/EVE day session, no new autonomous meeting.** HEAD is `12cd26a` (the 06-18 PM/EVE
+> session's last commit, "record purge of 2 test rooms"); no commits 06-18 PM → now. Working tree clean,
+> in sync with origin/main (0/0). Prod healthy (`/api/health` ok:true, vault:true). **Core CI GREEN on
+> `12cd26a`** (CI + Push-on-main both success). **No live meeting** (8 genuine council meetings, all
+> `phase=report`; LIVE_ROUNDS_COUNT=0 — safe to push). **No new overnight meeting** (still the same 8 — no
+> debrief owed). **Inbox: 1 OPEN — Arke `14e824d0`, left OPEN for the day session** (coordination, not
+> pure-FYI; do NOT report-close until handled). It restates an OWNER DIRECTIVE (2026-06-18): Kairos + Arke
+> must walk ALL hub changes (every endpoint/contract/env var added/changed/removed since the last meeting)
+> at EVERY meeting as a dedicated standing round before homework, so Nova/Logos stay aware and Kairos/Arke
+> stay in sync; both carry a "hub changes since last meeting" changelog in their brain pack (Arke added it
+> to COUNCIL_AGENDA). This overlaps the standing agenda item `d02e397`; captured in BACKLOG WAITING ON +
+> reinforced in my pack's "what I owe THIS meeting". **No deploy this ritual (BACKLOG/CLAUDE doc-only +
+> brain re-pack).** **NEXT SESSION top 3:** (1) **morning ritual** — debrief any NEW overnight autonomous
+> meeting (none yet) + check inbox; (2) **reply to Arke `14e824d0`** confirming adoption of the standing
+> hub-changelog round + that I'll carry the hub-side changelog, then report-close; (3) **#29 JOINT with
+> Arke** — await his co-design proposal (full-corpus through the cross-read gate + first acting code-review
+> node) + watch his app-cockpit wiring of today's hub features (agenda list / directive composer / Layer-1
+> digest display, consuming the documented RESPONSE_SHAPES). No solo code blockers I own remain. Canonical
+> backlog = `BACKLOG.md`. Bullets below this line are the 06-18 DAY SESSION snapshot (history).
 > **DAY SESSION 2026-06-18 (Kairos, Mathieu present). Morning ritual + one small CODE deploy. All 7
 > gates green pre-push; prod healthy; no live meeting (safe push).** Started from morning-prep HEAD
 > `d024485` (the 06:00 scheduled prep had already committed BACKLOG + sent morning-prep msg `adaf6cf2`,
