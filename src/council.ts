@@ -738,10 +738,12 @@ councilRouter.get('/council/backlogs', async (req, res) => {
 // tolerant — done/planned default to [], and a legacy single-text blob surfaces as one note line.
 councilRouter.get('/council/backlog', requireOwner, async (_req, res) => {
   try {
-    // Owner directive 2026-06-11 (confirmed by Mathieu in session): the owner board shows ONLY the
-    // council project's own rows — arke + architect-council. Nova/biblevoice keep their backlogs on
-    // their own platforms; their write path stays, but their rows never surface here.
-    const BOARD_ACTORS = new Set(['arke', 'kairos']); // 'architect-council' legacy alias dropped 2026-06-11 (kairos row live; stale row ignored)
+    // Owner directive 2026-06-18 (Mathieu): the board shows ALL FOUR canonical seats so the owner has a
+    // global vision of every agent's backlog — superseding the 2026-06-11 arke+kairos-only scope. The
+    // hub-self 'architect-council' row (and any retired alias) is excluded by virtue of not being a seat.
+    // Nova/Logos rows surface here once their end-of-day task posts (the daily-loop standard); until then
+    // a stale or absent row is itself a useful signal to the owner.
+    const BOARD_ACTORS = new Set(MEETING_DEFAULT); // kairos, arke, nova, logos
     const rows = (await getAgentBacklogs()).filter((r: any) => BOARD_ACTORS.has(String(r.actor)));
     const arr = (v: any) => (Array.isArray(v) ? v.map((x) => (typeof x === 'string' ? x : JSON.stringify(x))) : []);
     const sections = rows.map((r: any) => {
