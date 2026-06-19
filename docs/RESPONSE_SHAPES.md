@@ -5,6 +5,8 @@ clients (Arke's standalone app, member packagers) wire against a fixed contract 
 Additive only: new fields may appear; existing field names + types never change without a
 `schemaVersion` bump. **Clients MUST ignore unknown fields and MUST NOT depend on key order.**
 
+_Last updated: 2026-06-19 — added `GET /api/council/meetings/:id/status` (finalizer observability, #30)._
+
 ## `POST /api/bridge/brain/:uploadId/commit` (brain pack/corpus commit) — schemaVersion 1
 
 Commits an uploaded brain blob (pack or corpus) for the upload's actor and returns the committed
@@ -54,6 +56,17 @@ torn pack/corpus pair) and pinned atomically at `/meeting/open`. Map `hash := sh
 - `409 { error:"contract_version" }` — `x-contract-version` mismatch
 - `412 { error:"consent_required", ... }` — consent manifest `secretScan.findings != 0`
 - `422 { error:"chunk_hash_mismatch", idx, expected, got }`
+- `422 { error:"manifest_bad_dropped_files", message }` — a `kind:"manifest"` commit whose optional
+  `droppedFiles` is not an array of `{ path, reason }` (two non-empty strings). See below.
+
+**`droppedFiles` on a `kind:"manifest"` commit (#32, optional, no contract bump):** a manifest may
+carry `droppedFiles: [{ path, reason }]` — files the packager intentionally excluded from its corpus.
+The hub is the **consumer**: it validates the **shape only** (rejecting malformed with the 422 above)
+and echoes the normalized `droppedFiles` array back in the commit response; it also surfaces it on the
+owner dashboard (`droppedFiles` + `droppedFilesCount` per member). The **declared-vs-actual delta
+equality** (count + set, both directions — under-declare AND over-declare fail) is enforced
+**producer-side** in each packager's `validateShrink`, not by the hub. Absent/empty `droppedFiles` is
+valid.
 
 ## `GET /api/meeting/:id/transcript` — canon `council-jcs-1.0`
 
@@ -76,6 +89,36 @@ A `pass` turn carries `text:""` (key present, empty) — never omitted. The SPEA
 camelCase 4-field structured report: `{ codeReviewImprovements, directionConsensus, frictionFixes,
 flags }` plus `{ id, agenda, closedAt, raw }`. Synthesized once at real close (best-effort; null if
 synthesis was skipped or the meeting is mid-flight).
+
+## `GET /api/council/meetings/:id/status` (finalizer observability, #30 — meeting 2026-06-19)
+
+The signal a downstream consumer polls *before* reading `/report`, so it never pulls a half-written
+report while the async finalizer is still committing. Auth: any authenticated actor (member secret OR
+owner) — the consumers are the sibling agents. Metadata only; never the report body.
+
+```jsonc
+{
+  "id": "9a427b5f-...",
+  "state": "ready",                 // "pending" | "finalizing" | "ready"
+  "report_committed": true,         // boolean — true iff owner_report is committed
+  "report_committed_at": "2026-06-19T07:04:05Z", // string|null — set only in state "ready"
+  "finalizer_lag_ms": 1840,         // integer|null — owner_report_at - closed_at; null until "ready"
+  "closed_at": "2026-06-19T07:04:03Z" // string|null — null while state is "pending"
+}
+```
+
+**State semantics:**
+- `pending` — meeting not yet closed (still running, or never closed). `closed_at` null.
+- `finalizing` — `closed_at` set but the owner report is NOT yet committed. This also covers a
+  **crashed or failed finalizer** (or a real close that produced no report, e.g. zero spoken turns,
+  and a dry-run room which never synthesizes): held **indefinitely** on purpose — there is no silent
+  flip to `ready` on a partial write. The consumer's poll **timeout** is the page-someone signal.
+- `ready` — owner report committed; `/report` and `/owner-report` are safe to read.
+
+**Consumer contract (adopted in meeting 2026-06-19, behind `COUNCIL_STATUS_ENDPOINT_URL` until live):**
+`pollUntilReportReady` (Arke) — 3s interval, 120s hard timeout, throw on expiry. Logos's refinement:
+a transient-502 retry layer *inside* the loop — a `404` (unknown id) re-throws immediately, other
+non-200s burn budget and retry. `404 { error:"not_found" }` on an unknown meeting id.
 
 ## `GET /api/bridge/corpus-status?actor=<actor>` (corpus-ready signal, P1 #7)
 

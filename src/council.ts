@@ -593,6 +593,38 @@ councilRouter.get('/council/meeting/:id/owner-report', async (req, res) => {
   } catch (e) { internalError(res, e); }
 });
 
+// Finalizer status (#30, meeting 2026-06-19) — member-or-owner readable. Downstream consumers
+// (Arke's pollUntilReportReady, Logos's retry layer, the morning-prep poll) hit this before reading
+// /report so they never pull a half-written report while the async finalizer is still committing.
+//   state: 'pending'    — meeting not yet closed (still running or never closed)
+//          'finalizing' — closed_at set, owner_report NOT yet committed (finalizer in flight, OR a
+//                         crashed/failed finalizer — held indefinitely on purpose; the consumer's
+//                         poll timeout is the page-someone signal, never a silent flip to ready)
+//          'ready'      — owner_report committed; report is safe to read
+// finalizer_lag_ms = owner_report_at - closed_at (null until ready). 404 on unknown id.
+councilRouter.get('/council/meetings/:id/status', async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
+    const m = await getMeeting(req.params.id); if (!m) return res.status(404).json({ error: 'not_found' });
+    const closedAt = m.closed_at || null;
+    const reportAt = m.owner_report_at || null;
+    const reportCommitted = !!m.owner_report;
+    const state = !closedAt ? 'pending' : (reportCommitted ? 'ready' : 'finalizing');
+    let lag: number | null = null;
+    if (state === 'ready' && closedAt && reportAt) {
+      const d = Date.parse(reportAt) - Date.parse(closedAt);
+      lag = Number.isFinite(d) && d >= 0 ? d : null;
+    }
+    res.json({
+      id: m.id, state,
+      report_committed: reportCommitted,
+      report_committed_at: state === 'ready' ? reportAt : null,
+      finalizer_lag_ms: lag,
+      closed_at: closedAt,
+    });
+  } catch (e) { internalError(res, e); }
+});
+
 // Boot-stamp log readback (P1 #8) — owner-gated. Two consecutive rows with the same deploy_sha =
 // the container cycled without a deploy. secret_fp is a non-reversible fingerprint, never the secret.
 councilRouter.get('/council/boots', async (req, res) => {
@@ -709,8 +741,17 @@ councilRouter.get('/council/dashboard', requireOwner, async (_req, res) => {
         try { corpus = await getBrainV2Meta(name, 'corpus'); } catch { /* absent */ }
         try { pack = await getBrainV2Meta(name, 'pack'); } catch { /* absent */ }
         try { manifest = await getBrainV2Meta(name, 'manifest'); } catch { /* absent */ }
+        // #32: surface the manifest's declared droppedFiles (best-effort; parse the manifest content).
+        let droppedFiles: Array<{ path: string; reason: string }> = [];
+        if (manifest) {
+          try {
+            const manc = await getBrainV2Content(name, 'manifest');
+            if (manc) { const mj = JSON.parse(manc.content.toString('utf8')); const df = parseDroppedFiles(mj && mj.droppedFiles); if (df.ok) droppedFiles = df.entries; }
+          } catch { /* dropped-files surface is best-effort, never fails the dashboard */ }
+        }
         out.push({ actor: name, corpusReady: !!corpus, packReady: !!pack, manifestReady: !!manifest,
-          corpusBuiltAt: corpus ? corpus.committed_at : null });
+          corpusBuiltAt: corpus ? corpus.committed_at : null,
+          droppedFiles, droppedFilesCount: droppedFiles.length });
       }
       return out;
     };
@@ -886,6 +927,25 @@ function readRawBody(req: Request, maxBytes = 12 * 1024 * 1024): Promise<Buffer>
 }
 const remainingIdx = (manifest: any[], received: number[]) => manifest.map((m: any) => Number(m.idx)).filter((i) => !received.includes(i));
 
+/** #32 (meeting 2026-06-19): the brain-manifest 2.1 OPTIONAL `droppedFiles` field — files a packager
+ *  intentionally excluded from its corpus, each declared `{ path, reason }` (two non-empty strings,
+ *  nothing more). The hub is the CONSUMER: it validates the SHAPE only (and surfaces it on the owner
+ *  dashboard). The declared-vs-actual delta equality check (count + set, both directions) is
+ *  PRODUCER-side — Nova's `validateShrink` in each packager. No contract bump; absent/empty is valid. */
+function parseDroppedFiles(v: any): { ok: boolean; entries: Array<{ path: string; reason: string }>; error?: string } {
+  if (v == null) return { ok: true, entries: [] };
+  if (!Array.isArray(v)) return { ok: false, entries: [], error: 'droppedFiles must be an array' };
+  const entries: Array<{ path: string; reason: string }> = [];
+  for (let i = 0; i < v.length; i++) {
+    const e = v[i];
+    if (!e || typeof e !== 'object' || Array.isArray(e)) return { ok: false, entries: [], error: `droppedFiles[${i}] must be an object { path, reason }` };
+    if (typeof e.path !== 'string' || !e.path.trim()) return { ok: false, entries: [], error: `droppedFiles[${i}].path must be a non-empty string` };
+    if (typeof e.reason !== 'string' || !e.reason.trim()) return { ok: false, entries: [], error: `droppedFiles[${i}].reason must be a non-empty string` };
+    entries.push({ path: e.path, reason: e.reason });
+  }
+  return { ok: true, entries };
+}
+
 councilRouter.post('/bridge/brain/init', requireContract2, async (req, res) => {
   try {
     const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
@@ -959,6 +1019,7 @@ councilRouter.post('/bridge/brain/:uploadId/commit', requireContract2, async (re
     // Content is canonical JSON {actor, pack_sha256, corpus_sha256, committed_at, contract:"2.1"}; each
     // *_sha256 MUST equal the actor's currently-committed pack/corpus row — else the pair is torn (409,
     // naming which kind diverged so the packager re-uploads the lagging artifact then the manifest).
+    let droppedFiles: Array<{ path: string; reason: string }> | undefined;
     if (up.kind === 'manifest') {
       let mani: any;
       try { mani = JSON.parse(buf.toString('utf8')); } catch { return res.status(422).json({ error: 'manifest_invalid_json' }); }
@@ -972,6 +1033,10 @@ councilRouter.post('/bridge/brain/:uploadId/commit', requireContract2, async (re
       const corpusMeta = await getBrainV2Meta(up.actor, 'corpus');
       if (!packMeta || String(packMeta.sha256).toLowerCase() !== wantPack) return res.status(409).json({ error: 'manifest_mismatch', kind: 'pack', expected: wantPack, got: packMeta ? String(packMeta.sha256).toLowerCase() : null });
       if (!corpusMeta || String(corpusMeta.sha256).toLowerCase() !== wantCorpus) return res.status(409).json({ error: 'manifest_mismatch', kind: 'corpus', expected: wantCorpus, got: corpusMeta ? String(corpusMeta.sha256).toLowerCase() : null });
+      // #32: accept + shape-validate the OPTIONAL droppedFiles declaration (producer computes the delta).
+      const dfp = parseDroppedFiles(mani.droppedFiles);
+      if (!dfp.ok) return res.status(422).json({ error: 'manifest_bad_dropped_files', message: dfp.error });
+      droppedFiles = dfp.entries;
     }
     // Corpus floor-assert + delta-print (Nova's pattern, adopted 2026-06-18 from mtg e097ff64): surface a
     // shrunk/truncated corpus LOUDLY at the commit boundary so a slow corpus leak can't land unnoticed.
@@ -1003,7 +1068,7 @@ councilRouter.post('/bridge/brain/:uploadId/commit', requireContract2, async (re
     try { const cm = await getBrainV2Meta(up.actor, up.kind || 'corpus'); committedAt = cm ? cm.committed_at : null; } catch { /* echo is best-effort */ }
     // #28 + RESPONSE_SHAPES.md: ok + schemaVersion are additive. Clients gate on ok===true and branch on
     // schemaVersion; committedAt is the authoritative server time, sha256 is the whole-blob content hash.
-    res.json({ ok: true, schemaVersion: 1, brainVersion, actor: up.actor, kind: up.kind || 'corpus', sha256: whole, bytes: buf.length, committedAt, corpusGuard });
+    res.json({ ok: true, schemaVersion: 1, brainVersion, actor: up.actor, kind: up.kind || 'corpus', sha256: whole, bytes: buf.length, committedAt, corpusGuard, droppedFiles });
   } catch (e) { internalError(res, e); }
 });
 councilRouter.get('/bridge/brain-meta/:actor', async (req, res) => {

@@ -96,6 +96,9 @@ export async function initDb(): Promise<void> {
   await q.query(`ALTER TABLE meetings ADD COLUMN IF NOT EXISTS brain_versions jsonb`);
   // Owner report (ROADMAP Layer 0 / Fable review 2.2): 4-point synthesis to Mathieu at meeting close.
   await q.query(`ALTER TABLE meetings ADD COLUMN IF NOT EXISTS owner_report text`);
+  // Finalizer observability (#30, meeting 2026-06-19): timestamp the owner-report commit so the status
+  // endpoint can derive finalizer_lag_ms (owner_report_at - closed_at) and a ready/finalizing signal.
+  await q.query(`ALTER TABLE meetings ADD COLUMN IF NOT EXISTS owner_report_at timestamptz`);
   // Brain-manifest 2.1 (corpus-contract §6): per-seat atomic pack+corpus pin state recorded at
   // meeting open — { actor: { state:'paired'|'stale'|'none', reason, packSha256, corpusSha256, manifestAt } }.
   // Parallel to brain_versions (which stays the back-compat per-kind string); surfaced in the owner report.
@@ -486,6 +489,7 @@ export async function getMeeting(id: string): Promise<any | null> {
     to_char(turn_started_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS turn_started_at,
     to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
     to_char(updated_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS updated_at,
+    to_char(owner_report_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS owner_report_at,
     to_char(closed_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS closed_at FROM meetings WHERE id=$1`, [id]);
   if (!rows[0]) return null;
   const r = rows[0];
@@ -507,7 +511,7 @@ export async function updateMeeting(id: string, patch: { phase?: string; turn_in
      patch.transcript ? JSON.stringify(patch.transcript) : null, patch.report ?? null, patch.closed === true, patch.touchTurn === true]);
 }
 export async function setMeetingOwnerReport(id: string, report: string): Promise<void> {
-  await db().query(`UPDATE meetings SET owner_report=$2, updated_at=now() WHERE id=$1`, [id, report]);
+  await db().query(`UPDATE meetings SET owner_report=$2, owner_report_at=now(), updated_at=now() WHERE id=$1`, [id, report]);
 }
 // ---- Autonomous voice loop: ledger + run-state (HUB_AUTONOMOUS_VOICE_SPEC §2/§3) ----
 export async function setMeetingLedger(id: string, ledger: any): Promise<void> {

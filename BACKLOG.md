@@ -610,9 +610,10 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
     throw-on-timeout, Logos's transient-502 retry). Fail closed → skip narrative embed, leave last-known-good.
     **First VERIFY whether the sleep actually exists** (self-flag: this morning had no race, 3h gap). NOTE:
     the prep script lives under `C:\Users\matpa\Claude\Scheduled\`, NOT the repo. Gated on #30 being live.
-34. **Scheduler jitter debt (NEW 2026-06-19, mtg `9a427b5f`, trivial).** The 03:00 ET auto-scheduler
-    (`beeac4c`) has no jitter — fine at single-tenant, a thundering-herd risk only if the hub goes
-    multi-tenant. Record as explicit debt in the dev log; not a fix.
+34. **Scheduler jitter debt (NEW 2026-06-19, mtg `9a427b5f`, trivial).** ✅ RECORDED — now lives in
+    `docs/TECH_DEBT.md` TD-1 (the durable debt ledger). The 03:00 ET auto-scheduler (`beeac4c`) has no
+    jitter — fine at single-tenant, a thundering-herd risk only if the hub goes multi-tenant; pay down
+    with the multi-tenant work, not before. Not a fix.
 
 ## WAITING ON
 - **Mathieu**: effectively NOTHING blocking. (1) **Layer-1 Manager + agenda/directive — RESOLVED + BUILT
