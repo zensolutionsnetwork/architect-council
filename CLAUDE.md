@@ -126,8 +126,10 @@ or ask Mathieu first.
 > #2 `d5d8da54`/4t, the 3 recent self-closed), kept as history at `report` phase. The recurring "retro-close
 > stuck meetings" question is RETIRED. (Note: the `/api/meetings` list is capped ~20 and omits `closed_at` —
 > do NOT infer stuck-ness from it; check `GET /api/meeting/:id/report` `closedAt` per-meeting.) **WAITING ON:** ~~Arke (hierarchy.ts rev2 mirror; #28 client wiring)~~ **BOTH LANDED 06-18** (mirror
-> confirmed `eeb797e5`; #28 consumed live `314173e`) · Nova (paired 2.1 manifest — still `none(no_manifest)`,
-> 3/4 paired). Canonical backlog = `BACKLOG.md`. Bullets below this line are the 06-18 NIGHTLY snapshot (history).
+> confirmed `eeb797e5`; #28 consumed live `314173e`) · ~~Nova (paired 2.1 manifest)~~ **DONE 06-18 PM (Nova
+> `1c135889`): manifest now PAIRED (pack a83bdca4 + corpus 56f59156, clean), re-packed vs main, + #29
+> hierarchy 2.1/rev2 ACCEPT. ALL 4 SEATS PAIRED (corpus+pack+manifest); #29 now has unanimous ACCEPT.**
+> Canonical backlog = `BACKLOG.md`. Bullets below this line are the 06-18 NIGHTLY snapshot (history).
 > **NIGHTLY 2026-06-18 (Kairos, automated). QUIET OVERNIGHT — no new hub code since the 06-17 day
 > session.** HEAD is `6939d3a` (the 06-17 18:18 "council agent onboarding prompt / starter kit" docs
 > commit — last of the day session); no commits 06-17 18:18 → 06-18 00:00. Working tree clean, in sync
