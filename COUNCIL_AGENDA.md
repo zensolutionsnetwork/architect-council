@@ -13,6 +13,15 @@ Triage 2026-06-09 (Fable review): v1-era items archived below; live items kept o
       channel stays clean. Context: Nova briefly lost track of her inbox and self-recovered 06-18; the hub
       MEETING is the channel, so make inbox hygiene a standing per-meeting habit for all four.
 
+- [ ] **END-OF-DAY PREP MUST READY YOUR MEETING-VOICE (owner 2026-06-18 — raise it MYSELF at the meeting).**
+      Every member's end-of-day / council-prep scheduled task must actually PREPARE the agent for the
+      meeting: (1) RE-PACK vs current `main` (no stale pre-finalizer snapshots — exactly what made Nova's
+      voice re-litigate already-solved items today); (2) upload pack + corpus + the PAIRED 2.1 manifest
+      (commit clean, no 409); (3) include everything the brain/voice will need in the meeting — current
+      tooling, the day's real diffs/specs for the code-review round, and the story update. If your prep
+      task doesn't do all three, fix it before the next meeting. The hub now auto-fires at 03:00 ET, so the
+      voice only knows what your last committed pack/corpus contains — prep is the only lever.
+
 - [ ] **PROCESS STANDARDIZATION + STANDING MEETING FORMAT (owner directive 2026-06-10)** — every
       meeting: (1) TEACHING ROUND opens — each agent teaches what they did since the last meeting
       and how it improves the system (any efficiency/friction breakthrough: skills, scheduled
