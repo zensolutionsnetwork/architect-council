@@ -110,12 +110,44 @@ function bootsCard(rows) {
   const tr = rows.map(b=>'<tr><td class="mono">'+esc((b.deploy_sha||'').slice(0,7))+'</td><td class="meta">'+esc(fmt(b.booted_at))+'</td><td class="meta">fp '+(b.secret_fp?'present':'—')+'</td></tr>').join('');
   return '<div class="card"><h2>Boot log</h2><table><tr><th>deploy</th><th>booted</th><th>secret</th></tr>'+tr+'</table><div class="meta" style="margin-top:8px">two rows, same deploy = a container cycled without a deploy</div></div>';
 }
+function agendaCard(items) {
+  const head = '<div class="card"><h2>Open agenda</h2>';
+  if (!items || !items.length) return head + '<div class="meta">no open topics — queue one via POST /api/council/agenda</div></div>';
+  const pri = p => '<span class="badge ' + (p==='high'?'no2':'ok2') + '">' + esc(p||'normal') + '</span>';
+  const tr = items.map(it => '<tr><td>'+pri(it.priority)+'</td><td><b>'+esc(it.title)+'</b>'
+    + (it.body?'<div class="meta">'+esc(String(it.body).slice(0,180))+'</div>':'')
+    + '</td><td class="meta">'+esc(it.actor)+'</td><td class="meta">'+esc(ago(it.createdAt))+'</td></tr>').join('');
+  return head + '<table><tr><th>pri</th><th>topic</th><th>by</th><th>queued</th></tr>'+tr+'</table></div>';
+}
+function managerCard(digest, flags) {
+  const head = '<div class="card"><h2>Layer-1 Manager</h2>';
+  let body = '';
+  if (!digest) body += '<div class="meta">no meeting digest yet — generates at the next meeting close</div>';
+  else {
+    const b=(ok,l)=>'<span class="badge '+(ok?'ok2':'no2')+'">'+l+' '+(ok?'✓':'✗')+'</span>';
+    body += '<div class="meta">meeting '+esc((digest.meetingId||'').slice(0,8))+' · '+esc(ago(digest.generatedAt))+'</div>';
+    if (digest.note) body += '<pre class="raw">'+esc(digest.note)+'</pre>';
+    const pa = (digest.perAgent||[]).map(a=>'<tr><td><b>'+esc(a.actor)+'</b></td><td>'+b(a.brainPaired,'paired')+b(a.participated,'spoke')+b(a.codeChanged,'shipped')+'</td></tr>').join('');
+    if (pa) body += '<table><tr><th>actor</th><th>signals</th></tr>'+pa+'</table>';
+  }
+  if (flags && flags.length) {
+    const fr = flags.map(f=>'<tr><td><b>'+esc(f.title)+'</b></td><td><span class="badge '+(f.count>=2?'no2':'ok2')+'">×'+esc(f.count)+'</span></td><td class="meta">'+(f.agendaItemId?'on agenda':'')+'</td></tr>').join('');
+    body += '<div class="grouph" style="margin-top:10px">recurring flags</div><table><tr><th>flag</th><th>seen</th><th></th></tr>'+fr+'</table>';
+  } else body += '<div class="meta" style="margin-top:8px">no open flags</div>';
+  return head + body + '</div>';
+}
 async function loadPanels() {
   try {
     const r = await fetch('/api/council/dashboard', { headers: hdrs() });
     if (!r.ok) return;
     const d = await r.json();
-    document.getElementById('panels').innerHTML = statStrip(d) + meetingsCard(d.meetings) + membersCard(d.members) + bootsCard(d.boots);
+    // Layer-1 + agenda panels pull from their own owner-gated endpoints (best-effort; never block the board).
+    let agenda = [], digest = null, flags = [];
+    try { const ar = await fetch('/api/council/agenda', { headers: hdrs() }); if (ar.ok) agenda = (await ar.json()).items || []; } catch {}
+    try { const mr = await fetch('/api/council/manager/digests', { headers: hdrs() }); if (mr.ok) { const dd = (await mr.json()).digests || []; digest = dd[0] || null; } } catch {}
+    try { const fr = await fetch('/api/council/manager/flags', { headers: hdrs() }); if (fr.ok) flags = (await fr.json()).flags || []; } catch {}
+    document.getElementById('panels').innerHTML = statStrip(d) + managerCard(digest, flags) + agendaCard(agenda)
+      + meetingsCard(d.meetings) + membersCard(d.members) + bootsCard(d.boots);
   } catch {}
 }
 
