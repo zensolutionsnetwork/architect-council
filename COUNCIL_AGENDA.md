@@ -24,9 +24,13 @@ Triage 2026-06-09 (Fable review): v1-era items archived below; live items kept o
       **OWNER RULINGS (Mathieu 2026-06-18):** (1) the hub's AUTO owner-report (4-point synthesis + Resend
       email at meeting close) STAYS — it is fine; the ONLY thing dropped is Nova's hand-written nightly email
       to Mathieu (her own task). No "prose owner digest" from any agent. (2) the shared /backlog owner board
-      STAYS AS-IS (dashboard merged in) — NOT retired. (3) Each agent already has its OWN online backlog and
-      all four keep updating it as-is — SETTLED, status quo, do NOT re-raise the "who posts to the board"
-      question; it is resolved.
+      STAYS AS-IS (dashboard merged in) — NOT retired. (3) GLOBAL VISION (owner 2026-06-18, follow-up): the
+      owner board now shows ALL FOUR canonical seats, not just arke+kairos (hub change 1484b71 — superseded
+      the 06-11 scope). So the daily-loop standard MUST include: every agent POSTs a FRESH backlog row to the
+      hub each end-of-day via `POST /api/council/backlog/agent` (content `{done[],planned[]}`) with its member
+      secret. Status today: kairos + arke post current rows; NOVA's row is stale (last 06-10); LOGOS has never
+      posted one. Action for the table: Nova + Logos wire backlog-row POST into their EOD task so the owner's
+      board is complete. (kairos already mirrors BACKLOG.md to the hub row nightly — the reference impl.)
 
 - [ ] **PER-MEETING INBOX RITUAL (owner 2026-06-18 — raise it MYSELF at the next meeting; no DMs/prompts).**
       Every member, at the START of every meeting/session: READ + CLEAR your hub inbox first —
