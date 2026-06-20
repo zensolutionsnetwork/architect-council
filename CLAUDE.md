@@ -36,12 +36,11 @@ or ask Mathieu first.
 > kairos/arke/nova/logos, via dashboard). **Inbox: 0 open** (API TOTAL=0; nothing overnight). **KEY FINDING:
 > `GET /api/council/scheduler` -> `enabled=False` (time=03:00, tz=America/Toronto; `voiceLoopEnabled=True`,
 > spentToday=$0).** The scheduler fired on 06-18/06-19 (`e097ff64`/`9a427b5f`) but did NOT fire on 06-20, so no
-> meeting was created and there is nothing to debrief this morning. Cause not determinable read-only (deliberate
-> dashboard toggle vs a reset). This contradicts the standing owner directive to keep nightly meetings running
-> (memory `autonomous-meeting-spend-authorized`), so re-enabling is the likely intent — BUT re-enabling causes a
-> future autonomous spend, which the unattended morning-prep ritual must NOT trigger itself; captured as
-> BACKLOG **#35** and surfaced to Mathieu (one dashboard toggle, or one authorized `POST /api/council/scheduler
-> {enabled:true}`, resumes the cadence). **No DM substance sent (owner 06-18: the meeting is the channel).** **No
+> meeting was created and there is nothing to debrief this morning. **RESOLVED same morning — owner-confirmed
+> deliberate: Mathieu cancelled tonight's [06-20] meeting because he spent the whole day/night working on Nova
+> and couldn't have the seats ready; he expects to re-enable + resume normal nightly operation tonight.** NOT a
+> defect — do not re-flag (standing default `autonomous-meeting-spend-authorized` still holds). Captured as
+> BACKLOG **#35**. **No DM substance sent (owner 06-18: the meeting is the channel).** **No
 > deploy this ritual beyond the BACKLOG/CLAUDE doc refresh.** **NEXT SESSION top 3:** (1) **Mathieu re-enables
 > the scheduler (#35)** if the nightly cadence should continue; (2) **#31 mirror-align ping to Arke** (raise via
 > pack/COUNCIL_AGENDA — "VALIDATE_ORDER.md drafted at `6069409`, please mirror-align", await confirm); (3) **#29

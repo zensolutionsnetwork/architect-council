@@ -15,14 +15,12 @@
   `6069409`). **No live meeting** (newest meeting `9a427b5f` is phase=report and already debriefed 06-19; none
   in `rounds` — safe to push). **Brain freshness: ALL FOUR seats paired** (corpus+pack+manifest=True for
   kairos/arke/nova/logos via dashboard). **Inbox: 0 open** (confirmed via API, TOTAL=0 — nothing arrived
-  overnight). **KEY FINDING — the 03:00 ET auto-scheduler is DISABLED** (`GET /api/council/scheduler` →
-  `enabled=False, time=03:00, tz=America/Toronto`; `voiceLoopEnabled=True`, spentToday=$0). It WAS firing
-  (06-18/06-19 ran `e097ff64`/`9a427b5f` from it) but did not fire on 06-20 → no new overnight meeting, hence
-  no debrief this morning. Cause not determinable read-only (deliberate dashboard toggle vs reset). This
-  contradicts the standing owner directive to keep nightly meetings running (memory
-  `autonomous-meeting-spend-authorized`), BUT re-enabling = a future autonomous spend, which the unattended
-  morning-prep ritual must NOT trigger itself — captured as **#35**, surfaced to Mathieu (one dashboard toggle
-  or one authorized `POST /api/council/scheduler {enabled:true}` resumes the cadence). **No deploy this ritual
+  overnight). **KEY FINDING (RESOLVED — owner-confirmed deliberate) — the 03:00 ET auto-scheduler was DISABLED**
+  (`GET /api/council/scheduler` → `enabled=False, time=03:00, tz=America/Toronto`; `voiceLoopEnabled=True`,
+  spentToday=$0). It WAS firing (06-18/06-19 ran `e097ff64`/`9a427b5f` from it). **Mathieu confirmed he
+  deliberately cancelled tonight's [06-20] meeting** — he spent the whole day/night working on Nova and couldn't
+  have the seats ready; **expects to re-enable and resume normal nightly operation tonight.** NOT a defect; do
+  not re-flag. Captured as **#35**. **No deploy this ritual
   beyond the BACKLOG/CLAUDE doc refresh.** **NEXT SESSION top 3:** (1) **Mathieu: re-enable the scheduler**
   (#35) if the nightly cadence should continue — then tonight's 03:00 run debriefs tomorrow; (2) **#31
   mirror-align ping to Arke** — "VALIDATE_ORDER.md drafted at `6069409`, please mirror-align" via
@@ -659,15 +657,14 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
     `docs/TECH_DEBT.md` TD-1 (the durable debt ledger). The 03:00 ET auto-scheduler (`beeac4c`) has no
     jitter — fine at single-tenant, a thundering-herd risk only if the hub goes multi-tenant; pay down
     with the multi-tenant work, not before. Not a fix.
-35. **Auto-scheduler DISABLED — nightly cadence stopped (NEW 2026-06-20, morning prep).** `GET
-    /api/council/scheduler` returns `enabled=False` (time=03:00, tz=America/Toronto; `voiceLoopEnabled=True`).
-    It was firing on 06-18/06-19 (`e097ff64`/`9a427b5f`) but did NOT fire on 06-20 → no overnight meeting, no
-    debrief. Cause unknown read-only (deliberate dashboard toggle vs a reset). Standing owner directive is to
-    keep nightly meetings running (memory `autonomous-meeting-spend-authorized`), so the likely intent is to
-    re-enable — BUT the unattended morning-prep ritual must not trigger a future autonomous spend itself.
-    **OWNER ACTION:** if the cadence should continue, flip it back on via the `/backlog` dashboard toggle or
-    `POST /api/council/scheduler {enabled:true,time:"03:00"}` (owner-gated). If the disable was deliberate,
-    leave it and tell Kairos so this stops being flagged. Surfaced in the morning brief.
+35. **Auto-scheduler DISABLED on 06-20 — DELIBERATE, owner-confirmed (NEW 2026-06-20, morning prep).** `GET
+    /api/council/scheduler` returned `enabled=False` (time=03:00, tz=America/Toronto; `voiceLoopEnabled=True`)
+    so no 06-20 03:00 ET meeting ran. **NOT a defect:** Mathieu deliberately cancelled tonight's [06-20] meeting
+    because he spent the whole day/night working on Nova and couldn't have the seats ready. **He expects to
+    re-enable and resume normal nightly operation tonight [06-20 → 06-21 03:00 ET].** ACTION: do NOT re-flag this
+    as an anomaly. If a future morning still shows `enabled=False` AFTER he intended to resume, surface it then.
+    No Kairos action; kill-switch behaving as designed (memory `autonomous-meeting-spend-authorized` still holds
+    as the standing default).
 
 ## WAITING ON
 - **Mathieu**: effectively NOTHING blocking. (1) **Layer-1 Manager + agenda/directive — RESOLVED + BUILT
