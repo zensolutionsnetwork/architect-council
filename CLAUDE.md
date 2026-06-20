@@ -26,7 +26,39 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-19 MORNING PREP — overnight meeting 9a427b5f debriefed, all green, inbox 0) — HANDOFF
+## Current state (2026-06-20 NIGHTLY — 06-19 day session shipped the #30 keystone, all green, inbox 0) — HANDOFF
+> **NIGHTLY 2026-06-20 (Kairos, automated, ~00:30 EDT). The 06-19 DAY SESSION shipped the P1 #30 status-endpoint
+> KEYSTONE + the rest of the meeting homework; quiet overnight since.** HEAD is `6069409` ("ship #30 finalizer
+> status endpoint + #32 droppedFiles consumer + #31/#34 docs", committed 06-19 15:32Z). Working tree clean, in
+> sync with origin/main (0/0). Prod healthy (`/api/health` ok:true, vault:true). **ALL THREE workflows GREEN on
+> `6069409`** (CI + Push-on-main + checksuite-guard all `success`). **No live meeting** (every meeting `phase=report`;
+> LIVE_ROUNDS_COUNT=0 — safe to push). **No new overnight autonomous meeting yet** — the hub-side 03:00 ET
+> scheduler hasn't fired (latest is still `9a427b5f`, 06-19 07:00, already debriefed yesterday); the new run will
+> be the 06-20 morning-prep's debrief job. **SHIPPED in the 06-19 day session (`6069409`, CI-green, deployed):**
+> (1) **P1 #30 — `GET /api/council/meetings/:id/status`** -> `{state:pending|finalizing|ready, report_committed,
+> report_committed_at, finalizer_lag_ms}`; new `owner_report_at` column stamped at report commit; a crashed
+> finalizer holds `finalizing` (NO silent flip to ready); route-auth probe added. **KEYSTONE — unblocks three
+> siblings' `pollUntilReportReady` wrappers** (Arke/Nova/Logos wire against `COUNCIL_STATUS_ENDPOINT_URL` now
+> that it's live). (2) **P2 #32 — droppedFiles hub consumer**: shape-validates optional manifest
+> `droppedFiles {path,reason}[]` + surfaces on the dashboard pack panel (delta-equality stays producer-side;
+> 2.1 OPTIONAL, no version bump). (3) **#31 — `docs/VALIDATE_ORDER.md`** (28-check validateHierarchy emission
+> order for Arke's mirror). (4) **#34 — `docs/TECH_DEBT.md` TD-1** (scheduler-jitter multi-tenant debt). (5)
+> **`docs/RESPONSE_SHAPES.md`** updated with #30+#32 shapes + a `lastUpdated` anchor. All gates green pre-push:
+> secret-scan/swallow/canon(6)/cost/hierarchy(28)/route-auth 40-0. **INBOX: was 1 OPEN — Nova `c8aca08d`
+> (pure-FYI friction: a verify command folded onto her brain-commit shell line silently no-op'd the commit it
+> was checking — same shape as the finalizer-race / stale-read lessons; she shipped her own fix `5c61feb` +
+> `council/brain-ship.bat` so the ship self-verifies HEAD==origin/main) — report-closed (no action owed to
+> Kairos) -> INBOX 0.** Worth keeping the generalization: **bind the truth-signal to the operation — verification
+> must be out-of-band from, or built INTO, the action, never folded into the same fragile invocation.** **No
+> deploy this ritual (BACKLOG/CLAUDE doc-only + brain re-pack).** **NEXT SESSION top 3:** (1) **morning ritual**
+> — debrief any NEW overnight autonomous meeting (none at nightly; the 03:00 ET run should appear) + check inbox;
+> (2) **#31 mirror-align ping to Arke** — raise "VALIDATE_ORDER.md drafted at `6069409`, please mirror-align"
+> via pack/COUNCIL_AGENDA (no-substance-DM rule), await his mirror-match confirm; (3) **#29 JOINT with Arke** —
+> await his co-design proposal (full-corpus through the cross-read gate + first acting code-review node) + watch
+> the app-cockpit wiring (agenda/directive/Layer-1 digest/status consumers). Also consider **#33** (morning-prep
+> `pollUntilReportReady`, now unblocked by #30 — but FIRST verify the claimed 90s sleep even exists; the prep
+> script lives under `C:\Users\matpa\Claude\Scheduled\`, not the repo). No solo code blockers remain. Canonical
+> backlog = `BACKLOG.md`. Bullets below this line are the 06-19 MORNING PREP snapshot (history).
 > **MORNING PREP 2026-06-19 (Kairos, Mathieu present). Overnight autonomous meeting DEBRIEFED, all systems
 > green, inbox cleared.** HEAD `1b29224` (midnight nightly's backlog/handoff commit; no new CODE overnight),
 > working tree clean (only the new debrief doc untracked), in sync origin/main 0/0. Prod healthy (ok:true,

@@ -2,12 +2,40 @@
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-19
-> (MORNING PREP: overnight meeting 9a427b5f debriefed — hash-verify PASS, $0.608, clean all-done close;
-> inbox cleared; all systems green; 6 new self-assigned homework items from the meeting, status endpoint
-> is the P1 keystone).
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-20
+> (NIGHTLY: the 06-19 day session shipped the P1 #30 status-endpoint KEYSTONE + #32/#31/#34 — `6069409`,
+> all gates green, CI+Push+checksuite all success; inbox 1 FYI from Nova report-closed → 0; no new
+> overnight meeting yet, 03:00 ET hasn't fired).
 
 ## STATE AT A GLANCE
+- **NIGHTLY (2026-06-19 day → 2026-06-20 00:30 EDT) — the day session SHIPPED the #30 keystone; all green;
+  inbox cleared to 0.** HEAD is `6069409` ("ship #30 finalizer status endpoint + #32 droppedFiles consumer
+  + #31/#34 docs", committed 06-19 15:32Z). Working tree clean, in sync with origin/main (0/0). Prod healthy
+  (`/api/health` ok:true, vault:true). **ALL THREE workflows GREEN on `6069409`** (CI + Push-on-main +
+  checksuite-guard all `success`). **No live meeting** (all meetings `phase=report`; LIVE_ROUNDS_COUNT=0 —
+  safe to push). **No new overnight autonomous meeting yet** — the hub-side 03:00 ET scheduler hasn't fired
+  (latest meeting is still `9a427b5f`, 06-19 07:00, already debriefed yesterday morning); the new run will
+  appear for the 06-20 morning prep to debrief. **SHIPPED in the 06-19 day session (`6069409`, CI-green,
+  deployed):** (1) **P1 #30 — `GET /api/council/meetings/:id/status`** → `{state: pending|finalizing|ready,
+  report_committed, report_committed_at, finalizer_lag_ms}`; new `owner_report_at` column stamped at report
+  commit; a crashed finalizer holds `finalizing` (no silent flip); route-auth probe added. **This is the
+  KEYSTONE that unblocks three siblings' `pollUntilReportReady` wrappers** (Arke/Nova/Logos can now wire
+  against `COUNCIL_STATUS_ENDPOINT_URL`). (2) **P2 #32 — droppedFiles hub consumer**: shape-validates an
+  optional manifest `droppedFiles {path,reason}[]` + surfaces it on the dashboard pack panel (delta-equality
+  stays producer-side; 2.1 OPTIONAL, no version bump). (3) **#31 — `docs/VALIDATE_ORDER.md`** (validateHierarchy
+  28-check emission order for Arke's mirror). (4) **#34 — `docs/TECH_DEBT.md` TD-1** (scheduler-jitter
+  multi-tenant debt). (5) **`docs/RESPONSE_SHAPES.md`** updated with #30+#32 shapes + a `lastUpdated`
+  commit-hash anchor. All gates green pre-push: secret-scan/swallow/canon(6)/cost/hierarchy(28)/route-auth
+  40-0. **Inbox: was 1 OPEN — Nova `c8aca08d` (FYI friction: a folded-in verify step silently no-op'd her
+  brain-commit; she shipped her own fix `5c61feb`/`brain-ship.bat`) — report-closed (no action owed to
+  Kairos) → INBOX 0.** **No deploy this ritual (BACKLOG/CLAUDE doc-only + brain re-pack).** **NEXT SESSION
+  top 3:** (1) **morning ritual** — debrief any NEW overnight autonomous meeting (none yet at nightly) +
+  check inbox; (2) **#31 follow-through** — raise "VALIDATE_ORDER.md drafted at `6069409`, please mirror-align"
+  to Arke via pack/COUNCIL_AGENDA (per the no-substance-DM rule), await his mirror-match confirm; (3) **#29
+  JOINT with Arke** — await his co-design proposal (full-corpus through the cross-read gate + first acting
+  code-review node) + watch app-cockpit wiring (agenda/directive/Layer-1/status consumers). No solo code
+  blockers remain. Canonical backlog = this file. Bullets below this line are the 06-19 MORNING PREP +
+  earlier snapshots (history).
 - **MORNING PREP (2026-06-19 06:00, Mathieu present) — overnight meeting debriefed, all green, inbox 0.**
   HEAD is `1b29224` (the midnight nightly's "backlog refresh + handoff 2026-06-19" commit — landed
   overnight, no new CODE). Working tree clean (only the new debrief doc untracked), in sync with origin/main
@@ -550,21 +578,17 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
    12-hex `secret_fp` = first 12 of sha256(MASTER_KEY), NEVER the secret) + owner-gated
    `GET /api/council/boots`. Two consecutive rows with the same deploy_sha = container cycled without a
    deploy. All gates green; deployed CI-green. (Her zen-ai impl `0bdf1dd`.)
-30. **Finalizer-status endpoint (NEW 2026-06-19, mtg `9a427b5f`, my homework — KEYSTONE).** Build + deploy
-    `GET /api/council/meetings/{id}/status` → `{id, state:"pending"|"finalizing"|"ready", report_committed,
-    report_committed_at, finalizer_lag_ms}`; 404 on unknown id; a crashed finalizer holds `finalizing`
-    **indefinitely** (NO silent flip to ready on a partial write — the consumer's polling timeout is the
-    page-someone signal). `finalizer_lag_ms = closed_at → report_committed_at`; log it to a lightweight table
-    for P99 data. **Gates THREE siblings' homework** (Arke/Nova/Logos all wire `pollUntilReportReady` —
-    3s/120s, throw-on-timeout, Logos's transient-502 retry inside the loop — behind `COUNCIL_STATUS_ENDPOINT_URL`
-    until this is live). Ship FIRST. Additive, owner/member-gated read, CI-green, route-auth probe, no deploy
-    over a live meeting. **Bundle:** update `docs/RESPONSE_SHAPES.md` with the status shape + add a top-of-file
-    `lastUpdated` commit-hash annotation (mechanical anchor for Arke's doc-matches-live check).
-31. **`docs/VALIDATE_ORDER.md` (NEW 2026-06-19, mtg `9a427b5f`, joint w/ Arke).** Number all 28 hierarchy
-    invariant checks in execution order so the hub + Arke's `hierarchy.ts` mirror return an identical
-    first-error on a multi-violation tree. Pure doc. Per the no-substance-DM rule (owner 2026-06-18): commit
-    it, raise "drafted at <sha>, please mirror-align" via my pack + COUNCIL_AGENDA (a bare file-pointer
-    report-note is the most I'd send). Arke confirms his mirror matches before either side ships against it.
+30. ~~**Finalizer-status endpoint (KEYSTONE).**~~ **DONE 2026-06-19 (`6069409`, CI-green, deployed).**
+    `GET /api/council/meetings/:id/status` → `{state:"pending"|"finalizing"|"ready", report_committed,
+    report_committed_at, finalizer_lag_ms}`; new `owner_report_at` column stamped at report commit; crashed
+    finalizer holds `finalizing` (no silent flip to ready); route-auth probe added (40/0). RESPONSE_SHAPES.md
+    updated with the status shape + `lastUpdated` anchor. **Unblocks THREE siblings' `pollUntilReportReady`
+    wrappers** (Arke/Nova/Logos wire against `COUNCIL_STATUS_ENDPOINT_URL` now that the endpoint is live).
+31. ~~**`docs/VALIDATE_ORDER.md` (joint w/ Arke).**~~ **DRAFTED + COMMITTED 2026-06-19 (`6069409`).** The 28
+    validateHierarchy invariant checks are numbered in execution order so the hub + Arke's `hierarchy.ts`
+    mirror return an identical first-error on a multi-violation tree. **REMAINING (next session):** per the
+    no-substance-DM rule, raise "drafted at `6069409`, please mirror-align" to Arke via pack + COUNCIL_AGENDA;
+    Arke confirms his mirror matches before either side ships against it.
 
 ## P2 — product arc + hygiene
 0. **Process standardization (STANDING GOAL, owner directive 2026-06-10)** — every member adopts
@@ -601,10 +625,10 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
     assigns a drafter, or defers. Surfaced in the morning brief. (Blocks P2 #7 hierarchy wiring until a
     canonical 2.1 schema exists.) NOTE: a 2.1 schema DID land (`00d58ca`/rev2) — this item is effectively
     superseded; keep until Mathieu confirms ownership disposition.
-32. **`droppedFiles` hub manifest consumer (NEW 2026-06-19, mtg `9a427b5f`, my homework).** Accept an optional
-    `droppedFiles: {path, reason}[]` (two strings, nothing more) on the manifest when present; schema-validate;
-    surface on the dashboard per-member pack panel. **2.1 OPTIONAL extension — NO version bump.** Consumer can
-    land ahead of the producers (Nova/Arke/Logos packagers emit it via their `declared-shrink.json` homework).
+32. ~~**`droppedFiles` hub manifest consumer.**~~ **DONE 2026-06-19 (`6069409`).** The hub shape-validates an
+    optional manifest `droppedFiles: {path,reason}[]` when present + surfaces it on the dashboard per-member
+    pack panel; delta-equality stays producer-side. 2.1 OPTIONAL extension, NO version bump — landed ahead of
+    the producers (Nova/Arke/Logos packagers emit it via their `declared-shrink.json` homework).
 33. **Morning-prep `pollUntilReportReady` (NEW 2026-06-19, mtg `9a427b5f`, my homework — gated on #30).**
     Replace the (claimed) 90s sleep in my morning-prep script with `pollUntilReportReady` (120s/3s,
     throw-on-timeout, Logos's transient-502 retry). Fail closed → skip narrative embed, leave last-known-good.
@@ -627,10 +651,13 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
   spend #22 = KEEP RUNNING ✅; stuck/test meetings ERASED ✅; SN7100/SSD = DONE; #29 owner call RESOLVED.)
 - **Nova + Logos**: brain-manifest 2.1 ACCEPT — ✅ DONE (Nova `e1528e03`, Logos `9298fc53`/`3c33082b`).
   All four ratified; nothing further owed here.
-- **Kairos (own queue)**: **meeting `9a427b5f` DEBRIEFED 2026-06-19** (`KAIROS_DEBRIEF_2026-06-19.md`,
-  hash-verify PASS) → 6 self-assigned homework items folded in (P1 #30 status endpoint keystone, #31
-  VALIDATE_ORDER doc, P2 #32 droppedFiles consumer, #33 prep-script poll, #34 scheduler-jitter debt).
-  Next-session build queue = #30 (ship first, unblocks 3 siblings) → #31 → #32. **Older debrief
+- **Kairos (own queue)**: **the 06-19 homework is SHIPPED** — #30 status endpoint (KEYSTONE), #31
+  VALIDATE_ORDER.md, #32 droppedFiles consumer, #34 TECH_DEBT TD-1 all landed in `6069409` (CI-green).
+  **REMAINING from that meeting:** #31 mirror-align ping to Arke (raise via pack/COUNCIL_AGENDA, await his
+  confirm); #33 morning-prep `pollUntilReportReady` — gated on #30 being live (now is) AND a self-check of
+  whether the claimed 90s sleep even exists (the prep script lives under `C:\Users\matpa\Claude\Scheduled\`,
+  NOT the repo). Meeting `9a427b5f` was DEBRIEFED 2026-06-19 (`KAIROS_DEBRIEF_2026-06-19.md`, hash-verify
+  PASS). **Older debrief
   queue — QUEUE RETIRED 2026-06-18.** Audit found the carried queue
   was STALE: `17f49b6f`/`344fcf74` (06-15 doc), `fc5b1606`/`4386e50c` (06-17 doc), `e097ff64` (06-18 doc),
   #1 `6aef82f6` (06-11 doc) were ALL already debriefed. The five with no individual doc (`6868e491`,
