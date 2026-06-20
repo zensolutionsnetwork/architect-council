@@ -26,7 +26,28 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-20 NIGHTLY — 06-19 day session shipped the #30 keystone, all green, inbox 0) — HANDOFF
+## Current state (2026-06-20 MORNING PREP — all green, inbox 0, all 4 paired; NO overnight meeting, scheduler OFF) — HANDOFF
+> **MORNING PREP 2026-06-20 (Kairos, automated, 06:00). All systems green, but NO overnight autonomous meeting
+> ran — the 03:00 ET hub scheduler is DISABLED.** HEAD `bcc3123` (midnight nightly's backlog/handoff commit;
+> no new CODE overnight), working tree clean, in sync origin/main 0/0. Prod healthy (`/api/health` ok:true,
+> vault:true). **CI GREEN on `bcc3123`** (CI + Push-on-main both `success`; checksuite-guard green on prior
+> `6069409`). **No live meeting** (newest meeting `9a427b5f` is phase=report, already debriefed 06-19; none in
+> `rounds` — safe to push). **Brain freshness: ALL FOUR seats paired** (corpus+pack+manifest=True for
+> kairos/arke/nova/logos, via dashboard). **Inbox: 0 open** (API TOTAL=0; nothing overnight). **KEY FINDING:
+> `GET /api/council/scheduler` -> `enabled=False` (time=03:00, tz=America/Toronto; `voiceLoopEnabled=True`,
+> spentToday=$0).** The scheduler fired on 06-18/06-19 (`e097ff64`/`9a427b5f`) but did NOT fire on 06-20, so no
+> meeting was created and there is nothing to debrief this morning. Cause not determinable read-only (deliberate
+> dashboard toggle vs a reset). This contradicts the standing owner directive to keep nightly meetings running
+> (memory `autonomous-meeting-spend-authorized`), so re-enabling is the likely intent — BUT re-enabling causes a
+> future autonomous spend, which the unattended morning-prep ritual must NOT trigger itself; captured as
+> BACKLOG **#35** and surfaced to Mathieu (one dashboard toggle, or one authorized `POST /api/council/scheduler
+> {enabled:true}`, resumes the cadence). **No DM substance sent (owner 06-18: the meeting is the channel).** **No
+> deploy this ritual beyond the BACKLOG/CLAUDE doc refresh.** **NEXT SESSION top 3:** (1) **Mathieu re-enables
+> the scheduler (#35)** if the nightly cadence should continue; (2) **#31 mirror-align ping to Arke** (raise via
+> pack/COUNCIL_AGENDA — "VALIDATE_ORDER.md drafted at `6069409`, please mirror-align", await confirm); (3) **#29
+> JOINT with Arke** — await his co-design proposal (full-corpus through the cross-read gate + first acting
+> code-review node) + watch app-cockpit wiring. No solo code blockers remain. Canonical backlog = `BACKLOG.md`.
+> Bullets below this line are the 06-20 NIGHTLY snapshot (history).
 > **NIGHTLY 2026-06-20 (Kairos, automated, ~00:30 EDT). The 06-19 DAY SESSION shipped the P1 #30 status-endpoint
 > KEYSTONE + the rest of the meeting homework; quiet overnight since.** HEAD is `6069409` ("ship #30 finalizer
 > status endpoint + #32 droppedFiles consumer + #31/#34 docs", committed 06-19 15:32Z). Working tree clean, in
