@@ -2,12 +2,34 @@
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-20
-> (MORNING PREP: all green — prod ok/vault, CI+Push success on `bcc3123`, repo clean 0/0, all 4 seats
-> paired, inbox 0. NO new overnight meeting — the 03:00 ET scheduler is DISABLED (enabled=False); nothing
-> to debrief. New item #35: scheduler off, surface to Mathieu — one toggle to resume the nightly cadence).
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-21
+> (NIGHTLY: quiet 06-20 — no new code, only doc/handoff commits; all green — prod ok/vault, all THREE
+> workflows success on `8dd1833`, repo clean 0/0, inbox 0. NO new meeting since `9a427b5f` (06-19) —
+> nothing to debrief. #35 STILL OPEN: the 03:00 ET scheduler is STILL `enabled=false` at midnight 06-21
+> — Mathieu said 06-20 he'd re-enable "tonight"; not yet done, so no 03:00 run will fire tonight unless
+> he toggles it before then. Surface to Mathieu — one toggle resumes the nightly cadence).
 
 ## STATE AT A GLANCE
+- **NIGHTLY (2026-06-20 day → 2026-06-21 00:30 EDT) — quiet day, all green, no new code, no new meeting,
+  inbox 0; scheduler STILL off.** HEAD is `8dd1833` ("note: 06-20 scheduler disable was deliberate" — the
+  06-20 morning prep's follow-up doc commit). The 06-20 day shipped NO code, only doc/handoff commits
+  (`bcc3123` nightly, `31d1f01` morning prep, `8dd1833` note). Working tree clean, in sync with origin/main
+  (0/0). Prod healthy (`/api/health` ok:true, vault:true). **ALL THREE workflows GREEN on `8dd1833`**
+  (checksuite-guard + CI + Push-on-main all `success`). **No live meeting** (7 visible meetings all
+  `phase=report`; newest is still `9a427b5f` from 06-19 — already debriefed; safe to push). **No new
+  autonomous meeting since 06-19** — nothing to debrief. **Inbox: 0 open** (API `tasks:[]`). **#35 STILL
+  OPEN — the 03:00 ET scheduler remains `enabled=false`** (`GET /api/council/scheduler` → enabled=false,
+  time=03:00, tz=America/Toronto, voiceLoopEnabled=true). On 06-20 Mathieu said he'd re-enable it "tonight"
+  and resume the nightly cadence; as of midnight 06-21 it is STILL off, so **no 03:00 run will fire tonight
+  (06-21) unless he toggles it first** — and there will again be nothing for the 06-21 morning prep to
+  debrief. NOT a defect (owner-confirmed deliberate 06-20); just a standing reminder that the nightly loop
+  is paused on one toggle. **No deploy this ritual beyond the BACKLOG/CLAUDE doc refresh + brain re-pack.**
+  **NEXT SESSION top 3:** (1) **Mathieu: re-enable the scheduler (#35)** to resume the nightly cadence
+  (one toggle: `POST /api/council/scheduler {enabled:true}`); (2) **#31 mirror-align ping to Arke** —
+  "VALIDATE_ORDER.md drafted at `6069409`, please mirror-align" via pack/COUNCIL_AGENDA, await his confirm;
+  (3) **#29 JOINT with Arke** — await his co-design proposal (full-corpus through the cross-read gate +
+  first acting code-review node) + watch app-cockpit wiring. No solo code blockers remain. Bullets below
+  this line are the 06-20 MORNING PREP + earlier snapshots (history).
 - **MORNING PREP (2026-06-20 06:00) — all green, inbox 0, all 4 seats paired; NO overnight meeting (scheduler
   is OFF).** HEAD is `bcc3123` (the midnight nightly's "backlog refresh + handoff 2026-06-20" commit; no new
   CODE overnight). Working tree clean, in sync with origin/main (0/0). Prod healthy (`/api/health` ok:true,
@@ -664,7 +686,11 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
     re-enable and resume normal nightly operation tonight [06-20 → 06-21 03:00 ET].** ACTION: do NOT re-flag this
     as an anomaly. If a future morning still shows `enabled=False` AFTER he intended to resume, surface it then.
     No Kairos action; kill-switch behaving as designed (memory `autonomous-meeting-spend-authorized` still holds
-    as the standing default).
+    as the standing default). **UPDATE 2026-06-21 nightly: STILL `enabled=false` at midnight 06-21** — past the
+    point Mathieu said he'd re-enable ("tonight" = 06-20 eve). So no 03:00 ET run will fire tonight (06-21)
+    unless he toggles it first, and there will be nothing for the 06-21 morning prep to debrief. Surfacing as a
+    standing reminder (one toggle: `POST /api/council/scheduler {enabled:true}`); still not treating it as a
+    defect — he may simply still be heads-down on Nova.
 
 ## WAITING ON
 - **Mathieu**: effectively NOTHING blocking. (1) **Layer-1 Manager + agenda/directive — RESOLVED + BUILT

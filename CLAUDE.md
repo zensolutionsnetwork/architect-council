@@ -26,7 +26,31 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-20 MORNING PREP — all green, inbox 0, all 4 paired; NO overnight meeting, scheduler OFF) — HANDOFF
+## Current state (2026-06-21 NIGHTLY — quiet day, all green, inbox 0, no new meeting; scheduler STILL OFF) — HANDOFF
+> **NIGHTLY 2026-06-21 (Kairos, automated midnight ritual, ~00:30 EDT). QUIET 06-20 — no new hub code, only
+> doc/handoff commits; no new autonomous meeting; the 03:00 ET scheduler is STILL disabled.** HEAD is `8dd1833`
+> ("note: 06-20 scheduler disable was deliberate (owner working on Nova); resumes tonight (#35)" — the 06-20
+> morning-prep follow-up doc commit). The 06-20 day shipped ZERO code: only `bcc3123` (nightly), `31d1f01`
+> (morning prep), `8dd1833` (scheduler note). Working tree clean, in sync with origin/main (0/0). Prod healthy
+> (`/api/health` ok:true, vault:true). **ALL THREE workflows GREEN on `8dd1833`** (checksuite-guard + CI +
+> Push-on-main all `success`). **No live meeting** (7 visible meetings all `phase=report`; newest is still
+> `9a427b5f` from 06-19, already debriefed — safe to push). **No new autonomous meeting since 06-19** — nothing
+> to debrief this ritual. **INBOX: 0 open** (API `tasks:[]`; the `_kairos_dump5.ps1` helper returned empty and
+> a direct GET confirmed an empty `tasks` array — note: the older fallback that counts the wrapper object can
+> misreport "1", trust the raw `tasks:[]`). **#35 STILL OPEN — the 03:00 ET scheduler remains `enabled=false`**
+> (`GET /api/council/scheduler` → enabled=false, time=03:00, tz=America/Toronto, voiceLoopEnabled=true). On
+> 06-20 Mathieu said he'd re-enable it "tonight" and resume the nightly cadence; as of midnight 06-21 it is
+> STILL off, so **no 03:00 run will fire tonight (06-21) unless he toggles it first**, and the 06-21 morning prep
+> will again have nothing to debrief. NOT treating it as a defect (owner-confirmed deliberate 06-20; he may
+> still be heads-down on Nova) — surfacing as a standing reminder only. **This ritual: BACKLOG + CLAUDE doc
+> refresh + brain re-pack only; push happened (no live meeting). NO code/deploy.** **NEXT SESSION top 3:** (1)
+> **Mathieu: re-enable the scheduler (#35)** to resume the nightly cadence — one toggle:
+> `POST /api/council/scheduler {enabled:true}`; (2) **#31 mirror-align ping to Arke** — "VALIDATE_ORDER.md
+> drafted at `6069409`, please mirror-align" via pack/COUNCIL_AGENDA (no-substance-DM rule), await his confirm;
+> (3) **#29 JOINT with Arke** — await his co-design proposal (full-corpus through the cross-read gate + first
+> acting code-review node) + watch app-cockpit wiring (agenda/directive/Layer-1/status consumers). No solo code
+> blockers remain. Canonical backlog = `BACKLOG.md`. Bullets below this line are the 06-20 MORNING PREP snapshot
+> (history).
 > **MORNING PREP 2026-06-20 (Kairos, automated, 06:00). All systems green, but NO overnight autonomous meeting
 > ran — the 03:00 ET hub scheduler is DISABLED.** HEAD `bcc3123` (midnight nightly's backlog/handoff commit;
 > no new CODE overnight), working tree clean, in sync origin/main 0/0. Prod healthy (`/api/health` ok:true,
