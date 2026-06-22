@@ -26,7 +26,30 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-22 NIGHTLY — quiet day, all green, inbox 0, no new meeting; scheduler STILL OFF 3rd night) — HANDOFF
+## Current state (2026-06-22 MORNING PREP — all green, inbox 0, all 4 seats paired, no new meeting; scheduler STILL OFF 4th night) — HANDOFF
+> **MORNING PREP 2026-06-22 (Kairos, automated 06:00). All systems green; NO overnight autonomous meeting —
+> the 03:00 ET scheduler is STILL disabled (4th consecutive night, #35), so there was nothing to debrief.**
+> HEAD is `084b491` (the midnight nightly's backlog/handoff commit; no new CODE overnight). Working tree clean,
+> in sync with origin/main (0/0). Prod healthy (`/api/health` ok:true, vault:true). **CI + Push-on-main GREEN on
+> `084b491`** (all 7 gate check-runs success: CodeQL x2 / hierarchy 2.1 / canon golden vector / secret scan /
+> route-auth / cost-caps; checksuite-guard green on the prior `21c8926`, runs on its own 11:00 UTC schedule).
+> **No live meeting** (LIVE_ROUNDS_COUNT=0; 9 meetings all phase=report; newest is still `9a427b5f` from 06-19,
+> already debriefed — safe to push). **No new autonomous meeting since 06-19** — nothing to debrief. **INBOX: 0
+> open** (raw `tasks` array empty; NOTE the env-task query param is `for=kairos`, NOT `to=` — `to=` returns 400
+> "for is required"). **BRAIN FRESHNESS: ALL FOUR seats paired** (corpusReady+packReady+manifestReady all true
+> via dashboard); kairos corpus fresh `2026-06-22T04:29Z` (midnight re-pack), arke/nova `06-19`, logos `06-18` —
+> siblings' corpus is days old only because no meeting has run to trigger a re-pack (expected, not a defect; all
+> paired). **#35 STILL OPEN — the 03:00 ET scheduler remains `enabled=false`** (`GET /api/council/scheduler` →
+> enabled=false, time=03:00, tz=America/Toronto, voiceLoopEnabled=true, spentToday=$0). It has now NOT fired for
+> FOUR consecutive nights (06-19→06-22). On 06-20 Mathieu said he'd re-enable it "tonight"; as of 06-22 06:00 it
+> is STILL off. NOT a defect (owner-confirmed deliberate 06-20; he may still be heads-down on Nova) — standing
+> reminder that the nightly loop is paused on one owner toggle. **This ritual: BACKLOG + CLAUDE doc refresh only;
+> push if files changed + no live meeting. NO code/deploy.** **NEXT SESSION top 3:** (1) **Mathieu: re-enable the
+> scheduler (#35)** — one toggle: `POST /api/council/scheduler {enabled:true}`; (2) **#31 mirror-align ping to
+> Arke** — "VALIDATE_ORDER.md drafted at `6069409`, please mirror-align" via pack/COUNCIL_AGENDA, await his
+> confirm; (3) **#29 JOINT with Arke** — await his co-design proposal (full-corpus through the cross-read gate +
+> first acting code-review node) + watch app-cockpit wiring. No solo code blockers remain. Bullets below this
+> line are the 06-22 NIGHTLY snapshot (history).
 > **NIGHTLY 2026-06-22 (Kairos, automated midnight ritual, ~00:30 EDT). QUIET 06-21 — no new hub code, only the
 > 06-21 morning-prep doc commit; no new autonomous meeting; the 03:00 ET scheduler is STILL disabled (3rd
 > consecutive night).** HEAD is `21c8926` ("morning prep 2026-06-21: all green, inbox 0, 4 seats paired; no

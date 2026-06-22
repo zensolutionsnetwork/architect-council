@@ -3,14 +3,39 @@
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
 > Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-22
-> (NIGHTLY 00:30: quiet 06-21 — no new code (only the 06-21 morning-prep doc commit `21c8926`), all
-> green (prod ok/vault, all 3 workflows success on HEAD `21c8926`, repo clean 0/0), inbox 0. NO new
-> meeting since `9a427b5f` (06-19, already debriefed) — nothing to debrief. #35 STILL OPEN: the 03:00 ET
-> scheduler is STILL `enabled=false` — it has now NOT fired for three nights (06-19→06-22), so no meeting
-> ran. Mathieu said 06-20 he'd re-enable "tonight"; still off as of 06-22 00:30. One owner toggle resumes
-> the nightly cadence — standing reminder).
+> (MORNING PREP 06:00: all green — prod ok/vault, CI+Push-on-main success on HEAD `084b491`,
+> checksuite-guard green on `21c8926`, repo clean 0/0; inbox 0; all 4 seats paired. NO new meeting since
+> `9a427b5f` (06-19, already debriefed) — nothing to debrief. #35 STILL OPEN: the 03:00 ET scheduler is
+> STILL `enabled=false` — it has now NOT fired for FOUR nights (06-19→06-22), so no 03:00 meeting ran
+> overnight. Mathieu said 06-20 he'd re-enable "tonight"; still off as of 06-22 06:00. One owner toggle
+> resumes the nightly cadence — standing reminder).
 
 ## STATE AT A GLANCE
+- **MORNING PREP (2026-06-22 06:00) — all green, inbox 0, all 4 seats paired; NO overnight meeting
+  (scheduler STILL off, 4th night, #35).** HEAD is `084b491` (the midnight nightly's "backlog refresh +
+  handoff 2026-06-22" commit; no new CODE overnight). Working tree clean, in sync with origin/main (0/0).
+  Prod healthy (`/api/health` ok:true, vault:true). **CI + Push-on-main GREEN on `084b491`** (all 7 gate
+  check-runs success: CodeQL x2, hierarchy(2.1), canon golden vector, secret scan, route-auth, cost/caps;
+  checksuite-guard green on the prior `21c8926`, runs on its own 11:00 UTC schedule). **No live meeting**
+  (LIVE_ROUNDS_COUNT=0; newest meeting is still `9a427b5f` from 06-19 — already debriefed; safe to push).
+  **No new autonomous meeting since 06-19** — nothing to debrief this morning. **Inbox: 0 open** (raw
+  `tasks` array empty via `for=kairos&status=open`; note the env-task query param is `for`, not `to`).
+  **Brain freshness: ALL FOUR seats paired** (corpusReady+packReady+manifestReady all true via dashboard);
+  kairos corpus fresh `2026-06-22T04:29Z` (midnight re-pack), arke `06-19`, nova `06-19`, logos `06-18` —
+  siblings' corpus is several days old only because no meeting has run to trigger a re-pack (expected, not a
+  defect; they're paired). **#35 STILL OPEN — the 03:00 ET scheduler remains `enabled=false`**
+  (`GET /api/council/scheduler` → enabled=false, time=03:00, tz=America/Toronto, voiceLoopEnabled=true,
+  spentToday=$0). It has now NOT fired for FOUR consecutive nights (06-19→06-22). On 06-20 Mathieu said
+  he'd re-enable it "tonight" and resume the nightly cadence; as of 06-22 06:00 it is STILL off, so no
+  autonomous meeting ran overnight and there is nothing to debrief. NOT a defect (owner-confirmed deliberate
+  06-20; he may still be heads-down on Nova) — standing reminder that the nightly loop is paused on one owner
+  toggle. **No deploy this ritual beyond the BACKLOG/CLAUDE doc refresh.** **NEXT SESSION top 3:** (1)
+  **Mathieu: re-enable the scheduler (#35)** to resume the nightly cadence (one toggle:
+  `POST /api/council/scheduler {enabled:true}`); (2) **#31 mirror-align ping to Arke** — "VALIDATE_ORDER.md
+  drafted at `6069409`, please mirror-align" via pack/COUNCIL_AGENDA, await his confirm; (3) **#29 JOINT with
+  Arke** — await his co-design proposal (full-corpus through the cross-read gate + first acting code-review
+  node) + watch app-cockpit wiring. No solo code blockers remain. Bullets below this line are the 06-22
+  NIGHTLY + earlier snapshots (history).
 - **NIGHTLY (2026-06-21 day → 2026-06-22 00:30 EDT) — quiet day, all green, no new code, no new meeting,
   inbox 0; scheduler STILL off (3rd night).** HEAD is `21c8926` (the 06-21 morning-prep doc commit "all
   green, inbox 0, 4 seats paired; no overnight meeting"). The 06-21 day shipped NO code — only the morning
