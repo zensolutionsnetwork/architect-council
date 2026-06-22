@@ -2,15 +2,36 @@
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-21
-> (MORNING PREP 06:00: quiet — all green (prod ok/vault, CI+Push success on HEAD `13be7d7`, repo clean
-> 0/0), inbox 0, all 4 seats paired (corpus+pack+manifest). NO new meeting since `9a427b5f` (06-19,
-> already debriefed) — nothing to debrief. #35 STILL OPEN: the 03:00 ET scheduler is STILL
-> `enabled=false` — it did NOT fire overnight 06-20→06-21, so no meeting ran. Mathieu said 06-20 he'd
-> re-enable "tonight"; still off as of 06-21 06:00. One toggle resumes the nightly cadence — surface to
-> Mathieu).
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-22
+> (NIGHTLY 00:30: quiet 06-21 — no new code (only the 06-21 morning-prep doc commit `21c8926`), all
+> green (prod ok/vault, all 3 workflows success on HEAD `21c8926`, repo clean 0/0), inbox 0. NO new
+> meeting since `9a427b5f` (06-19, already debriefed) — nothing to debrief. #35 STILL OPEN: the 03:00 ET
+> scheduler is STILL `enabled=false` — it has now NOT fired for three nights (06-19→06-22), so no meeting
+> ran. Mathieu said 06-20 he'd re-enable "tonight"; still off as of 06-22 00:30. One owner toggle resumes
+> the nightly cadence — standing reminder).
 
 ## STATE AT A GLANCE
+- **NIGHTLY (2026-06-21 day → 2026-06-22 00:30 EDT) — quiet day, all green, no new code, no new meeting,
+  inbox 0; scheduler STILL off (3rd night).** HEAD is `21c8926` (the 06-21 morning-prep doc commit "all
+  green, inbox 0, 4 seats paired; no overnight meeting"). The 06-21 day shipped NO code — only the morning
+  prep commit. Working tree clean, in sync with origin/main (0/0). Prod healthy (`/api/health` ok:true,
+  vault:true). **ALL THREE workflows GREEN on `21c8926`** (checksuite-guard + CI + Push-on-main all
+  `success`). **No live meeting** (LIVE_ROUNDS_COUNT=0; newest meeting is still `9a427b5f` from 06-19 —
+  already debriefed; safe to push). **No new autonomous meeting since 06-19** — nothing to debrief.
+  **Inbox: 0 open** (API `tasks:[]`, COUNT=0). **#35 STILL OPEN — the 03:00 ET scheduler remains
+  `enabled=false`** (`GET /api/council/scheduler` → enabled=false, time=03:00, tz=America/Toronto,
+  voiceLoopEnabled=true). It has now NOT fired for three consecutive nights (06-19→06-22). On 06-20 Mathieu
+  said he'd re-enable it "tonight" and resume the nightly cadence; as of midnight 06-22 it is STILL off, so
+  **no 03:00 run will fire tonight (06-22) unless he toggles it first** — and there will again be nothing
+  for the 06-22 morning prep to debrief. NOT a defect (owner-confirmed deliberate 06-20; he may still be
+  heads-down on Nova) — standing reminder that the nightly loop is paused on one owner toggle. **No deploy
+  this ritual beyond the BACKLOG/CLAUDE doc refresh + brain re-pack.** **NEXT SESSION top 3:** (1)
+  **Mathieu: re-enable the scheduler (#35)** to resume the nightly cadence (one toggle:
+  `POST /api/council/scheduler {enabled:true}`); (2) **#31 mirror-align ping to Arke** — "VALIDATE_ORDER.md
+  drafted at `6069409`, please mirror-align" via pack/COUNCIL_AGENDA, await his confirm; (3) **#29 JOINT
+  with Arke** — await his co-design proposal (full-corpus through the cross-read gate + first acting
+  code-review node) + watch app-cockpit wiring. No solo code blockers remain. Bullets below this line are
+  the 06-21 MORNING PREP + earlier snapshots (history).
 - **MORNING PREP (2026-06-21 06:00) — quiet, all green, inbox 0, all 4 seats paired; NO overnight meeting
   (scheduler STILL off, #35).** HEAD is `13be7d7` (the midnight nightly's "backlog refresh + handoff
   2026-06-21" commit, landed 04:29Z; no new CODE overnight). Working tree clean, in sync with origin/main
