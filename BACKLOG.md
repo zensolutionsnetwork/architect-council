@@ -850,9 +850,17 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
 - **Kairos (own queue)**: **the 06-19 homework is SHIPPED** — #30 status endpoint (KEYSTONE), #31
   VALIDATE_ORDER.md, #32 droppedFiles consumer, #34 TECH_DEBT TD-1 all landed in `6069409` (CI-green).
   **REMAINING from that meeting:** #31 mirror-align ping to Arke (raise via pack/COUNCIL_AGENDA, await his
-  confirm); #33 morning-prep `pollUntilReportReady` — gated on #30 being live (now is) AND a self-check of
-  whether the claimed 90s sleep even exists (the prep script lives under `C:\Users\matpa\Claude\Scheduled\`,
-  NOT the repo). Meeting `9a427b5f` was DEBRIEFED 2026-06-19 (`KAIROS_DEBRIEF_2026-06-19.md`, hash-verify
+  confirm). **#33 RESOLVED 2026-06-23 (day session).** Truth-check: NO 90s sleep exists anywhere in the
+  prep path (0 `Start-Sleep` across the bridge-app `.ps1` helpers; neither scheduled `SKILL.md` has one) —
+  the meeting voice's "I added a 90s sleep to my prep" was a stale-mental-model overstatement (the prep
+  runs ~3h after the 03:00 close, no race), exactly as the 06-23 debrief self-flagged. **ALSO SHIPPED this
+  session (scheduled scripts, outside the repo):** debrief-HW2 — `_kairos_brain_refresh.ps1` now does the
+  verify-after-mutate CONTENT assertion (`corpus-status` `etag === uploaded $corpusSha`, throws on a torn
+  upload; was print-only built_at) — corrected endpoint per the debrief, `/api/health` has NO per-member
+  fields; midnight `SKILL.md` 8(c) updated to match; debrief-HW5 — midnight `SKILL.md` gained step 8(d)
+  (dedup-guarded `POST /api/council/agenda` so concrete proposals actually REACH the meeting, not just the
+  pack — per `council-agenda-mirror-vs-hub`). PARSE OK; corpus-status probed live (etag=bare sha,
+  corpus_version=prefixed). Meeting `9a427b5f` was DEBRIEFED 2026-06-19 (`KAIROS_DEBRIEF_2026-06-19.md`, hash-verify
   PASS). **Older debrief
   queue — QUEUE RETIRED 2026-06-18.** Audit found the carried queue
   was STALE: `17f49b6f`/`344fcf74` (06-15 doc), `fc5b1606`/`4386e50c` (06-17 doc), `e097ff64` (06-18 doc),
