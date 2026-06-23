@@ -19,6 +19,7 @@ import {
   setAgentBacklog, getAgentBacklogs, getRegistryVersion,
   queueEnvTask, listEnvTasks, getEnvTask, claimEnvTask, reportEnvTask, sweepEnvTasks,
   createMeeting, getMeeting, updateMeeting, listMeetings, listMeetingsForActor, setMeetingOwnerReport, deleteMeeting,
+  latestRealMeetingCreatedAtUtc,
   setMeetingLedger, setMeetingManifestPins,
   setVoiceRunning, closeStaleVoiceMeetings, usdSpentTodayUtc, vaultReady, listMeetingsForDashboard,
   createBrainUpload, getBrainUpload, putBrainChunk, brainReceived, assembleBrain,
@@ -1103,6 +1104,28 @@ async function schedulerEnabled(): Promise<boolean> {
 const VALID_HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 async function getSchedTime(): Promise<string> {
   try { const t = String(await getSetting('hub_meeting_time') || ''); return VALID_HHMM.test(t) ? t : '03:00'; } catch { return '03:00'; }
+}
+
+// #35 (meeting 2026-06-22, ratified family-wide): the /api/health "missed_meeting" signal. Computed
+// HUB-SIDE so the cockpit does ZERO threshold math — Arke/Nova render the boolean + timestamp tooltip,
+// Logos logs the ISO lag. The threshold is the daily cadence (24h) + a fixed grace, NOT a magic 26h.
+// `missed_meeting` is purely time-based and INDEPENDENT of `scheduler_enabled`: while the scheduler is
+// intentionally off it reads true by design (the loop IS dark) — `scheduler_enabled` is what lets the
+// badge say "disabled" (grey) vs "MISSED MEETING" (alarm). Fail-soft throughout: any read error returns
+// a safe default so /api/health never throws (Railway liveness probe must always get a 200).
+const SCHED_INTERVAL_MS = 24 * 60 * 60 * 1000; // hub scheduler fires once per Toronto day
+const SCHED_GRACE_MS = 2 * 60 * 60 * 1000;     // grace past the daily mark before we call it missed
+export async function healthMeetingSignal(): Promise<{ last_meeting_created_at: string | null; missed_meeting: boolean; scheduler_enabled: boolean }> {
+  let last_meeting_created_at: string | null = null;
+  let scheduler_enabled = false;
+  try { scheduler_enabled = (await getSetting('hub_meeting_scheduler')) === 'on'; } catch { /* default false */ }
+  try { last_meeting_created_at = await latestRealMeetingCreatedAtUtc(); } catch { /* default null */ }
+  let missed_meeting = true; // no meeting on record => missed by definition
+  if (last_meeting_created_at) {
+    const ageMs = Date.now() - Date.parse(last_meeting_created_at);
+    missed_meeting = ageMs > (SCHED_INTERVAL_MS + SCHED_GRACE_MS);
+  }
+  return { last_meeting_created_at, missed_meeting, scheduler_enabled };
 }
 async function fireScheduledMeeting(): Promise<void> {
   if (process.env.VOICE_LOOP_ENABLED !== 'true') { console.warn('[hub:sched] skip — VOICE_LOOP_ENABLED not true'); return; }

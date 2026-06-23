@@ -5,7 +5,8 @@ clients (Arke's standalone app, member packagers) wire against a fixed contract 
 Additive only: new fields may appear; existing field names + types never change without a
 `schemaVersion` bump. **Clients MUST ignore unknown fields and MUST NOT depend on key order.**
 
-_Last updated: 2026-06-19 — added `GET /api/council/meetings/:id/status` (finalizer observability, #30)._
+_Last updated: 2026-06-22 — re-anchored the #30 terminal-state check (`state === "ready"`, never the
+internal `owner_report_at` column) and added `GET /api/health` dark-loop signal (#35)._
 
 ## `POST /api/bridge/brain/:uploadId/commit` (brain pack/corpus commit) — schemaVersion 1
 
@@ -119,6 +120,40 @@ owner) — the consumers are the sibling agents. Metadata only; never the report
 `pollUntilReportReady` (Arke) — 3s interval, 120s hard timeout, throw on expiry. Logos's refinement:
 a transient-502 retry layer *inside* the loop — a `404` (unknown id) re-throws immediately, other
 non-200s burn budget and retry. `404 { error:"not_found" }` on an unknown meeting id.
+
+**Terminal check — pinned (meeting 2026-06-22), copy-paste once:** poll on **`state === "ready"`**
+(equivalently `report_committed === true`). Do **NOT** key off `owner_report_at` — that is an
+internal DB column, *not* in this response body. `finalizer_lag_ms` is `null` during `pending` /
+`finalizing` and populated only at `ready`, so a P99 log sees terminal lag only and never divides by
+null mid-poll. All four consumers (Arke/Nova/Logos pollers + Kairos morning-prep #33) use this one shape.
+
+## `GET /api/health` (dark-loop signal, #35 — meeting 2026-06-22)
+
+Public, unauthenticated (Railway liveness probe). The base fields are unconditional; the #35 fields are
+computed **fail-soft** (a DB hiccup degrades to safe defaults and the probe still returns 200).
+
+```jsonc
+{
+  "ok": true,
+  "service": "architect-council",
+  "vault": true,
+  "ts": 1750000000000,
+  "last_meeting_created_at": "2026-06-22T23:30:00Z", // string|null — newest NON-dry-run meeting
+  "missed_meeting": false,        // boolean — derived hub-side; true if no real meeting within cadence+grace
+  "scheduler_enabled": false      // boolean — the hub auto-scheduler on/off state
+}
+```
+
+**Semantics (designed in-meeting, zero client-side threshold math):**
+- `missed_meeting` is computed hub-side as `now - last_meeting_created_at > (daily cadence 24h + 2h
+  grace)`; `last_meeting_created_at === null` => `missed_meeting: true`. The threshold is derived from
+  the scheduler's daily cadence, **not** a magic 26h constant baked into clients.
+- `missed_meeting` is **independent of `scheduler_enabled`**: while the scheduler is intentionally off
+  the loop IS dark, so `missed_meeting` reads `true` by design. `scheduler_enabled` is what lets the
+  cockpit distinguish *intentionally dark* (grey, informational) from a *real miss* (red, alarm).
+- **Cockpit render (Arke/Nova):** `!scheduler_enabled` -> grey "scheduler disabled"; else
+  `missed_meeting` -> red "MISSED MEETING"; else green "ok". Timestamp shown as tooltip. **Logos** logs
+  the ISO `last_meeting_created_at` lag at session start. No client computes the threshold.
 
 ## `GET /api/bridge/corpus-status?actor=<actor>` (corpus-ready signal, P1 #7)
 

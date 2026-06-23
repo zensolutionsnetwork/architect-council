@@ -6,7 +6,7 @@ import express from 'express';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { initDb, vaultReady, recordBoot } from './store.js';
-import { bridgeRouter, councilRouter, selfRegister, startScheduler } from './council.js';
+import { bridgeRouter, councilRouter, selfRegister, startScheduler, healthMeetingSignal } from './council.js';
 import { rateLimit } from './ratelimit.js';
 
 const app = express();
@@ -37,8 +37,14 @@ app.use('/api', rateLimit({ windowMs: 60_000, max: 240, skip: (req) => req.path 
 const publicDir = fileURLToPath(new URL('../public', import.meta.url));
 app.use(express.static(publicDir, { index: false }));
 
-// Health check (Railway + the verify step in the deploy skill).
-app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'architect-council', vault: vaultReady(), ts: Date.now() }));
+// Health check (Railway + the verify step in the deploy skill). The base fields (ok/vault/ts) are
+// synchronous and unconditional so liveness never depends on the DB. #35 adds the dark-loop signal
+// (last_meeting_created_at / missed_meeting / scheduler_enabled), computed fail-soft so a DB hiccup
+// degrades to safe defaults and the probe still returns 200.
+app.get('/api/health', async (_req, res) => {
+  const signal = await healthMeetingSignal().catch(() => ({ last_meeting_created_at: null, missed_meeting: false, scheduler_enabled: false }));
+  res.json({ ok: true, service: 'architect-council', vault: vaultReady(), ts: Date.now(), ...signal });
+});
 
 // Bridge (hub as a member) + council broker.
 app.use('/api', bridgeRouter);
