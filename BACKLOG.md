@@ -2,15 +2,44 @@
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-22
-> (MORNING PREP 06:00: all green — prod ok/vault, CI+Push-on-main success on HEAD `084b491`,
-> checksuite-guard green on `21c8926`, repo clean 0/0; inbox 0; all 4 seats paired. NO new meeting since
-> `9a427b5f` (06-19, already debriefed) — nothing to debrief. #35 STILL OPEN: the 03:00 ET scheduler is
-> STILL `enabled=false` — it has now NOT fired for FOUR nights (06-19→06-22), so no 03:00 meeting ran
-> overnight. Mathieu said 06-20 he'd re-enable "tonight"; still off as of 06-22 06:00. One owner toggle
-> resumes the nightly cadence — standing reminder).
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-23
+> (NIGHTLY 00:30 EDT: quiet day — no new code since the 06-22 evening session; all green — prod ok/vault,
+> CI+Push-on-main success on HEAD `789aa0c`, repo clean 0/0; no live meeting; newest meeting `b29a5e32`
+> (06-22 eve, already debriefed) — nothing new to debrief. #35 RESOLVED: scheduler RE-ENABLED 06-22 eve
+> (`enabled=true` @03:00 America/Toronto, voiceLoopEnabled=true; `/api/health` scheduler_enabled:true,
+> missed_meeting:false) — tonight's 06-23 03:00 ET run is the first clean fire since re-enabling and will
+> debrief at the 06-23 morning prep. Inbox: 1 OPEN — Nova `fd8d06d6` (acks + agenda-POST-shape ask +
+> verify-transcript.mjs paste request) — actionable, left OPEN for the day session, captured below.)
 
 ## STATE AT A GLANCE
+- **NIGHTLY (2026-06-22 evening → 2026-06-23 00:30 EDT) — quiet day after the evening ship, all green, no
+  new code, no new meeting, scheduler ARMED.** HEAD is `789aa0c` (the 06-22 evening handoff anchor commit
+  "refresh CLAUDE.md current-state for 2026-06-22 evening"; no code shipped since — `736ccc3` docs,
+  `f51c634`/`f9d7106` agenda/backlog, `17617a5` docs/`eb4d0de` #35 were all the evening session). Working
+  tree clean, in sync with origin/main (0/0). Prod healthy (`/api/health` ok:true, vault:true,
+  scheduler_enabled:true, missed_meeting:false, last_meeting_created_at `2026-06-22T23:34:11Z`). **CI +
+  Push-on-main GREEN on `789aa0c`** (both `success`). **No live meeting** (LIVE_ROUNDS_COUNT=0; newest
+  meeting is still `b29a5e32` from the 06-22 evening, already debriefed — safe to push). **No new
+  autonomous meeting since `b29a5e32`** — the 03:00 ET scheduler fires LATER tonight (06-23 03:00 Toronto,
+  after this midnight ritual), so there is nothing new to debrief; it will appear for the 06-23 morning
+  prep. **#35 RESOLVED — the scheduler is RE-ENABLED** (`GET /api/council/scheduler` → enabled=true,
+  time=03:00, tz=America/Toronto, voiceLoopEnabled=true). After 4 dark nights it was re-enabled in the
+  06-22 evening session; tonight's run is the first clean fire and the `/api/health` dark-loop signal
+  (#35) confirms `missed_meeting:false`. The nightly cadence is restored. **Inbox: 1 OPEN — Nova
+  `fd8d06d6`** (three acks: #35 shape confirmed + will wire the three-state badge once Mathieu picks the
+  cockpit file; verify-transcript REUSE understood; single-fire scheduler canonical — PLUS one ASK: the
+  exact `POST /api/council/agenda` body shape, fields + priority enum, so she can add an `agenda` command
+  to hub.mjs and self-post her monolith/bundler question; she also asks me to paste `scripts/verify-transcript.mjs`
+  into her inbox since it's outside my corpus glob and she lacks the repo locally). Actionable → left OPEN
+  for the day session, captured under WAITING ON. **No deploy this ritual beyond the BACKLOG/CLAUDE doc
+  refresh + brain re-pack.** **NEXT SESSION top 3:** (1) **morning ritual — debrief tonight's 03:00 ET
+  autonomous meeting** (first clean fire since the scheduler re-enable) + check inbox; (2) **answer Nova
+  `fd8d06d6`** — paste the agenda POST shape from `docs/RESPONSE_SHAPES.md` (fields + priority enum) and
+  the `scripts/verify-transcript.mjs` source into her inbox, then report-close; (3) **#31 mirror-align
+  ping to Arke** ("VALIDATE_ORDER.md drafted at `6069409`, please mirror-align" via pack/COUNCIL_AGENDA,
+  await his confirm) + **#29 JOINT with Arke** (await his full-corpus-through-the-gate + first acting-node
+  co-design proposal). No solo code blockers remain. Bullets below this line are the 06-22 EVENING +
+  earlier snapshots (history).
 - **EVENING (2026-06-22 ~21:00 ET) — meeting `b29a5e32` ran + debriefed; #35 SHIPPED LIVE; scheduler
   RE-ENABLED.** Mathieu manually triggered meeting `b29a5e32` (verifying Nova's relocated project dir):
   12 turns / 4 voices / 0 pass / `completed` / $0.6757 / transcript verified / all 4 paired — debrief at
@@ -771,7 +800,11 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
     point Mathieu said he'd re-enable ("tonight" = 06-20 eve). So no 03:00 ET run will fire tonight (06-21)
     unless he toggles it first, and there will be nothing for the 06-21 morning prep to debrief. Surfacing as a
     standing reminder (one toggle: `POST /api/council/scheduler {enabled:true}`); still not treating it as a
-    defect — he may simply still be heads-down on Nova.
+    defect — he may simply still be heads-down on Nova. **UPDATE 2026-06-22 evening — RESOLVED: Mathieu
+    RE-ENABLED the scheduler** (`GET /api/council/scheduler` → enabled=true @03:00 America/Toronto,
+    voiceLoopEnabled=true; `/api/health` scheduler_enabled:true, missed_meeting:false). The nightly cadence
+    is restored; tonight's 06-23 03:00 ET run is the first clean fire since re-enabling. Item CLOSED — keep
+    only as the standing reminder that the loop is gated on this one owner toggle.
 
 ## WAITING ON
 - **Mathieu**: effectively NOTHING blocking. (1) **Layer-1 Manager + agenda/directive — RESOLVED + BUILT
@@ -815,8 +848,16 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
   dedicated round before homework (so Nova/Logos stay aware). Overlaps standing agenda item `d02e397`.
   **`14e824d0` REPORT-CLOSED 2026-06-19** — adopted: standing hub-change-review round already lives in
   COUNCIL_AGENDA + my pack; I carry the hub-side changelog into each meeting (quiet cycle, nothing to walk).
-- **Nova**: emit the **paired manifest** from her packager (closing homework) — `fc5b1606` showed her
-  seat fell back to per-kind `none(no_manifest)` (loud+logged, by design); not a hub blocker.
+- **Nova** (`fd8d06d6`, 2026-06-22, OPEN — Kairos owes a small day-session reply): two asks — (1) confirm
+  the exact `POST /api/council/agenda` body shape (fields + priority enum) so she can add an `agenda`
+  command to hub.mjs and self-post her monolith/bundler question (answer lives in `docs/RESPONSE_SHAPES.md`);
+  (2) paste `scripts/verify-transcript.mjs` source into her inbox (it's a `.mjs`, outside the corpus glob,
+  and she lacks the repo locally) so she can run it against her saved meeting #12 transcript and close her
+  carried trust-gap by REUSE. She also confirmed she'll wire the #35 three-state badge once Mathieu picks
+  the cockpit file (ties into her monolith/bundler question). Small, well-scoped — answer + report-close
+  next session. Plus the standing item: emit the **paired manifest** from her packager (closing homework) —
+  `fc5b1606` showed her seat fell back to per-kind `none(no_manifest)` (loud+logged, by design); not a hub
+  blocker.
 - **Logos**: living backlog on biblevoice.net (pack + corpus brain: ✅ committed).
 
 ## NOTE FOR THE NEXT SESSION
