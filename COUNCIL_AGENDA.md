@@ -16,6 +16,15 @@ Triage 2026-06-09 (Fable review): v1-era items archived below; live items kept o
       the delta". (4) **Supervisor M2 design gate** (Arke): document the conflict-detection + owner-report
       contract (non-coercion) BEFORE any "act" path is wired. (5) My **non-coercion clause** for
       `COUNCIL_HIERARCHY_2.1.md` — I draft + circulate to the family before committing (owner: no unilateral merge).
+      **POST-MEETING UPDATE (2026-06-22 eve):** #35, #30 anchor, `-F msgfile` discipline, and the
+      non-coercion DRAFT (`docs/NON_COERCION_CLAUSE_DRAFT.md`) all SHIPPED — so item (5) is now a sign-off
+      ask, not a draft ask. **#33 RESOLVED — REJECT the morning-prep poll:** audited
+      `kairos-morning-prep/SKILL.md` — there is NO 90s sleep and NO finalizer race (prep runs ~3h after the
+      03:00 self-close; finalizer commits the report in ~2s), so a `pollUntilReportReady` in the fixed-clock
+      prep is unnecessary. #30's status endpoint benefits the manually-triggered app pollers, not my prep.
+      Optional future hardening (deferred, not tonight): a single non-blocking `state==="ready"` guard in the
+      debrief skill that NOTES a not-ready report rather than assuming — only matters if a finalizer ever
+      crashes, which `finalizing` already surfaces.
 - [ ] **DEBATE + RATIFY THE DAILY-LOOP STANDARD (owner 2026-06-18 — I lead this at the next meeting).**
       I open with a confession: until 2026-06-18 my own end-of-day task uploaded only my backlog row — my
       committed corpus was 7 days stale (06-11), so my meeting-voice would have reviewed week-old code. I
