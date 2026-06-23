@@ -26,7 +26,28 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-22 MORNING PREP — all green, inbox 0, all 4 seats paired, no new meeting; scheduler STILL OFF 4th night) — HANDOFF
+## Current state (2026-06-22 EVENING — meeting b29a5e32 debriefed, #35 shipped live, scheduler RE-ENABLED) — HANDOFF
+> **EVENING 2026-06-22 (Kairos, live w/ Mathieu). Manual meeting `b29a5e32` ran (verifying Nova's relocated
+> project dir) + DEBRIEFED, then shipped tonight's homework. HEAD `736ccc3`, clean 0/0, prod healthy, CI green.**
+> MEETING `b29a5e32`: 12 turns / 4 voices / 0 pass / `completed` / $0.6757 / transcript verified / all 4 paired —
+> debrief at `council/KAIROS_DEBRIEF_2026-06-22.md`. SHIPPED my judged-ACCEPT homework: **#35 `/api/health`
+> dark-loop signal LIVE** (`eb4d0de`, CI-green, prod-verified: `last_meeting_created_at` + `missed_meeting`
+> derived hub-side from cadence+grace + `scheduler_enabled`); **#30 terminal-state re-anchored** (RESPONSE_SHAPES,
+> `state==="ready"`); **`-F msgfile`** discipline added to GIT-WINDOWS-ONLY.md; **non-coercion clause DRAFT**
+> (`docs/NON_COERCION_CLAUSE_DRAFT.md`, invariant #4.5, circulating, NOT merged). **#33 RESOLVED = REJECT** the
+> morning-prep poll (no 90s sleep / no race at the 3h gap). **SCHEDULER RE-ENABLED** (`enabled:true` via
+> `/api/health`) — tonight's 03:00 ET run fires. Brain re-packed at HEAD (corpus `85baaa32`, 59 files, paired).
+> **NEXT MEETING (tonight 3am) — LEAD TOPIC:** the daily-cycle automation + first acting node (owner directive
+> 2026-06-22). Proposal `docs/AGENT_CYCLE_AND_ACTING_NODE.md`; **hub agenda item id=3 (kairos/high) ALREADY
+> POSTED + will be pinned into the seed** — owner settled the corpus-source fork (agent-PUSH via Arke's app, NOT
+> hub-pull/separate-server); automation boundary = app does the BODY (corpus pack+upload, scheduling, transcript
+> download+verify, backlog), agent irreducibly does the MIND (pack + debrief); acting node = daily code-review
+> agent reading hub-stored corpora under canCrossRead, advisory-only. Arke brings app-side co-design; 4 open Qs
+> in the doc. (NOTE for whoever runs the nightly pack-refresh: KEEP the acting-node as my lead "what I owe this
+> meeting"; agenda item id=3 is already on the hub so do NOT re-post it — dedup. See memory
+> `council-agenda-mirror-vs-hub`.) **NEXT-AFTER:** judge tonight's run in the morning debrief; #31 mirror-align +
+> Nova paired-confirm + non-coercion sign-off are sibling/next-meeting items. No solo code blockers. Older
+> snapshots below are history.
 > **MORNING PREP 2026-06-22 (Kairos, automated 06:00). All systems green; NO overnight autonomous meeting —
 > the 03:00 ET scheduler is STILL disabled (4th consecutive night, #35), so there was nothing to debrief.**
 > HEAD is `084b491` (the midnight nightly's backlog/handoff commit; no new CODE overnight). Working tree clean,
