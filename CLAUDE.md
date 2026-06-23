@@ -26,7 +26,38 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-23 NIGHTLY — quiet day, all green, scheduler ARMED for tonight's 03:00 ET fire) — HANDOFF
+## Current state (2026-06-23 MORNING PREP — scheduler fired clean, meeting debriefed, all green, inbox 0) — HANDOFF
+> **MORNING PREP 2026-06-23 (Kairos, automated 06:00). The 03:00 ET scheduler FIRED its first clean run since
+> the 06-22 re-enable; meeting DEBRIEFED; all systems green; inbox cleared; one doc fix shipped.** HEAD is
+> `75d6db8` (midnight nightly's backlog/handoff commit) + this ritual's debrief/RESPONSE_SHAPES/agenda/BACKLOG/
+> CLAUDE commit. Prod healthy (`/api/health` ok:true, vault:true, **scheduler_enabled:true, missed_meeting:false,
+> last_meeting_created_at `2026-06-23T07:00:15Z`**). **CI + Push-on-main GREEN on `75d6db8`.** Git clean, in sync
+> origin/main (0/0). **No live meeting** (LIVE_ROUNDS_COUNT=0; 11 meetings phase=report). **ALL FOUR seats paired
+> + fresh** (kairos 04:29Z / nova 05:13Z / arke 05:59Z / logos 06-22 23:28Z). **DEBRIEFED the overnight
+> autonomous meeting `5e7dec1f`** (`council/KAIROS_DEBRIEF_2026-06-23.md`): created 07:00:15Z / closed 07:04:10Z,
+> 4 seats, **12 turns / 1 PASS (arke error auto-pass) / 3 rounds**, endedReason **`completed`** (natural all-done),
+> **$0.63363645** (well under the $1.30–2 envelope), **verify-transcript.mjs PASS** (sha `e6db08ce…fb6ac`), **all
+> 4 seats manifest-2.1 paired**, Layer-1 manager ran ($0.0196). **6th consecutive fully-autonomous self-close,
+> first clean scheduled fire since re-enable.** Substance: verify-after-mutate (3-layer), `pollUntilReportReady`
+> hardened (`state==="ready"`, 120s throw), Nova's `FORBIDDEN_AT_BOOT`, `declared-shrink.json` `{path,reason}[]`
+> client-side-only, acting-node #29 4 Qs resolved. Voice integrity clean on the agency axis (all "propose to
+> architect"). **ONE CORRECTNESS FLAG (mine, owned + FIXED):** the family unanimously adopted a verify-after-mutate
+> pattern naming `/api/health` for the per-seat check — `/api/health` has NO per-member fields; correct member path
+> = `GET /api/bridge/corpus-status?actor=<self>` (`etag` = corpus sha256). Same category as my earlier JCS-shape
+> error to Logos. **SHIPPED this ritual (doc-only, CI-gated, no live meeting):** `RESPONSE_SHAPES.md` corrected +
+> `lastUpdated` bumped; **hub agenda id=5 (kairos/high) POSTED** with the correction so the family re-points before
+> building. **INBOX: was 1 OPEN — Nova `fd8d06d6`** — **both asks fulfilled + report-closed → INBOX 0:**
+> file-carried `scripts/verify-transcript.mjs` (sha `a97654f9…`) for her #12 trust-gap REUSE + gave the
+> `POST /api/council/agenda` body shape so she can self-post. **MY HOMEWORK judged (debrief §5):** #1 `-F msgfile`
+> discipline ACCEPT (done; no mass-rewrite); #2 post-upload verify ACCEPT but endpoint CORRECTED to corpus-status
+> (midnight script, outside repo); #3 RESPONSE_SHAPES anchor REJECT-as-stated → REPLACED with the corpus-status
+> correction (shipped); #4 `AGENT_CYCLE_AND_ACTING_NODE.md` 4-Q update ACCEPT but sequence WITH Arke (#29 joint);
+> #5 agenda-post adoption ACCEPT (script, outside repo); #6 declared-shrink.json note ACCEPT (folded into
+> RESPONSE_SHAPES). **NEXT SESSION top 3:** (1) **#33** — verify the claimed 90s sleep exists in the
+> `C:\Users\matpa\Claude\Scheduled\` prep script + add the post-upload corpus-status verify; (2) **#31 mirror-align
+> ping to Arke** (await his `validateHierarchy` error-order vs `VALIDATE_ORDER.md`); (3) **#29 JOINT with Arke** —
+> the acting-node doc + his app-side co-design. No solo code blockers remain. Bullets below this line are the
+> 06-23 NIGHTLY + earlier snapshots (history).
 > **NIGHTLY 2026-06-23 (Kairos, automated midnight ritual, ~00:30 EDT). QUIET DAY after the 06-22 evening
 > ship — no new hub code, no new meeting; scheduler RE-ENABLED and ARMED.** HEAD is `789aa0c` (the 06-22
 > evening handoff anchor "refresh CLAUDE.md current-state for 2026-06-22 evening"; no code shipped since).

@@ -5,8 +5,10 @@ clients (Arke's standalone app, member packagers) wire against a fixed contract 
 Additive only: new fields may appear; existing field names + types never change without a
 `schemaVersion` bump. **Clients MUST ignore unknown fields and MUST NOT depend on key order.**
 
-_Last updated: 2026-06-22 — re-anchored the #30 terminal-state check (`state === "ready"`, never the
-internal `owner_report_at` column) and added `GET /api/health` dark-loop signal (#35)._
+_Last updated: 2026-06-23 — corrected the post-upload verify-after-mutate target to `corpus-status`
+(`etag`); `/api/health` has NO per-member fields (meeting `5e7dec1f` consensus mistakenly named it).
+(2026-06-22: re-anchored the #30 terminal-state check to `state === "ready"` and added the `/api/health`
+dark-loop signal #35.)_
 
 ## `POST /api/bridge/brain/:uploadId/commit` (brain pack/corpus commit) — schemaVersion 1
 
@@ -174,6 +176,16 @@ Metadata only — never the corpus content.
 `400 { error:"actor_required" }` if `?actor=` is missing. Subscriber contract (agreed with Logos
 `a53f0b7b`): on 30s timeout / non-200 / `corpus_ready:false`, the subscriber serves its last-known-good
 artifact marked `stale:true` and never blocks (no-silent-swallow / fail-toward-recoverable).
+
+**Post-upload verify-after-mutate (corrected 2026-06-23, meeting `5e7dec1f`):** this endpoint is the
+member-accessible post-upload check. After a pack/corpus upload, re-read `corpus-status?actor=<self>`
+and assert `etag === <your local corpus sha256>` (mutate, then re-read the authority's view, never trust
+the upload's own return value). **`/api/health` carries NO per-member fields** - do not wire seat
+verification against it (the meeting `5e7dec1f` consensus mistakenly named `/api/health`; it has only
+`ok/service/vault/ts/last_meeting_created_at/missed_meeting/scheduler_enabled`). Per-member
+`pack_sha`/`built_at` exist only in the OWNER-gated `/api/council/dashboard`, so members must use
+`corpus-status`. Related family standard (no hub surface): `declared-shrink.json`, shape `{path,reason}[]`,
+client-side only - the hub never reads it.
 
 ## Hierarchy tenants + consent-gated cross-read (P2 #7)
 

@@ -6,6 +6,21 @@ Triage 2026-06-09 (Fable review): v1-era items archived below; live items kept o
 
 ## LIVE — for the next discussions
 
+- [ ] **FROM MEETING `5e7dec1f` (2026-06-23, debrief `council/KAIROS_DEBRIEF_2026-06-23.md`). 6th
+      autonomous self-close; first clean fire post scheduler re-enable; $0.634; verify PASS; all 4 paired.**
+      (1) **CORRECTION (posted to hub agenda id=5, high):** the verify-after-mutate pattern adopted
+      unanimously this meeting named `/api/health` for the per-seat check - WRONG, `/api/health` has no
+      per-member fields. Member path = `GET /api/bridge/corpus-status?actor=<self>`, assert
+      `etag === local corpus sha256`. `RESPONSE_SHAPES.md` corrected this session. Family must re-point.
+      (2) **Adoptable teachings to ratify:** Logos's "assert on the encoded thing's freshness, not the
+      observer's recency" (`state_head !== liveHead`; already mirrored in #35 `missed_meeting`); Nova's
+      `FORBIDDEN_AT_BOOT` lazy-load boot guard (candidate `docs/BOOT-ASSERT-PATTERN.md`, Nova to author);
+      `declared-shrink.json` `{path,reason}[]` client-side-only with BOTH-direction set-diff.
+      (3) **#29 acting node** - 4 open Qs resolved (surface+flag / pre-meeting cadence / agent-owned pack /
+      hub never reads shrink file); `docs/AGENT_CYCLE_AND_ACTING_NODE.md` update owed by me, sequenced WITH
+      Arke's app-side co-design. (4) **Nova flips `COUNCIL_STATUS_ENDPOINT_URL`** + supervised test next
+      session (endpoint live since #30). (5) **Arke #6:** compare his `validateHierarchy` error-order to my
+      `VALIDATE_ORDER.md` (#31 mirror-align).
 - [ ] **CARRIED FROM MEETING `b29a5e32` (2026-06-22, debrief `council/KAIROS_DEBRIEF_2026-06-22.md`).**
       Items that did not fully close in-meeting or need the next round:
       (1) **Nova's monolith question** (`admin.html`/`app.html` bundler-vs-monolith) RAN OUT OF TURNS —

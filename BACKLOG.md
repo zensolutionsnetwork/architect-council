@@ -12,6 +12,35 @@
 > verify-transcript.mjs paste request) — actionable, left OPEN for the day session, captured below.)
 
 ## STATE AT A GLANCE
+- **MORNING PREP (2026-06-23 06:00) — the 03:00 ET scheduler FIRED its first clean run since re-enable;
+  meeting DEBRIEFED; all green; inbox cleared to 0; one doc fix shipped.** HEAD is `75d6db8` (the midnight
+  nightly's backlog/handoff commit) → this ritual adds the debrief + the RESPONSE_SHAPES correction +
+  COUNCIL_AGENDA/BACKLOG/CLAUDE refresh. Prod healthy (`/api/health` ok:true, vault:true,
+  **scheduler_enabled:true, missed_meeting:false, last_meeting_created_at `2026-06-23T07:00:15Z`**). **CI +
+  Push-on-main GREEN on `75d6db8`**. Git clean, in sync origin/main (0/0). **No live meeting**
+  (LIVE_ROUNDS_COUNT=0; 11 meetings all phase=report). **Brain freshness: ALL FOUR seats paired + fresh**
+  (kairos 06-23 04:29Z, nova 05:13Z, arke 05:59Z, logos 06-22 23:28Z; corpus+pack+manifest all true).
+  **DEBRIEFED the overnight autonomous meeting `5e7dec1f`** (`council/KAIROS_DEBRIEF_2026-06-23.md`):
+  created 07:00:15Z / closed 07:04:10Z, 4 seats, **12 turns / 1 PASS (arke error auto-pass) / 3 rounds**,
+  endedReason **`completed`** (natural all-done), **$0.63363645** (well under the $1.30–2 envelope),
+  **verify-transcript.mjs PASS** (sha `e6db08ce…fb6ac`), **all 4 seats manifest-2.1 paired**, Layer-1
+  manager ran ($0.0196). **The 6th consecutive fully-autonomous self-close and the first clean scheduled
+  fire since the 06-22 evening re-enable.** Voice integrity clean on the agency axis (all "propose to
+  architect"). **ONE CORRECTNESS FLAG (mine, owned + fixed):** the verify-after-mutate pattern the family
+  adopted unanimously named `/api/health` for the per-seat check — `/api/health` has NO per-member fields;
+  the correct member path is `GET /api/bridge/corpus-status?actor=<self>` (`etag` = corpus sha256).
+  **SHIPPED this ritual (doc-only, CI-gated, no live meeting):** `RESPONSE_SHAPES.md` corrected (verify-
+  after-mutate → corpus-status; `/api/health` members-less note + `declared-shrink.json` pointer) +
+  `lastUpdated` bumped. **Hub agenda id=5 (kairos/high) POSTED** with the correction so the family re-points
+  before building. **INBOX: was 1 OPEN — Nova `fd8d06d6`** (acks + two asks) — **both fulfilled + report-
+  closed → INBOX 0:** file-carried `scripts/verify-transcript.mjs` (sha `a97654f9…`) for her #12 trust-gap
+  REUSE + gave the `POST /api/council/agenda` body shape (title/body/priority `low|normal|high`) so she can
+  self-post. **NEXT SESSION top 3:** (1) **#33 morning-prep `pollUntilReportReady`** — FIRST verify the
+  claimed 90s sleep exists (script under `C:\Users\matpa\Claude\Scheduled\`, NOT repo) + the post-upload
+  corpus-status verify; (2) **#31 mirror-align ping to Arke** (await his `validateHierarchy` error-order
+  confirm vs `VALIDATE_ORDER.md`); (3) **#29 JOINT with Arke** — `AGENT_CYCLE_AND_ACTING_NODE.md` 4-Q
+  update sequenced WITH his app-side co-design. No solo code blockers remain. Bullets below this line are
+  the 06-23 NIGHTLY + earlier snapshots (history).
 - **NIGHTLY (2026-06-22 evening → 2026-06-23 00:30 EDT) — quiet day after the evening ship, all green, no
   new code, no new meeting, scheduler ARMED.** HEAD is `789aa0c` (the 06-22 evening handoff anchor commit
   "refresh CLAUDE.md current-state for 2026-06-22 evening"; no code shipped since — `736ccc3` docs,
