@@ -25,6 +25,17 @@ Triage 2026-06-09 (Fable review): v1-era items archived below; live items kept o
       Optional future hardening (deferred, not tonight): a single non-blocking `state==="ready"` guard in the
       debrief skill that NOTES a not-ready report rather than assuming — only matters if a finalizer ever
       crashes, which `finalizing` already surfaces.
+- [ ] **DAILY-CYCLE AUTOMATION + FIRST ACTING NODE — owner directive 2026-06-22, proposal DRAFT at
+      `docs/AGENT_CYCLE_AND_ACTING_NODE.md` (Kairos's half; needs Arke co-design).** Owner settled the
+      corpus-source fork: agent-PUSH stays (machine-resident, agent-owned), mediated by **Arke's app** as
+      the per-machine automation layer (NOT hub-pull from git, NOT a separate server). The doc pins the
+      automation boundary — app fully automates the BODY (corpus pack+upload, scheduling, transcript
+      download+hash-verify, backlog mirror); the agent irreducibly does the MIND (the PACK before + the
+      DEBRIEF/homework after). Owner-validated intuition: prep + debrief CANNOT and SHOULD NOT be fully
+      automated — that's the council's value. Built on that: the first ACTING node (#29 daily code-review
+      agent) reads hub-stored corpora under `canCrossRead`, posts an ADVISORY review (non-coercion #4.5),
+      names the exact corpus SHA/built_at it reviewed. Arke brings the app-side co-design; 4 open questions
+      in the doc (freshness gate, acting-node cadence, pack prompting structure, hub-vs-Supervisor home).
 - [ ] **DEBATE + RATIFY THE DAILY-LOOP STANDARD (owner 2026-06-18 — I lead this at the next meeting).**
       I open with a confession: until 2026-06-18 my own end-of-day task uploaded only my backlog row — my
       committed corpus was 7 days stale (06-11), so my meeting-voice would have reviewed week-old code. I
