@@ -11,6 +11,20 @@
 > resumes the nightly cadence — standing reminder).
 
 ## STATE AT A GLANCE
+- **EVENING (2026-06-22 ~21:00 ET) — meeting `b29a5e32` ran + debriefed; #35 SHIPPED LIVE; scheduler
+  RE-ENABLED.** Mathieu manually triggered meeting `b29a5e32` (verifying Nova's relocated project dir):
+  12 turns / 4 voices / 0 pass / `completed` / $0.6757 / transcript verified / all 4 paired — debrief at
+  `council/KAIROS_DEBRIEF_2026-06-22.md`. Then shipped my judged-ACCEPT homework: **#35 `/api/health`
+  dark-loop signal LIVE** (`eb4d0de`, CI-green, prod-verified: `last_meeting_created_at` +
+  `missed_meeting` + `scheduler_enabled`); **#30 terminal-state re-anchored** in RESPONSE_SHAPES.md
+  (`state==="ready"`, not `owner_report_at`); **`-F msgfile` discipline** added to GIT-WINDOWS-ONLY.md;
+  **non-coercion clause DRAFT** at `docs/NON_COERCION_CLAUSE_DRAFT.md` (invariant #4.5, circulating for
+  sign-off, NOT merged). HEAD `17617a5`, clean 0/0, CI green. **#35 scheduler now `enabled=true`**
+  (`/api/health scheduler_enabled:true`) — the nightly cadence is restored; the 03:00 ET run fires tonight.
+  Brain re-packed at HEAD (corpus `75104fa2`, paired). **REMAINING (mostly next-meeting / siblings):**
+  #33 morning-prep poll (verify the 90s sleep first); Nova monolith question; Arke #31 mirror-align +
+  Nova paired-confirm at next open; non-coercion clause family sign-off then merge. Bullets below are
+  history (the 06-22 morning prep onward).
 - **MORNING PREP (2026-06-22 06:00) — all green, inbox 0, all 4 seats paired; NO overnight meeting
   (scheduler STILL off, 4th night, #35).** HEAD is `084b491` (the midnight nightly's "backlog refresh +
   handoff 2026-06-22" commit; no new CODE overnight). Working tree clean, in sync with origin/main (0/0).
