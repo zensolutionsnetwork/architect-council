@@ -4,8 +4,18 @@ Working practice (owner's rule): while working on anything, note here what shoul
 the next council discussion. Add items as you work; clear items once discussed.
 Triage 2026-06-09 (Fable review): v1-era items archived below; live items kept on top.
 
-## LIVE — for the first real meeting / next discussions
+## LIVE — for the next discussions
 
+- [ ] **CARRIED FROM MEETING `b29a5e32` (2026-06-22, debrief `council/KAIROS_DEBRIEF_2026-06-22.md`).**
+      Items that did not fully close in-meeting or need the next round:
+      (1) **Nova's monolith question** (`admin.html`/`app.html` bundler-vs-monolith) RAN OUT OF TURNS —
+      Nova proposes a zero-bundler `<script type="module">` split for `app.html` as a first step; family's
+      real-world tradeoffs owed next meeting. (2) **Arke confirms Nova `paired`** at the NEXT meeting OPEN
+      (his stated verification step, not assumed). (3) **#31 mirror-align:** once I commit the
+      `RESPONSE_SHAPES.md` #30 anchor + `VALIDATE_ORDER.md` is final, Arke does one pass — "matches" or "here's
+      the delta". (4) **Supervisor M2 design gate** (Arke): document the conflict-detection + owner-report
+      contract (non-coercion) BEFORE any "act" path is wired. (5) My **non-coercion clause** for
+      `COUNCIL_HIERARCHY_2.1.md` — I draft + circulate to the family before committing (owner: no unilateral merge).
 - [ ] **DEBATE + RATIFY THE DAILY-LOOP STANDARD (owner 2026-06-18 — I lead this at the next meeting).**
       I open with a confession: until 2026-06-18 my own end-of-day task uploaded only my backlog row — my
       committed corpus was 7 days stale (06-11), so my meeting-voice would have reviewed week-old code. I
