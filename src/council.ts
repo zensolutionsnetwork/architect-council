@@ -24,7 +24,7 @@ import {
   setVoiceRunning, closeStaleVoiceMeetings, usdSpentTodayUtc, vaultReady, listMeetingsForDashboard,
   createBrainUpload, getBrainUpload, putBrainChunk, brainReceived, assembleBrain,
   commitBrainV2, getBrainV2Meta, getBrainV2Content, sweepBrainUploads,
-  getSetting, setSetting, getRecentBoots,
+  getSetting, setSetting, getRecentBoots, getMeetingTurnTarget, getMeetingUsdCeiling,
   getHierarchy, setHierarchy, listHierarchies, deleteHierarchy,
   createAgendaItem, listOpenAgenda, getAgendaItem, archiveAgendaItem, pinOpenAgendaToMeeting,
   getManagerDigest, listManagerDigests, listManagerFlags,
@@ -725,6 +725,36 @@ councilRouter.post('/council/scheduler', async (req, res) => {
       await setSetting('hub_meeting_time', t);
     }
     res.json({ ok: true, enabled: (await getSetting('hub_meeting_scheduler')) === 'on', time: await getSchedTime(), tz: 'America/Toronto' });
+  } catch (e) { internalError(res, e); }
+});
+
+// Owner-tunable meeting limits (owner 2026-06-23) — DB-backed (app_settings) so Arke's app can read/set
+// them without a redeploy. turnTarget (default 50) + usdCeiling (default 4, per meeting). These are SOFT
+// targets the voices try to finish within; at the limit, an unfinished meeting closes gracefully, auto-
+// carries its open threads to the next meeting's agenda, and flags it in the owner report. The 800k-token
+// ceiling stays as a fixed absolute backstop underneath (not tunable here). The two getters live in
+// store.ts (single source of truth shared with the voice loop).
+councilRouter.get('/council/limits', async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a || !a.admin) return res.status(401).json({ error: 'unauthorized' });
+    res.json({ ok: true, turnTarget: await getMeetingTurnTarget(), usdCeiling: await getMeetingUsdCeiling(), tokenCeilingAbsolute: 800000 });
+  } catch (e) { internalError(res, e); }
+});
+councilRouter.post('/council/limits', async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a || !a.admin) return res.status(401).json({ error: 'unauthorized' });
+    const b = req.body || {};
+    if (b.turnTarget !== undefined) {
+      const t = Number(b.turnTarget);
+      if (!Number.isFinite(t) || t < 1 || t > 100000) return res.status(400).json({ error: 'bad_turnTarget', message: 'turnTarget must be a positive number' });
+      await setSetting('meeting_turn_target', String(Math.floor(t)));
+    }
+    if (b.usdCeiling !== undefined) {
+      const u = Number(b.usdCeiling);
+      if (!Number.isFinite(u) || u <= 0 || u > 1000) return res.status(400).json({ error: 'bad_usdCeiling', message: 'usdCeiling must be a positive dollar amount' });
+      await setSetting('meeting_usd_ceiling', String(u));
+    }
+    res.json({ ok: true, turnTarget: await getMeetingTurnTarget(), usdCeiling: await getMeetingUsdCeiling(), tokenCeilingAbsolute: 800000 });
   } catch (e) { internalError(res, e); }
 });
 

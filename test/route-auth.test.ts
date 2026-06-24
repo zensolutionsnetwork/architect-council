@@ -48,6 +48,8 @@ const PROTECTED: { method: string; path: string; body?: object }[] = [
   { method: 'GET',  path: '/api/council/scheduler' },
   { method: 'POST', path: '/api/council/scheduler', body: { enabled: true } },
   { method: 'GET',  path: '/api/council/dashboard' },
+  { method: 'GET',  path: '/api/council/limits' },
+  { method: 'POST', path: '/api/council/limits', body: { turnTarget: 50, usdCeiling: 4 } },
   { method: 'POST', path: '/api/council/member/probe/active', body: { active: false } },
   { method: 'POST', path: '/api/council/agenda', body: { title: 'probe topic' } },
   { method: 'GET',  path: '/api/council/agenda' },

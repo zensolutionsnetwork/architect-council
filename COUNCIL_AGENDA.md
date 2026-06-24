@@ -21,12 +21,15 @@ Triage 2026-06-09 (Fable review): v1-era items archived below; live items kept o
       Arke's app-side co-design. (4) **Nova flips `COUNCIL_STATUS_ENDPOINT_URL`** + supervised test next
       session (endpoint live since #30). (5) **Arke #6:** compare his `validateHierarchy` error-order to my
       `VALIDATE_ORDER.md` (#31 mirror-align).
-- [ ] **SUGGEST (optional, no push): each agent wire the agenda-post step into its own nightly ritual.**
-      The hub already lets any member `POST /api/council/agenda` (ratified 06-18); the family agreed in
-      `5e7dec1f` that everyone posts their own concerns. I added a dedup-guarded step to MY midnight
-      ritual this session (folding a topic into the pack alone does NOT reach the meeting — only an open
-      hub agenda_item gets pinned). Offering the pattern to Arke/Nova/Logos if they want it for their own
-      ritual scripts — adopt or not, their call. (Owner 2026-06-23: suggest, don't impose.)
+- [ ] **SUGGEST (optional, no push): each agent wire TWO agenda steps into its own nightly/EOD ritual.**
+      (1) **Post:** the hub already lets any member `POST /api/council/agenda` (ratified 06-18); the family
+      agreed in `5e7dec1f` that everyone posts their own concerns. I added a dedup-guarded post step to MY
+      midnight ritual (folding a topic into the pack alone does NOT reach the meeting — only an open hub
+      agenda_item gets pinned). (2) **Read + prepare (owner 2026-06-23):** at EOD, `GET /api/council/agenda`
+      and prepare a position/contribution on EACH open item, folded into your pack's "what I owe THIS
+      meeting", so every voice arrives PREPARED on the agenda instead of reading it cold at the table. I
+      added this to my ritual too. Offering both patterns to Arke/Nova/Logos for their own ritual scripts —
+      adopt or not, their call. (Owner 2026-06-23: suggest, don't impose.)
 - [ ] **CARRIED FROM MEETING `b29a5e32` (2026-06-22, debrief `council/KAIROS_DEBRIEF_2026-06-22.md`).**
       Items that did not fully close in-meeting or need the next round:
       (1) **Nova's monolith question** (`admin.html`/`app.html` bundler-vs-monolith) RAN OUT OF TURNS —

@@ -18,7 +18,7 @@
  * The owner /close route (council.ts) and the autonomous voice loop BOTH call finalizeMeetingClose
  * (converged 2026-06-15) — single close path, no twin to keep in step.
  */
-import { updateMeeting, setMeetingOwnerReport, setMeetingLedger, queueEnvTask, getSetting } from './store.js';
+import { updateMeeting, setMeetingOwnerReport, setMeetingLedger, queueEnvTask, getSetting, createAgendaItem } from './store.js';
 import { synthesizeOwnerReport, OWNER_REPORT_MODEL } from './architect.js';
 import { sendOwnerReportEmail } from './mailer.js';
 import { emptyTotals, addUsage } from './cost.js';
@@ -48,8 +48,10 @@ export interface FinalizeResult {
   emailReason: string | null;
 }
 
-/** Close + finalize a meeting. Pass the full meeting row (from getMeeting). Idempotent on closed_at. */
-export async function finalizeMeetingClose(m: any, opts: { report?: string } = {}): Promise<FinalizeResult> {
+/** Close + finalize a meeting. Pass the full meeting row (from getMeeting). Idempotent on closed_at.
+ *  `opts.endedReason` (voice loop) is surfaced in the owner report so a meeting that hit the token
+ *  ceiling — the only hard resource stop — is flagged to the owner (owner directive 2026-06-23). */
+export async function finalizeMeetingClose(m: any, opts: { report?: string; endedReason?: string } = {}): Promise<FinalizeResult> {
   const base: FinalizeResult = {
     ok: true, alreadyClosed: false, dryRun: !!(m && m.dry_run),
     storyUpdatesRouted: 0, ownerReport: false, emailSent: false, emailReason: null,
@@ -87,6 +89,24 @@ export async function finalizeMeetingClose(m: any, opts: { report?: string } = {
     // Per-reason auto-PASS counts make an error-heavy or stalled meeting visible at a glance.
     const passCounts: Record<string, number> = {};
     for (const t of (m.transcript || [])) if (t && t.kind === 'pass' && t.auto) { const r = String(t.reason || 'unknown'); passCounts[r] = (passCounts[r] || 0) + 1; }
+    // Graceful carryover + owner alert (owner directive 2026-06-23): a meeting that ended on a LIMIT
+    // (turn target / cost ceiling / token backstop) rather than naturally is UNFINISHED — auto-post a
+    // CONTINUED agenda item so the open threads resume next meeting, and flag it to the owner in the
+    // report below. A natural close (endedReason 'completed'/undefined, e.g. the /close route) does neither.
+    const LIMIT_LABELS: Record<string, string> = { turn_target: 'turn target', cost_ceiling: 'cost ceiling ($ limit)', token_ceiling: 'token ceiling (absolute backstop)' };
+    const limitLabel = opts.endedReason ? (LIMIT_LABELS[opts.endedReason] || '') : '';
+    let alertLine = '';
+    if (limitLabel) {
+      let carryId: any = null;
+      try {
+        const item = await createAgendaItem('hub',
+          `CONTINUED from meeting ${String(m.id).slice(0, 8)}: unfinished discussion`,
+          `This meeting reached its ${limitLabel} before the discussion concluded — continue the open threads here. See meeting ${m.id}'s owner report for the synthesized state.`,
+          'high');
+        carryId = item && item.id;
+      } catch (e) { console.warn('[finalize] carryover agenda post failed: ' + (e as Error).message); }
+      alertLine = `\n\n---\nALERT (owner): this meeting hit its ${limitLabel} with discussion still active. The unfinished threads were auto-carried to the next meeting's agenda${carryId ? ` (item #${carryId})` : ' (carryover post FAILED — see logs)'}. If you want longer meetings, raise the turn/cost targets from Arke's app (meeting limits).`;
+    }
     if (spoken.length) {
       try {
         const { report, usage } = await synthesizeOwnerReport(m.agenda || '', spoken);
@@ -95,7 +115,7 @@ export async function finalizeMeetingClose(m: any, opts: { report?: string } = {
           // Brain-manifest 2.1 (Logos rider): any non-paired seat MUST be surfaced in the owner report
           // with a reason — never silent. Deterministic line, not LLM-synthesized.
           const manifestLine = manifestPinLine(m.manifest_pins);
-          const full = clip(report + passLine + manifestLine, 16000);
+          const full = clip(report + passLine + manifestLine + alertLine, 16000);
           await setMeetingOwnerReport(m.id, full);
           base.ownerReport = true;
           try {

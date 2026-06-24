@@ -329,6 +329,14 @@ export async function setSetting(key: string, value: string | null): Promise<voi
     ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=now()`,
     [String(key).slice(0, 120), value == null ? null : String(value).slice(0, 500)]);
 }
+// Owner-tunable meeting limits (owner 2026-06-23), DB-backed so Arke's app sets them with no redeploy.
+// Single source of truth shared by the voice loop (enforcement) and the /council/limits routes (display/set).
+export async function getMeetingTurnTarget(): Promise<number> {
+  const v = Number(await getSetting('meeting_turn_target')); return Number.isFinite(v) && v > 0 ? Math.floor(v) : 50;
+}
+export async function getMeetingUsdCeiling(): Promise<number> {
+  const v = Number(await getSetting('meeting_usd_ceiling')); return Number.isFinite(v) && v > 0 ? v : 4;
+}
 // Per-agent backlog (contract answer 2026-06-09): write replaces ONLY the writer's row; read returns all.
 export async function setAgentBacklog(actor: string, content: any, updatedBy: string): Promise<string> {
   const { rows } = await db().query<any>(`INSERT INTO backlog_agents (actor, content, updated_at, updated_by) VALUES ($1,$2::jsonb,now(),$3)

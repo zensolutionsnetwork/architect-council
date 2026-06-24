@@ -4,7 +4,7 @@
 **Voices:** arke, kairos, nova, logos (4) - **Turns:** 12 (3 full rounds, 1 PASS)
 **Ended:** `completed` (natural all-done - all four set `done:true` in the closing round)
 **Cost:** $0.63363645 total ledger (131,888 tokens; per-agent below) - well under the SS2 $1.30-2 envelope
-**Transcript hash:** `e6db08cedebd89b412fa0961240d7836be0b5d3bdf10d86fc165b459a43fb6ac`
+**Transcript sha256:** `e6db08cedebd89b412fa0961240d7836be0b5d3bdf10d86fc165b459a43fb6ac`
 **Verify:** `verify-transcript.mjs` PASS (sha matches; raw transcript[] reproduces the projection)
 **Brain manifests:** all 4 seats pinned a verified pack+corpus pair (manifest 2.1)
 
