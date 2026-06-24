@@ -26,7 +26,30 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-24 MORNING PREP — debriefed first soft-limit meeting; all green; inbox 0; #36 spec converged) — HANDOFF
+## Current state (2026-06-24 DAY SESSION — #37 SHIPPED (top unblock); all green; inbox 0; agenda id=8 posted) — HANDOFF
+> **DAY SESSION 2026-06-24 (Kairos, w/ Mathieu, "do any task you need before next meeting"). SHIPPED #37 — the
+> top unblock for all three siblings' verify-after-mutate. HEAD `78863d1`, CI + Push-on-main GREEN, prod healthy,
+> tree clean 0/0, no live meeting.** Grounded the claim in a `council.ts` commit-order read first (corpus-status
+> 88-105; manifest-commit-last cross-check 1035-1107), then pinned in `docs/RESPONSE_SHAPES.md`: (a) the
+> **`corpus-status.etag` byte form** — a bare lowercase 64-hex sha256 of the whole corpus blob, a JSON string
+> field NOT the HTTP `ETag` header (no quotes, no `W/`, no `sha256:` prefix; the prefix lives only in
+> `corpus_version`/`brainVersion`); verify = plain string-equality vs local `sha256(corpus_blob)`. (b) a new
+> **"Three-artifact commit atomicity + the torn-state window"** section — pack/corpus/manifest commit via three
+> SEPARATE calls (no cross-artifact transaction); the manifest commits LAST and is the only kind that cross-checks
+> (409 `manifest_mismatch`), so a `2xx` manifest commit IS the atomic-pair witness; during the torn window
+> `corpus-status.etag` already reflects the new corpus and a meeting opens the seat `stale`. Per-consumer:
+> corpus-landed = `corpus-status.etag`; full-pair = `2xx` on the manifest commit; read-time pair view = the
+> meeting-open pin (`paired`/`stale`/`none`, dashboard `manifestReady`). `lastUpdated` bumped; BACKLOG #37 marked
+> DONE. Four gates green pre-push (secret-scan clean / canon 6 / cost / route-auth 42-0). **POSTED hub agenda
+> item id=8** (kairos/normal) announcing the pin so Arke/Nova/Logos re-point before the next meeting (open agenda
+> was empty — this morning's meeting flipped id=5/6/7 to discussed). Pre-push safety all green (inbox 0,
+> LIVE_ROUNDS_COUNT=0, `/api/health` ok/vault/scheduler_enabled:true/missed_meeting:false). **The brain pack is
+> the nightly ritual's to regenerate (it re-packs at HEAD tonight) — left untouched here.** **NEXT SESSION top 3:**
+> (1) **build #36 quorum-gate hub side** (spec converged; joint w/ Arke badge/cockpit — manifest
+> `pack_sha_at_attendance` + `/api/health` `last_meeting_status` enum + `/council/limits` durable backoff floored
+> at a monthly heartbeat); (2) **#31 mirror-align ping to Arke** (await his `validateHierarchy` error-order confirm
+> vs `VALIDATE_ORDER.md`); (3) watch **#29 acting-node co-design** (await Arke's app-side proposal). No solo code
+> blockers remain. Bullets below this line are the 06-24 MORNING PREP snapshot (history).
 > **MORNING PREP 2026-06-24 (Kairos, automated 06:00). DEBRIEFED the 03:00 ET autonomous meeting `18dd3ed5`
 > (the FIRST run under the soft-limit regime); all systems green; inbox 0; 4 seats paired; #36 quorum-gate
 > spec converged.** HEAD is `a6bf098` (the midnight nightly's handoff commit) + this ritual's debrief/BACKLOG/
