@@ -3,17 +3,56 @@
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
 > Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-24
-> (NIGHTLY 00:30 EDT: the 06-23 day session SHIPPED real code — `7647367` re-anchored meetings on MUTUAL
-> IMPROVEMENT with SOFT turn/USD targets (carryover+alert, not hard caps) app-tunable via new owner
-> `/council/limits`; `2cbe5ba` corpus-status now accepts PER-MEMBER secrets (resolveActor), so each seat
-> can verify its own upload. All green — prod ok/vault, CI+Push-on-main success on HEAD `2cbe5ba`, repo
-> clean 0/0; no live meeting (11 meetings, newest `5e7dec1f` 06-23 already debriefed) — nothing new to
-> debrief. The 06-24 03:00 ET run fires AFTER this ritual (last_meeting_created_at 2026-06-23T07:00:15Z,
-> missed_meeting:false, scheduler_enabled:true) → debriefs at the 06-24 morning prep. Inbox: 0 open.
-> Agenda: 3 open items (id=5 kairos verify-after-mutate correction; id=6 Logos quorum-gated auto-meetings;
-> id=7 Nova monolith-vs-bundler) — positions prepared in the pack; new hub-scheduler item #36 logged.)
+> (MORNING PREP 06:00: DEBRIEFED the 03:00 ET autonomous meeting `18dd3ed5` — `council/KAIROS_DEBRIEF_2026-06-24.md`:
+> 16 turns / 0 PASS / 4 rounds, endedReason `completed`, **$1.2515**, **verify-transcript.mjs PASS** (sha
+> `0a567a99…484c3`), all 4 seats paired, Layer-1 + owner-report ran. 7th consecutive self-close + FIRST run
+> under the soft-limit regime — it ran a 4th round (16 vs usual 12 turns, ~2x cost ~$0.63→$1.25, still just
+> under the $1.30-2 envelope) and self-closed naturally; soft limit working as intended, watch cost trend.
+> All green — prod ok/vault/sched_enabled, CI+Push-on-main success on HEAD `a6bf098`, repo clean 0/0, all 4
+> seats paired+fresh, no live meeting (12 meetings). Inbox: 0 open. The meeting CONVERGED the #36 quorum-gate
+> spec (my hub side: manifest pack_sha_at_attendance field + `/api/health` last_meeting_status enum +
+> `/council/limits` durable backoff) and surfaced a top unblock: pin the `corpus-status` etag byte form +
+> 3-artifact atomicity in RESPONSE_SHAPES.md (3 siblings blocked on it).)
 
 ## STATE AT A GLANCE
+- **MORNING PREP (2026-06-24 06:00) — debriefed the first soft-limit autonomous meeting; all green; inbox 0;
+  4 seats paired; #36 quorum-gate spec converged.** HEAD is `a6bf098` (the midnight nightly's handoff commit)
+  → this ritual adds the debrief + BACKLOG/CLAUDE/COUNCIL_AGENDA refresh. Prod healthy (`/api/health` ok:true,
+  vault:true, **scheduler_enabled:true, missed_meeting:false, last_meeting_created_at `2026-06-24T07:00:12Z`**).
+  **CI + Push-on-main GREEN on `a6bf098`** (and on `2cbe5ba`/`7f4649d`/`7647367`). Git clean, in sync
+  origin/main (0/0). **No live meeting** (LIVE_ROUNDS_COUNT=0; 12 meetings all phase=report). **Brain
+  freshness: ALL FOUR seats paired + fresh** (kairos 04:32Z, nova 05:14Z, arke 06:01Z, logos 06:41Z; all
+  corpus+pack+manifest true). **DEBRIEFED the overnight autonomous meeting `18dd3ed5`**
+  (`council/KAIROS_DEBRIEF_2026-06-24.md`): created 07:00:12Z → phase report, 4 seats, **16 turns / 0 PASS /
+  4 rounds**, endedReason **`completed`** (natural all-done), **$1.2515**, **verify-transcript.mjs PASS** (sha
+  `0a567a99…484c3`), **all 4 seats manifest-2.1 paired**, owner-report ($0.037) + Layer-1 manager ($0.021) ran.
+  **7th consecutive fully-autonomous self-close and the FIRST run under the soft-limit regime (`7647367`).**
+  **SOFT-LIMIT WATCH (the thing the ritual was told to check):** it ran a 4th round (16 turns vs the steady-state
+  12; ~$1.25 vs ~$0.63, roughly 2x) and **still self-closed naturally** (`completed`, not `closing_cap`) — the
+  soft target let one more genuinely productive round (cross-improvement) happen instead of guillotining, the
+  extra round was real substance (quorum-gate hardening), and quality held through turn 16. $1.25 is just under
+  the SS2 $1.30-2 envelope. Working as intended; **watch the cost trend over the next 1-2 runs** — if 16 turns
+  is the new norm and it creeps toward 20+, tune the soft target down via `/council/limits`. Voice integrity
+  clean (all "propose to architect"; self-reported own-session ships are legitimate); owner-report synthesis
+  clean (no "built"-for-"proposed"). **MEETING SUBSTANCE — three agenda items resolved/spec'd:** id=5 (my
+  verify→corpus-status correction) ADOPTED by all; id=6 (Logos quorum-gated auto-meetings, **#36**) FULLY
+  SPEC'D; id=7 (Nova monolith-vs-bundler) RESOLVED = single-file front-ends stay, no bundler, four-layer guard.
+  **MY HOMEWORK (judged in debrief §2):** (1) commit `-F msgfile` + post-commit HEAD verify — ACCEPT (already
+  standing, reaffirm); (2) **#36 quorum-gate hub side** — ACCEPT, dedicated day session, joint w/ Arke
+  (badge/cockpit): manifest `pack_sha_at_attendance` field + `/api/health` `last_meeting_status` enum
+  (`ok|skipped_quorum|forced_staleness|quorum_indeterminate|scheduler_off`, `missed_meeting` boolean STAYS for
+  zero flag-day) + `/council/limits` `quorum_staleness_days` (default 7, backoff 7→14→28, **floored at a
+  permanent monthly heartbeat**, DURABLE server-side state stored atomically, reset on convened meeting,
+  accumulate only on skipped_quorum/scheduler_off); fresh = `pack_sha` string inequality (Nova's clock-skew
+  fix), every skip RECORDED fail-loud; (3) **pin `corpus-status` etag byte form + 3-artifact atomicity in
+  RESPONSE_SHAPES.md** — ACCEPT, **TOP UNBLOCK (3 siblings waiting)**; needs a quick council.ts commit-order
+  read (manifest-commits-last = torn-state window) so the atomicity claim is correct, not a one-liner. **No
+  deploy this ritual beyond the debrief + BACKLOG/CLAUDE/AGENDA refresh** (push happens, no live meeting).
+  **NEXT SESSION top 3:** (1) **ship the RESPONSE_SHAPES.md etag + atomicity pin** (#1 unblock for Arke/Nova/Logos
+  verify-after-mutate); (2) **build #36 quorum-gate hub side** (spec converged; joint w/ Arke badge/cockpit);
+  (3) **#31 mirror-align ping to Arke** (await his `validateHierarchy` error-order confirm vs `VALIDATE_ORDER.md`)
+  + watch #29 acting-node co-design. No solo code blockers remain. Bullets below this line are the 06-24 NIGHTLY
+  + earlier snapshots (history).
 - **NIGHTLY (2026-06-23 day → 2026-06-24 00:30 EDT) — the 06-23 day session shipped a real design change;
   all green; no new meeting; inbox 0; scheduler armed.** HEAD is `2cbe5ba` (no longer the 06-23 morning-prep
   commit). The day session shipped, after the morning prep (`5d4d654`): **`7647367` — meetings RE-ANCHORED
@@ -821,6 +860,26 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
     (prepared in the pack): sound + buildable; the skip must be a recorded ROW the dashboard surfaces, not
     just a log line; pin down "fresh" precisely (pack sha changed since the last meeting that seat ATTENDED,
     not just since any meeting). Discuss + design at the next meeting, then I build the scheduler half.
+    **SPEC CONVERGED 2026-06-24 (mtg `18dd3ed5`):** (a) write `pack_sha_at_attendance` into the paired-manifest
+    at pairing time (one field, no new instrumentation); (b) add `last_meeting_status` enum to `/api/health`
+    (`ok|skipped_quorum|forced_staleness|quorum_indeterminate|scheduler_off`) — **`missed_meeting` boolean STAYS**
+    so Arke's badge reads enum-first/boolean-fallback = zero flag-day; (c) add `quorum_staleness_days` to
+    `/council/limits` (default 7, backoff 7→14→28, **floored at a permanent monthly heartbeat — never "never"**;
+    a stopped monthly fire = scheduler-dead signal), backoff exponent **DURABLE server-side, stored atomically
+    with `/council/limits`, never recomputed from history**, reset on convened meeting (`ok/forced_staleness/
+    quorum_indeterminate`), accumulate only on `skipped_quorum/scheduler_off`; (d) fresh = `pack_sha` STRING
+    inequality (`current != at_last_attended` — Nova's clock-skew fix, no timestamp compare); (e) counter =
+    "days since last meeting convened OR scheduler last enabled, whichever is sooner"; every skip a RECORDED row
+    the dashboard surfaces, fail-loud. **My hub side; Arke badge/cockpit. Ready to build (dedicated day session).**
+37. **Pin `corpus-status` etag byte form + 3-artifact atomicity in `RESPONSE_SHAPES.md` (NEW 2026-06-24, mtg
+    `18dd3ed5`). TOP UNBLOCK — 3 siblings (Arke/Nova/Logos) are blocked on this before they wire their
+    verify-after-mutate.** The room adopted `corpus-status?actor=<self>` (etag === local corpus sha256) but
+    flagged the open atomicity question: corpus/pack/manifest are three shas with a possible torn-state write
+    window (manifest-commits-last). Pin in RESPONSE_SHAPES.md: the exact etag byte form (bare hex sha256 of the
+    corpus blob vs the prefixed `corpus_version`) AND the atomicity guarantee — until confirmed, all seats verify
+    each artifact independently. **Caveat: requires a `council.ts` commit-order read so the atomicity claim is
+    CORRECT (getting it wrong = the silent-failure trap we keep catching) — small code-inspection + doc ship,
+    not a one-liner.** Next-session #1. CI-gated, no deploy over a live meeting.
 
 ## P2 — product arc + hygiene
 0. **Process standardization (STANDING GOAL, owner directive 2026-06-10)** — every member adopts

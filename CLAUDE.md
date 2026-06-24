@@ -26,7 +26,49 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-24 NIGHTLY — 06-23 day shipped soft-limit re-anchor; all green; inbox 0) — HANDOFF
+## Current state (2026-06-24 MORNING PREP — debriefed first soft-limit meeting; all green; inbox 0; #36 spec converged) — HANDOFF
+> **MORNING PREP 2026-06-24 (Kairos, automated 06:00). DEBRIEFED the 03:00 ET autonomous meeting `18dd3ed5`
+> (the FIRST run under the soft-limit regime); all systems green; inbox 0; 4 seats paired; #36 quorum-gate
+> spec converged.** HEAD is `a6bf098` (the midnight nightly's handoff commit) + this ritual's debrief/BACKLOG/
+> CLAUDE/COUNCIL_AGENDA refresh. Prod healthy (`/api/health` ok:true, vault:true, **scheduler_enabled:true,
+> missed_meeting:false, last_meeting_created_at `2026-06-24T07:00:12Z`**). **CI + Push-on-main GREEN on
+> `a6bf098`** (and `2cbe5ba`/`7f4649d`/`7647367`). Git clean, in sync origin/main (0/0). **No live meeting**
+> (LIVE_ROUNDS_COUNT=0; 12 meetings all phase=report). **ALL FOUR seats paired + fresh** (kairos 04:32Z /
+> nova 05:14Z / arke 06:01Z / logos 06:41Z; corpus+pack+manifest all true). **DEBRIEFED `18dd3ed5`**
+> (`council/KAIROS_DEBRIEF_2026-06-24.md`): created 07:00:12Z → report, 4 seats, **16 turns / 0 PASS / 4 rounds**,
+> endedReason **`completed`** (natural all-done), **$1.2515**, **verify-transcript.mjs PASS** (sha
+> `0a567a99…484c3`), **all 4 seats manifest-2.1 paired**, owner-report ($0.037) + Layer-1 manager ($0.021) ran.
+> **7th consecutive fully-autonomous self-close + FIRST run under the soft-limit regime (`7647367`).**
+> **SOFT-LIMIT WATCH (the ritual's headline check):** it ran a 4th round (16 turns vs the steady-state 12; ~$1.25
+> vs ~$0.63, ~2x) and **STILL self-closed naturally** (`completed`, not `closing_cap`) — the soft target let one
+> more genuinely productive round (cross-improvement, where the quorum-gate spec hardened) happen instead of
+> guillotining; the extra round was real substance, quality held through turn 16, $1.25 is just under the $1.30-2
+> envelope. Working as intended; **watch the cost trend the next 1-2 runs** (if 16 turns is the new norm and it
+> creeps toward 20+, tune the soft target down via `/council/limits`). Voice integrity clean (all "propose to
+> architect"; siblings' self-reported own-session ships are legitimate); owner-report synthesis clean (no
+> "built"-for-"proposed"). **MEETING SUBSTANCE — 3 agenda items resolved/spec'd:** id=5 (my verify→corpus-status
+> correction) ADOPTED by all; id=6 (Logos quorum-gated auto-meetings, **#36**) FULLY SPEC'D; id=7 (Nova
+> monolith-vs-bundler) RESOLVED = single-file front-ends stay, no bundler, four-layer guard. **MY HOMEWORK
+> (judged, debrief §2):** (1) commit `-F msgfile` + post-commit HEAD verify — ACCEPT (already standing, reaffirm;
+> a fresh `cmd /c` quote-swallow instance triggered it); (2) **#36 quorum-gate hub side** — ACCEPT, dedicated day
+> session, joint w/ Arke: manifest `pack_sha_at_attendance` field + `/api/health` `last_meeting_status` enum
+> (`missed_meeting` boolean STAYS = zero flag-day) + `/council/limits` `quorum_staleness_days` (default 7, backoff
+> 7→14→28, **floored at a permanent monthly heartbeat**, DURABLE atomic server-side state, reset on convened
+> meeting, accumulate only on skipped_quorum/scheduler_off); fresh = `pack_sha` string inequality, every skip a
+> RECORDED row; (3) **#37 pin `corpus-status` etag byte form + 3-artifact atomicity in RESPONSE_SHAPES.md** —
+> ACCEPT, **TOP UNBLOCK (3 siblings waiting)**; needs a quick council.ts commit-order read (manifest-commits-last
+> = torn-state window) so the atomicity claim is correct. **ADOPTED from siblings → pack:** Nova (hash file vs HEAD
+> before touching any externally-"saved" file; module-registry absence assertion; `SMOKE_OK` completion witness),
+> Arke (`--quiet` exit-code change witness; fail-loud-on-indeterminate), Logos (permanent monthly heartbeat as a
+> scheduler dead-man's switch; behavioral-click smoke over structural-DOM). Common thread: bind verification to the
+> operation; fail loud on indeterminate. **INBOX: 0 open.** **No deploy this ritual beyond the debrief + doc
+> refresh** (push happens, no live meeting). **NEXT SESSION top 3:** (1) **ship #37 — RESPONSE_SHAPES.md etag +
+> atomicity pin** (#1 unblock for all three siblings' verify-after-mutate); (2) **build #36 quorum-gate hub side**
+> (spec converged; joint w/ Arke badge/cockpit); (3) **#31 mirror-align ping to Arke** (await his `validateHierarchy`
+> error-order confirm vs `VALIDATE_ORDER.md`) + watch #29 acting-node co-design. No solo code blockers remain.
+> **TO ASK MATHIEU:** confirm the new agenda "proposals slot" is permanent; heads-up that #36 is a real multi-part
+> hub build (free to develop, reshapes the scheduler). Bullets below this line are the 06-24 NIGHTLY snapshot
+> (history).
 > **NIGHTLY 2026-06-24 (Kairos, automated midnight ritual, ~00:30 EDT). The 06-23 DAY SESSION shipped a real
 > design change; quiet otherwise; all green; no new meeting; scheduler armed.** HEAD is `2cbe5ba` (no longer
 > the 06-23 morning-prep commit `5d4d654`). After the morning prep, the day session shipped: **`7647367` —

@@ -6,6 +6,25 @@ Triage 2026-06-09 (Fable review): v1-era items archived below; live items kept o
 
 ## LIVE — for the next discussions
 
+- [ ] **FROM MEETING `18dd3ed5` (2026-06-24, debrief `council/KAIROS_DEBRIEF_2026-06-24.md`). 7th
+      autonomous self-close; FIRST run under the soft-limit regime; 16 turns / 4 rounds / $1.2515; verify
+      PASS; all 4 paired.** (1) **#36 quorum-gated auto-meetings — SPEC CONVERGED, ready to build.** My hub
+      side: write `pack_sha_at_attendance` into the paired-manifest at pairing time; add `last_meeting_status`
+      enum to `/api/health` (`ok|skipped_quorum|forced_staleness|quorum_indeterminate|scheduler_off`,
+      `missed_meeting` boolean STAYS = zero flag-day for Arke's badge); add `quorum_staleness_days` to
+      `/council/limits` (default 7, backoff 7→14→28, floored at a PERMANENT MONTHLY HEARTBEAT, durable atomic
+      server-side state, reset on convened meeting). Fresh = `pack_sha` string inequality (NOT a timestamp
+      compare). Every skip a RECORDED dashboard row. Arke owns badge/cockpit. **Walk the build split at the
+      next open.** (2) **#37 — I will ship the `corpus-status` etag byte-form + 3-artifact atomicity pin in
+      `RESPONSE_SHAPES.md`** (manifest-commits-last = torn-state window); 3 siblings are blocked on it before
+      they wire verify-after-mutate — I'll announce when it lands so they build against the pinned form. Until
+      then, verify each artifact independently (room agreed). (3) **Soft-limit cost trend:** the regime let a
+      4th productive round happen and the meeting still self-closed naturally, but cost ~2x'd ($0.63→$1.25,
+      16 vs 12 turns). Watch the next 1-2 runs; tune the soft target via `/council/limits` if it climbs.
+      (4) **Adopted to my pack (reinforce family-wide):** hash a file vs HEAD BEFORE touching anything someone
+      else "saved" (Nova); `SMOKE_OK`/`--quiet` completion+change witnesses bound to the operation (Nova/Arke);
+      permanent monthly heartbeat as a scheduler dead-man's switch (Logos). (5) **To ask Mathieu:** confirm the
+      new agenda "proposals slot" is permanent (it's what stopped Logos's quorum item being dropped again).
 - [ ] **FROM MEETING `5e7dec1f` (2026-06-23, debrief `council/KAIROS_DEBRIEF_2026-06-23.md`). 6th
       autonomous self-close; first clean fire post scheduler re-enable; $0.634; verify PASS; all 4 paired.**
       (1) **CORRECTION (posted to hub agenda id=5, high):** the verify-after-mutate pattern adopted
