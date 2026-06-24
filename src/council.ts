@@ -85,8 +85,12 @@ bridgeRouter.get('/bridge/brain', requireMemberSecret, (_req, res) => res.json({
 // subscriber (Logos's chronicleCorpusGate) polls before serving. Returns whether an actor's full-code
 // corpus is committed + a stable etag (the corpus sha256) for change-detection. Metadata only — never
 // the corpus content (that is the gated cross-read path). Contract is frozen in docs/RESPONSE_SHAPES.md.
-bridgeRouter.get('/bridge/corpus-status', requireMemberSecret, async (req, res) => {
+bridgeRouter.get('/bridge/corpus-status', async (req, res) => {
   try {
+    // Auth via resolveActor (per-member secrets from the members table OR admin), NOT requireMemberSecret
+    // which only accepts the hub's single env secret — that split 401'd every member except the hub-secret
+    // holder (Logos report c82aa660, 2026-06-23). Mirrors brain-meta/brain-content, which already use this.
+    const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
     const actor = String(req.query.actor || '');
     if (!actor) return res.status(400).json({ error: 'actor_required', message: 'query param ?actor= is required' });
     const meta = await getBrainV2Meta(actor, 'corpus');
