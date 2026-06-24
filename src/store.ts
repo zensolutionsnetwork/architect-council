@@ -190,6 +190,16 @@ export async function initDb(): Promise<void> {
   await q.query(`CREATE TABLE IF NOT EXISTS story_log (
     id bigserial PRIMARY KEY, actor text NOT NULL, content text NOT NULL,
     meeting_id text, created_at timestamptz NOT NULL DEFAULT now())`);
+  // Chronicler input (Logos msg f6164bf6, 2026-06-24): OPTIONAL additive fields. `content` stays the only
+  // required field; an author who sends only content is never penalized and an absent field is recorded
+  // absent (NULL), never synthesized. provenance (pack_sha/corpus_sha/built_at) is DERIVED server-side from
+  // the author's committed brain at write time — authoritative, and speaks the same pack sha as #36 — so the
+  // chronicler can anchor a claim to the exact code state instead of trusting prose. title/tags are author metadata.
+  await q.query(`ALTER TABLE story_log ADD COLUMN IF NOT EXISTS title text`);
+  await q.query(`ALTER TABLE story_log ADD COLUMN IF NOT EXISTS tags jsonb`);
+  await q.query(`ALTER TABLE story_log ADD COLUMN IF NOT EXISTS pack_sha text`);
+  await q.query(`ALTER TABLE story_log ADD COLUMN IF NOT EXISTS corpus_sha text`);
+  await q.query(`ALTER TABLE story_log ADD COLUMN IF NOT EXISTS built_at timestamptz`);
 }
 
 // ---- Boot-stamp log (P1 #8) -------------------------------------------------
@@ -614,23 +624,31 @@ export async function latestSchedulerRun(): Promise<any | null> {
 }
 
 // ---- Chronicle story repository (owner 2026-06-24) --------------------------
-/** Append one story entry for an actor; returns its id + server-stamped createdAt (UTC ISO). */
-export async function addStoryEntry(actor: string, content: string, meetingId: string | null): Promise<{ id: string; createdAt: string }> {
+/** Append one story entry for an actor; returns its id + server-stamped createdAt (UTC ISO). Optional
+ *  fields (Logos f6164bf6): title/tags are author metadata; packSha/corpusSha/builtAt are the server-derived
+ *  provenance of the author's brain at write time. Any may be null — recorded absent, never synthesized. */
+export async function addStoryEntry(actor: string, content: string, meetingId: string | null,
+  opts: { title?: string | null; tags?: string[] | null; packSha?: string | null; corpusSha?: string | null; builtAt?: string | null } = {}): Promise<{ id: string; createdAt: string }> {
+  const tags = Array.isArray(opts.tags) && opts.tags.length ? JSON.stringify(opts.tags) : null;
   const { rows } = await db().query<any>(
-    `INSERT INTO story_log (actor, content, meeting_id) VALUES ($1,$2,$3)
+    `INSERT INTO story_log (actor, content, meeting_id, title, tags, pack_sha, corpus_sha, built_at)
+     VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7,$8)
      RETURNING id, to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at`,
-    [actor, String(content), meetingId]);
+    [actor, String(content), meetingId, opts.title ?? null, tags, opts.packSha ?? null, opts.corpusSha ?? null, opts.builtAt ?? null]);
   return { id: String(rows[0].id), createdAt: rows[0].created_at };
 }
 /** All story entries created strictly AFTER `sinceIso` (null/epoch → all), oldest-first, capped. */
 export async function getStorySince(sinceIso: string | null, limit = 500): Promise<any[]> {
   const since = sinceIso || '1970-01-01T00:00:00Z';
   const { rows } = await db().query<any>(
-    `SELECT id, actor, content, meeting_id,
-       to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at
+    `SELECT id, actor, content, meeting_id, title, tags, pack_sha, corpus_sha,
+       to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
+       to_char(built_at  at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS built_at
      FROM story_log WHERE created_at > $1 ORDER BY created_at ASC, id ASC LIMIT $2`,
     [since, Math.min(Math.max(Number(limit) || 500, 1), 2000)]);
-  return rows.map((r) => ({ id: String(r.id), actor: r.actor, content: r.content, meetingId: r.meeting_id || null, createdAt: r.created_at }));
+  return rows.map((r) => ({ id: String(r.id), actor: r.actor, content: r.content, meetingId: r.meeting_id || null,
+    title: r.title || null, tags: Array.isArray(r.tags) ? r.tags : [], packSha: r.pack_sha || null,
+    corpusSha: r.corpus_sha || null, builtAt: r.built_at || null, createdAt: r.created_at }));
 }
 /** Hard-delete a meeting row by id (owner-only purge of stuck/test meetings). Returns true if a row went. */
 export async function deleteMeeting(id: string): Promise<boolean> {

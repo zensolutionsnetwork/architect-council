@@ -357,11 +357,20 @@ councilRouter.post('/council/story', async (req, res) => {
   try {
     const a = await resolveActor(req);
     if (!a) return res.status(401).json({ error: 'unauthorized' });
-    const content = clip((req.body || {}).content, 16000);
+    const b = req.body || {};
+    const content = clip(b.content, 16000);
     if (!content) return res.status(400).json({ error: 'content is required' });
-    const meetingId = clip((req.body || {}).meetingId, 80) || null;
-    const r = await addStoryEntry(a.actor, content, meetingId);
-    res.json({ ok: true, id: r.id, actor: a.actor, createdAt: r.createdAt, meetingId });
+    const meetingId = clip(b.meetingId, 80) || null;
+    // Optional author metadata (Logos f6164bf6): title + tags. Absent → null/[], never synthesized.
+    const title = clip(b.title, 120) || null;
+    const tags = Array.isArray(b.tags) ? b.tags.map((t: any) => clip(t, 40)).filter((t: string) => t).slice(0, 20) : [];
+    // Provenance is DERIVED server-side from the author's committed brain at write time (authoritative; same
+    // pack sha #36 keys on). Absent brain → null, recorded absent. Best-effort: a meta read miss never fails the post.
+    let packSha: string | null = null, corpusSha: string | null = null, builtAt: string | null = null;
+    try { const pm = await getBrainV2Meta(a.actor, 'pack'); if (pm) { packSha = String(pm.sha256); builtAt = pm.committed_at || null; } } catch { /* absent → null */ }
+    try { const cm = await getBrainV2Meta(a.actor, 'corpus'); if (cm) { corpusSha = String(cm.sha256); builtAt = cm.committed_at || builtAt; } } catch { /* absent → null */ }
+    const r = await addStoryEntry(a.actor, content, meetingId, { title, tags, packSha, corpusSha, builtAt });
+    res.json({ ok: true, id: r.id, actor: a.actor, createdAt: r.createdAt, meetingId, title, tags, packSha, corpusSha, builtAt });
   } catch (e) { internalError(res, e); }
 });
 councilRouter.get('/council/story', async (req, res) => {
