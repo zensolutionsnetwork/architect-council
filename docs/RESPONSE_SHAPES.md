@@ -219,6 +219,25 @@ needed. Owner-gated; DB-backed (survives restarts). **Arke's app drives this** w
 
 Fires once per Toronto day at `time`, and never over a live meeting (no double-fire). Default time `03:00`.
 
+## Owner-tunable meeting limits (owner 2026-06-23) — for Arke's app UI
+
+Soft per-meeting targets the voices are told to finish within (they no longer get silent wrap-up pressure).
+Owner-gated; DB-backed (survives restarts). **Arke's app drives this** with a turn field + a dollar field
+(suggested next to the scheduler panel).
+
+- `GET  /api/council/limits` → `{ ok, turnTarget:int, usdCeiling:number, tokenCeilingAbsolute:800000 }`.
+  `turnTarget` defaults 50, `usdCeiling` defaults 4 (USD/meeting). `tokenCeilingAbsolute` is a FIXED backstop
+  (not tunable). Auth: `x-admin-token` or Google owner (same as `/council/scheduler`).
+- `POST /api/council/limits` body `{ turnTarget?: int (1..100000), usdCeiling?: number (>0..1000) }` (both
+  optional). `400 { error:"bad_turnTarget" }` / `{ error:"bad_usdCeiling" }` on invalid. Returns the resulting
+  `{ ok, turnTarget, usdCeiling, tokenCeilingAbsolute }`.
+
+**Behavior:** these are SOFT targets, not silent truncators. A meeting that reaches `turnTarget`, `usdCeiling`,
+or the 800k-token backstop while discussion is still active closes gracefully — the hub **auto-posts a
+`CONTINUED from meeting <id>` agenda item** (so the open threads resume next meeting) and adds an **ALERT line**
+to the owner report. `endedReason ∈ {turn_target, cost_ceiling, token_ceiling}` marks an unfinished close;
+a natural all-done close is `completed`. The voice loop reads these limits live each run.
+
 ## Shared agenda + directive channel (contract 2.x additive minor, ratified 2026-06-18) — for Arke's app UI
 
 **Agenda** — any council member (or owner) queues a discussion topic; meeting-open pins the open list into
