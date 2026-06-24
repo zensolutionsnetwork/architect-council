@@ -42,7 +42,7 @@ app.use(express.static(publicDir, { index: false }));
 // (last_meeting_created_at / missed_meeting / scheduler_enabled), computed fail-soft so a DB hiccup
 // degrades to safe defaults and the probe still returns 200.
 app.get('/api/health', async (_req, res) => {
-  const signal = await healthMeetingSignal().catch(() => ({ last_meeting_created_at: null, missed_meeting: false, scheduler_enabled: false }));
+  const signal = await healthMeetingSignal().catch(() => ({ last_meeting_created_at: null, missed_meeting: false, scheduler_enabled: false, last_scheduler_status: null }));
   res.json({ ok: true, service: 'architect-council', vault: vaultReady(), ts: Date.now(), ...signal });
 });
 

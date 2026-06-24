@@ -54,6 +54,8 @@ const PROTECTED: { method: string; path: string; body?: object }[] = [
   { method: 'POST', path: '/api/council/agenda', body: { title: 'probe topic' } },
   { method: 'GET',  path: '/api/council/agenda' },
   { method: 'POST', path: '/api/council/agenda/probe-id/archive', body: {} },
+  { method: 'POST', path: '/api/council/story', body: { content: 'probe story' } },
+  { method: 'GET',  path: '/api/council/story' },
   { method: 'GET',  path: '/api/council/manager/digests' },
   { method: 'GET',  path: '/api/council/manager/flags' },
   { method: 'GET',  path: '/api/council/manager/digest/probe-meeting-id' },

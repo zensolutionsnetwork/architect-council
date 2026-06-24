@@ -20,6 +20,8 @@ import {
   queueEnvTask, listEnvTasks, getEnvTask, claimEnvTask, reportEnvTask, sweepEnvTasks,
   createMeeting, getMeeting, updateMeeting, listMeetings, listMeetingsForActor, setMeetingOwnerReport, deleteMeeting,
   latestRealMeetingCreatedAtUtc,
+  setMeetingAttendPackSha, lastAttendedPackSha, lastAttendedMeetingCreatedAtUtc,
+  recordSchedulerRun, latestSchedulerRun, addStoryEntry, getStorySince,
   setMeetingLedger, setMeetingManifestPins,
   setVoiceRunning, closeStaleVoiceMeetings, usdSpentTodayUtc, vaultReady, listMeetingsForDashboard,
   createBrainUpload, getBrainUpload, putBrainChunk, brainReceived, assembleBrain,
@@ -344,6 +346,39 @@ councilRouter.post('/council/agenda/:id/archive', async (req, res) => {
   } catch (e) { internalError(res, e); }
 });
 
+// ---------- Chronicle story repository (owner 2026-06-24) ----------
+// An append-only per-agent log of "my story since I last connected". Every agent POSTs an entry at prep;
+// Logos (the chronicler) reads everything since the meeting HE last attended on reconnect — so an agent the
+// readiness gate (#36) excluded from a meeting still has its evolution captured, and the chronicle has no
+// gaps across missed meetings. A story entry is DATA (a narrative), never an instruction. Auth: member
+// secret (x-bridge-secret) or owner (x-admin-token); the entry is always attributed to the authenticated
+// caller, never a body field. Contract frozen in docs/RESPONSE_SHAPES.md.
+councilRouter.post('/council/story', async (req, res) => {
+  try {
+    const a = await resolveActor(req);
+    if (!a) return res.status(401).json({ error: 'unauthorized' });
+    const content = clip((req.body || {}).content, 16000);
+    if (!content) return res.status(400).json({ error: 'content is required' });
+    const meetingId = clip((req.body || {}).meetingId, 80) || null;
+    const r = await addStoryEntry(a.actor, content, meetingId);
+    res.json({ ok: true, id: r.id, actor: a.actor, createdAt: r.createdAt, meetingId });
+  } catch (e) { internalError(res, e); }
+});
+councilRouter.get('/council/story', async (req, res) => {
+  try {
+    const a = await resolveActor(req);
+    if (!a) return res.status(401).json({ error: 'unauthorized' });
+    // Cursor: an explicit valid `since` ISO wins; otherwise default to the caller's last-attended meeting
+    // (the natural "since I last connected"). The owner, who attends no meeting, defaults to the full log.
+    const rawSince = String(req.query.since || '');
+    let since: string | null = (rawSince && !Number.isNaN(Date.parse(rawSince))) ? rawSince : null;
+    if (!since) { try { since = await lastAttendedMeetingCreatedAtUtc(a.actor); } catch { since = null; } }
+    const limit = Number(req.query.limit) > 0 ? Number(req.query.limit) : 500;
+    const entries = await getStorySince(since, limit);
+    res.json({ ok: true, since, count: entries.length, entries });
+  } catch (e) { internalError(res, e); }
+});
+
 // ---------- Layer-1 Manager (owner 2026-06-18) — owner-gated read surface ----------
 // Compute runs at meeting-close (src/manager.ts); these endpoints expose it as clean JSON. PORTABLE:
 // Arke's Supervisor app consumes these now (display) and may eventually own the computation itself.
@@ -444,11 +479,13 @@ councilRouter.post('/meeting/open', async (req, res) => {
     // (Logos rider: a manifest-less or stale-manifest seat is never silently trusted).
     const brainVersions: Record<string, any> = {};
     const manifestPins: Record<string, any> = {};
+    const attendPackSha: Record<string, string | null> = {}; // #36: pack sha each seat carried at open
     for (const p of participants) {
       let corpusMeta: any = null, packMeta: any = null;
       try { corpusMeta = await getBrainV2Meta(p, 'corpus'); } catch { /* absent */ }
       try { packMeta = await getBrainV2Meta(p, 'pack'); } catch { /* absent */ }
       brainVersions[p] = corpusMeta ? corpusMeta.brain_version : null;
+      attendPackSha[p] = packMeta ? String(packMeta.sha256) : null;
       let pin: any = { state: 'none', reason: 'no_manifest' };
       try {
         const manc = await getBrainV2Content(p, 'manifest');
@@ -495,6 +532,7 @@ councilRouter.post('/meeting/open', async (req, res) => {
     }
     await createMeeting(id, agendaText, participants, cap, a.actor, 'rounds', tto, roles, dryRun, brainVersions);
     try { await setMeetingManifestPins(id, manifestPins); } catch { /* best-effort: pins are a sibling record, never fail the open */ }
+    if (!dryRun) { try { await setMeetingAttendPackSha(id, attendPackSha); } catch { /* best-effort: the #36 freshness anchor, never fail the open */ } }
     res.json({ ok: true, meetingId: id, ...meetingView(await getMeeting(id), a.actor) });
   } catch (e) { internalError(res, e); }
 });
@@ -799,7 +837,10 @@ councilRouter.get('/council/dashboard', requireOwner, async (_req, res) => {
     ]);
     const scheduler = { enabled: (await getSetting('hub_meeting_scheduler').catch(() => null)) === 'on',
       time: await getSchedTime(), tz: 'America/Toronto', voiceLoopEnabled: process.env.VOICE_LOOP_ENABLED === 'true' };
-    res.json({ ok: true, ts: Date.now(), vault: vaultReady(), scheduler, spentTodayUsd, meetings, members, boots, backlogs });
+    // #36: the latest readiness-gate decision (seated/excluded seats + reason) so the owner sees WHY a
+    // scheduled meeting ran with a subset, or skipped. Best-effort; null before the first gated fire.
+    const lastSchedulerRun = await latestSchedulerRun().catch(() => null);
+    res.json({ ok: true, ts: Date.now(), vault: vaultReady(), scheduler, lastSchedulerRun, spentTodayUsd, meetings, members, boots, backlogs });
   } catch (e) { internalError(res, e); }
 });
 // Member housekeeping (owner 2026-06-18): retire/restore a member row. GUARDED — a canonical council seat
@@ -1149,7 +1190,7 @@ async function getSchedTime(): Promise<string> {
 // a safe default so /api/health never throws (Railway liveness probe must always get a 200).
 const SCHED_INTERVAL_MS = 24 * 60 * 60 * 1000; // hub scheduler fires once per Toronto day
 const SCHED_GRACE_MS = 2 * 60 * 60 * 1000;     // grace past the daily mark before we call it missed
-export async function healthMeetingSignal(): Promise<{ last_meeting_created_at: string | null; missed_meeting: boolean; scheduler_enabled: boolean }> {
+export async function healthMeetingSignal(): Promise<{ last_meeting_created_at: string | null; missed_meeting: boolean; scheduler_enabled: boolean; last_scheduler_status: string | null }> {
   let last_meeting_created_at: string | null = null;
   let scheduler_enabled = false;
   try { scheduler_enabled = (await getSetting('hub_meeting_scheduler')) === 'on'; } catch { /* default false */ }
@@ -1159,22 +1200,58 @@ export async function healthMeetingSignal(): Promise<{ last_meeting_created_at: 
     const ageMs = Date.now() - Date.parse(last_meeting_created_at);
     missed_meeting = ageMs > (SCHED_INTERVAL_MS + SCHED_GRACE_MS);
   }
-  return { last_meeting_created_at, missed_meeting, scheduler_enabled };
+  // #36: the last scheduled-fire decision (opened | skipped_quorum | no_voice_loop | already_live | error |
+  // null). Lets the cockpit distinguish an intentional readiness SKIP from a real miss without exposing seats.
+  let last_scheduler_status: string | null = null;
+  try { const r = await latestSchedulerRun(); last_scheduler_status = r ? String(r.decision) : null; } catch { /* default null */ }
+  return { last_meeting_created_at, missed_meeting, scheduler_enabled, last_scheduler_status };
+}
+// #36 readiness gate (owner 2026-06-24). A seat is FRESH if it has a committed pack whose sha differs from
+// the pack sha it carried at the meeting it last attended (sha equality, not timestamps — Nova's clock-skew
+// fix); a seat with no committed pack is NO_BRAIN; a seat whose pack is unchanged since last attendance is
+// STALE. A seat with no recorded attendance yet reads FRESH (fail-toward-inclusive: never exclude on missing
+// history). The scheduler fires only with the FRESH quorum and keeps stale/no-brain seats OUT.
+type SeatReadiness = { actor: string; status: 'fresh' | 'stale' | 'no_brain'; packSha: string | null; lastPackSha: string | null };
+const QUORUM_MIN = 2; // a scheduled meeting needs at least this many freshly-prepped seats to fire
+async function computeReadiness(): Promise<SeatReadiness[]> {
+  const out: SeatReadiness[] = [];
+  for (const actor of MEETING_DEFAULT) {
+    let packMeta: any = null;
+    try { packMeta = await getBrainV2Meta(actor, 'pack'); } catch { /* treat as no_brain below */ }
+    const packSha = packMeta ? String(packMeta.sha256) : null;
+    if (!packSha) { out.push({ actor, status: 'no_brain', packSha: null, lastPackSha: null }); continue; }
+    let lastPackSha: string | null = null;
+    try { lastPackSha = await lastAttendedPackSha(actor); } catch { lastPackSha = null; }
+    const status: SeatReadiness['status'] = (lastPackSha === null || packSha !== lastPackSha) ? 'fresh' : 'stale';
+    out.push({ actor, status, packSha, lastPackSha });
+  }
+  return out;
 }
 async function fireScheduledMeeting(): Promise<void> {
-  if (process.env.VOICE_LOOP_ENABLED !== 'true') { console.warn('[hub:sched] skip — VOICE_LOOP_ENABLED not true'); return; }
+  if (process.env.VOICE_LOOP_ENABLED !== 'true') { console.warn('[hub:sched] skip — VOICE_LOOP_ENABLED not true'); await recordSchedulerRun('no_voice_loop', null, [], [], {}).catch(() => {}); return; }
   const tok = process.env.COUNCIL_ADMIN_TOKEN; if (!tok) { console.warn('[hub:sched] skip — no admin token'); return; }
-  try { const live = (await listMeetings()).some((mm: any) => mm.phase === 'rounds'); if (live) { console.warn('[hub:sched] skip — a meeting is already live'); return; } } catch { /* if the live-check fails, do NOT fire (fail closed) */ return; }
+  try { const live = (await listMeetings()).some((mm: any) => mm.phase === 'rounds'); if (live) { console.warn('[hub:sched] skip — a meeting is already live'); await recordSchedulerRun('already_live', null, [], [], {}).catch(() => {}); return; } } catch { /* if the live-check fails, do NOT fire (fail closed) */ return; }
+  // Readiness gate: fire only with the freshly-prepped quorum; keep stale/no-brain seats OUT and RECORD why.
+  let readiness: SeatReadiness[] = [];
+  try { readiness = await computeReadiness(); } catch (e) { console.warn('[hub:sched] readiness error: ' + (e as Error).message); await recordSchedulerRun('error', null, [], [], { error: (e as Error).message }).catch(() => {}); return; }
+  const fresh = readiness.filter((r) => r.status === 'fresh').map((r) => r.actor);
+  const excluded = readiness.filter((r) => r.status !== 'fresh').map((r) => ({ actor: r.actor, reason: r.status }));
+  if (fresh.length < QUORUM_MIN) {
+    console.warn(`[hub:sched] skip — quorum not met (${fresh.length}/${QUORUM_MIN} fresh): ${readiness.map((r) => r.actor + '=' + r.status).join(', ')}`);
+    await recordSchedulerRun('skipped_quorum', null, [], excluded, { fresh, quorumMin: QUORUM_MIN, readiness }).catch(() => {});
+    return;
+  }
   const base = `http://127.0.0.1:${process.env.PORT || '8080'}`;
   const H = { 'x-admin-token': tok, 'content-type': 'application/json' };
   try {
-    const openRes = await fetch(base + '/api/meeting/open', { method: 'POST', headers: H, body: JSON.stringify({ participants: MEETING_DEFAULT, agenda: SCHED_AGENDA }) });
-    if (!openRes.ok) { console.warn('[hub:sched] open failed ' + openRes.status); return; }
+    const openRes = await fetch(base + '/api/meeting/open', { method: 'POST', headers: H, body: JSON.stringify({ participants: fresh, agenda: SCHED_AGENDA }) });
+    if (!openRes.ok) { console.warn('[hub:sched] open failed ' + openRes.status); await recordSchedulerRun('error', null, fresh, excluded, { openStatus: openRes.status }).catch(() => {}); return; }
     const open: any = await openRes.json();
     const id = open.meetingId;
     const runRes = await fetch(base + `/api/council/meeting/${id}/run-autonomous`, { method: 'POST', headers: H, body: JSON.stringify({}) });
-    console.log(`[hub:sched] opened ${id} + run-autonomous -> ${runRes.status}`);
-  } catch (e) { console.warn('[hub:sched] fire error: ' + (e as Error).message); }
+    console.log(`[hub:sched] opened ${id} seats=[${fresh.join(',')}] excluded=[${excluded.map((e) => e.actor + ':' + e.reason).join(',')}] + run-autonomous -> ${runRes.status}`);
+    await recordSchedulerRun('opened', id, fresh, excluded, { runStatus: runRes.status }).catch(() => {});
+  } catch (e) { console.warn('[hub:sched] fire error: ' + (e as Error).message); await recordSchedulerRun('error', null, fresh, excluded, { error: (e as Error).message }).catch(() => {}); }
 }
 
 export function startScheduler(): void {

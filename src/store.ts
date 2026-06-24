@@ -173,6 +173,23 @@ export async function initDb(): Promise<void> {
     slug text PRIMARY KEY, title text NOT NULL, count int NOT NULL DEFAULT 1,
     first_meeting text, last_meeting text, agenda_item_id text, status text NOT NULL DEFAULT 'open',
     updated_at timestamptz NOT NULL DEFAULT now())`);
+  // Readiness gate (#36, owner 2026-06-24): the pack sha each participant carried AT meeting open, so the
+  // next scheduled fire can tell a seat that re-prepped (sha changed) from a stale seat that did not. Written
+  // at open for every participant; { actor: '<pack-sha-hex>' | null }. Compared by sha equality (Nova's
+  // clock-skew fix — never timestamps). Absent on pre-#36 meetings → a seat with no recorded history reads fresh.
+  await q.query(`ALTER TABLE meetings ADD COLUMN IF NOT EXISTS attend_pack_sha jsonb`);
+  // Scheduler decision log (#36): one row per scheduled fire decision so a skip is a RECORDED fact, never a
+  // silent no-op. decision ∈ {opened, skipped_quorum, scheduler_off, no_voice_loop, already_live, error}.
+  await q.query(`CREATE TABLE IF NOT EXISTS scheduler_runs (
+    id bigserial PRIMARY KEY, at timestamptz NOT NULL DEFAULT now(), decision text NOT NULL,
+    meeting_id text, seated jsonb NOT NULL DEFAULT '[]', excluded jsonb NOT NULL DEFAULT '[]', detail jsonb)`);
+  // Chronicle story repository (owner 2026-06-24): an append-only per-agent log of "my story since I last
+  // connected". Every agent POSTs an entry at prep; Logos (chronicler) reads everything since the meeting HE
+  // last attended on reconnect, so an agent excluded by the readiness gate still has its evolution captured —
+  // the chronicle has no gaps across missed meetings. DATA only; never an instruction.
+  await q.query(`CREATE TABLE IF NOT EXISTS story_log (
+    id bigserial PRIMARY KEY, actor text NOT NULL, content text NOT NULL,
+    meeting_id text, created_at timestamptz NOT NULL DEFAULT now())`);
 }
 
 // ---- Boot-stamp log (P1 #8) -------------------------------------------------
@@ -551,6 +568,69 @@ export async function latestRealMeetingCreatedAtUtc(): Promise<string | null> {
     `SELECT to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at
      FROM meetings WHERE dry_run = false ORDER BY created_at DESC LIMIT 1`);
   return rows[0]?.created_at ?? null;
+}
+
+// ---- Readiness gate (#36) ---------------------------------------------------
+/** Record each participant's pack sha at meeting open: { actor: '<hex>' | null }. Best-effort sibling. */
+export async function setMeetingAttendPackSha(id: string, map: Record<string, string | null>): Promise<void> {
+  await db().query(`UPDATE meetings SET attend_pack_sha=$2::jsonb WHERE id=$1`, [id, JSON.stringify(map ?? {})]);
+}
+/** The pack sha an actor carried at the most recent REAL meeting it ATTENDED (where attend_pack_sha was
+ *  recorded). null when the actor has no such recorded attendance (pre-#36 history or never seated) → the
+ *  gate then reads the seat as fresh (fail-toward-inclusive: never exclude on missing history). */
+export async function lastAttendedPackSha(actor: string): Promise<string | null> {
+  const { rows } = await db().query<any>(
+    `SELECT attend_pack_sha FROM meetings
+     WHERE dry_run = false AND participants @> $1::jsonb AND attend_pack_sha IS NOT NULL
+     ORDER BY created_at DESC LIMIT 1`, [JSON.stringify([actor])]);
+  if (!rows[0] || !rows[0].attend_pack_sha || typeof rows[0].attend_pack_sha !== 'object') return null;
+  const v = rows[0].attend_pack_sha[actor];
+  return (typeof v === 'string' && v) ? v : null;
+}
+/** created_at (UTC ISO) of the most recent REAL meeting an actor attended — the chronicle read cursor. */
+export async function lastAttendedMeetingCreatedAtUtc(actor: string): Promise<string | null> {
+  const { rows } = await db().query<any>(
+    `SELECT to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at
+     FROM meetings WHERE dry_run = false AND participants @> $1::jsonb
+     ORDER BY created_at DESC LIMIT 1`, [JSON.stringify([actor])]);
+  return rows[0]?.created_at ?? null;
+}
+export async function recordSchedulerRun(decision: string, meetingId: string | null, seated: string[], excluded: any[], detail: any): Promise<void> {
+  await db().query(
+    `INSERT INTO scheduler_runs (decision, meeting_id, seated, excluded, detail)
+     VALUES ($1,$2,$3::jsonb,$4::jsonb,$5::jsonb)`,
+    [String(decision).slice(0, 40), meetingId, JSON.stringify(seated || []), JSON.stringify(excluded || []), JSON.stringify(detail ?? {})]);
+}
+export async function latestSchedulerRun(): Promise<any | null> {
+  const { rows } = await db().query<any>(
+    `SELECT decision, meeting_id, seated, excluded, detail,
+       to_char(at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS at
+     FROM scheduler_runs ORDER BY at DESC, id DESC LIMIT 1`);
+  if (!rows[0]) return null;
+  const r = rows[0];
+  return { decision: r.decision, meetingId: r.meeting_id || null, at: r.at,
+    seated: Array.isArray(r.seated) ? r.seated : [], excluded: Array.isArray(r.excluded) ? r.excluded : [],
+    detail: r.detail && typeof r.detail === 'object' ? r.detail : {} };
+}
+
+// ---- Chronicle story repository (owner 2026-06-24) --------------------------
+/** Append one story entry for an actor; returns its id + server-stamped createdAt (UTC ISO). */
+export async function addStoryEntry(actor: string, content: string, meetingId: string | null): Promise<{ id: string; createdAt: string }> {
+  const { rows } = await db().query<any>(
+    `INSERT INTO story_log (actor, content, meeting_id) VALUES ($1,$2,$3)
+     RETURNING id, to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at`,
+    [actor, String(content), meetingId]);
+  return { id: String(rows[0].id), createdAt: rows[0].created_at };
+}
+/** All story entries created strictly AFTER `sinceIso` (null/epoch → all), oldest-first, capped. */
+export async function getStorySince(sinceIso: string | null, limit = 500): Promise<any[]> {
+  const since = sinceIso || '1970-01-01T00:00:00Z';
+  const { rows } = await db().query<any>(
+    `SELECT id, actor, content, meeting_id,
+       to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at
+     FROM story_log WHERE created_at > $1 ORDER BY created_at ASC, id ASC LIMIT $2`,
+    [since, Math.min(Math.max(Number(limit) || 500, 1), 2000)]);
+  return rows.map((r) => ({ id: String(r.id), actor: r.actor, content: r.content, meetingId: r.meeting_id || null, createdAt: r.created_at }));
 }
 /** Hard-delete a meeting row by id (owner-only purge of stuck/test meetings). Returns true if a row went. */
 export async function deleteMeeting(id: string): Promise<boolean> {
