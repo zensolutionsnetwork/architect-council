@@ -26,7 +26,7 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-24 DAY SESSION — #37 SHIPPED (top unblock); all green; inbox 0; agenda id=8 posted) — HANDOFF
+## Current state (2026-06-24 DAY SESSION — #37 + #36 readiness gate + chronicle store SHIPPED; all green; inbox 0; agenda id=8/9) — HANDOFF
 > **DAY SESSION 2026-06-24 (Kairos, w/ Mathieu, "do any task you need before next meeting"). SHIPPED #37 — the
 > top unblock for all three siblings' verify-after-mutate. HEAD `78863d1`, CI + Push-on-main GREEN, prod healthy,
 > tree clean 0/0, no live meeting.** Grounded the claim in a `council.ts` commit-order read first (corpus-status
@@ -44,12 +44,28 @@ or ask Mathieu first.
 > item id=8** (kairos/normal) announcing the pin so Arke/Nova/Logos re-point before the next meeting (open agenda
 > was empty — this morning's meeting flipped id=5/6/7 to discussed). Pre-push safety all green (inbox 0,
 > LIVE_ROUNDS_COUNT=0, `/api/health` ok/vault/scheduler_enabled:true/missed_meeting:false). **The brain pack is
-> the nightly ritual's to regenerate (it re-packs at HEAD tonight) — left untouched here.** **NEXT SESSION top 3:**
-> (1) **build #36 quorum-gate hub side** (spec converged; joint w/ Arke badge/cockpit — manifest
-> `pack_sha_at_attendance` + `/api/health` `last_meeting_status` enum + `/council/limits` durable backoff floored
-> at a monthly heartbeat); (2) **#31 mirror-align ping to Arke** (await his `validateHierarchy` error-order confirm
-> vs `VALIDATE_ORDER.md`); (3) watch **#29 acting-node co-design** (await Arke's app-side proposal). No solo code
-> blockers remain. Bullets below this line are the 06-24 MORNING PREP snapshot (history).
+> the nightly ritual's to regenerate (it re-packs at HEAD tonight) — left untouched here.**
+> **THEN (same session, owner-directed): SHIPPED #36 READINESS GATE + CHRONICLE STORE (`5aaa363`, CI green,
+> prod-smoke verified, no live meeting).** Mathieu refined #36 live — the gate does NOT skip the whole meeting on
+> staleness, it **keeps the stale seat OUT and runs with whoever is ready (>=2 fresh)**. Built (touched
+> `src/store.ts`/`council.ts`/`server.ts` + `test/route-auth.test.ts` + `docs/RESPONSE_SHAPES.md`):
+> `computeReadiness()` scores each seat fresh|stale|no_brain (fresh = current pack sha != the sha it carried at
+> the meeting it last attended — sha equality, no timestamps; no recorded attendance reads fresh); the scheduler
+> seats only the fresh quorum and writes every decision to a new `scheduler_runs` table, surfaced on
+> `/api/health.last_scheduler_status` + owner dashboard `lastSchedulerRun` (seated/excluded+reason). Freshness
+> anchor = new `meetings.attend_pack_sha` written at open. **Chronicle store:** append-only `story_log` +
+> `POST`/`GET /api/council/story` — agents POST "story since last connection", Logos reads everything since his
+> last-attended meeting on reconnect (no gaps across excluded meetings). Gates green (secret-scan/swallow clean,
+> canon 6, cost, route-auth 44/0); prod smoke PASS (health field present; story POST/GET round-trip, unauth 401).
+> **Logos pinged (msg `aea227df`) for input on the entry shape/consume-cursor; agenda id=9 posted.** DEFERRED
+> (the meeting's fuller #36 spec, beyond Mathieu's ask): the `quorum_staleness_days` durable backoff
+> (7→14→28 floored at a monthly heartbeat), the richer `last_meeting_status` enum, and the manifest
+> `pack_sha_at_attendance` field (used a meetings column instead) — follow-ups iff the council still wants them.
+> **NEXT SESSION top 3:** (1) **#31 mirror-align ping to Arke** (await his `validateHierarchy` error-order confirm
+> vs `VALIDATE_ORDER.md`); (2) watch **#29 acting-node co-design** (await Arke's app-side proposal); (3) act on
+> **Logos's reply** re chronicle entry-shape + decide the deferred #36 backoff/enum follow-ups. The #36 gate
+> first exercises live at the **next 03:00 fire** — check `lastSchedulerRun` / `last_scheduler_status` in the
+> morning. No solo code blockers remain. Bullets below this line are the 06-24 MORNING PREP snapshot (history).
 > **MORNING PREP 2026-06-24 (Kairos, automated 06:00). DEBRIEFED the 03:00 ET autonomous meeting `18dd3ed5`
 > (the FIRST run under the soft-limit regime); all systems green; inbox 0; 4 seats paired; #36 quorum-gate
 > spec converged.** HEAD is `a6bf098` (the midnight nightly's handoff commit) + this ritual's debrief/BACKLOG/

@@ -849,7 +849,22 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
     mirror return an identical first-error on a multi-violation tree. **REMAINING (next session):** per the
     no-substance-DM rule, raise "drafted at `6069409`, please mirror-align" to Arke via pack + COUNCIL_AGENDA;
     Arke confirms his mirror matches before either side ships against it.
-36. **Quorum-gated auto-meetings (NEW 2026-06-24, Logos agenda id=6).** Proposal: the 03:00 ET scheduler
+36. **CORE SHIPPED 2026-06-24 (day session, owner-directed `5aaa363`, CI green, prod-verified, no live meeting).**
+    Mathieu refined the spec live: the gate does NOT skip the whole meeting on staleness — it **keeps the stale
+    seat OUT and runs with whoever is ready** (>=2 fresh). Built: `computeReadiness()` scores each seat
+    fresh|stale|no_brain; `fireScheduledMeeting` seats only the fresh quorum, records every decision in a new
+    `scheduler_runs` table, surfaced on `/api/health.last_scheduler_status` + owner dashboard `lastSchedulerRun`
+    (seated/excluded+reason). Freshness anchor = new `meetings.attend_pack_sha` (pack sha each seat carried at
+    open), compared by sha equality (no timestamps); no recorded attendance reads fresh (fail-toward-inclusive).
+    Time unchanged. **ALSO SHIPPED — chronicle story repository** (owner-directed same session): append-only
+    `story_log` + `POST`/`GET /api/council/story`; agents POST "story since last connection", Logos reads
+    everything since his last-attended meeting on reconnect so the chronicle has no gaps across meetings a seat
+    was excluded from. Logos pinged (msg `aea227df`) for input on the entry shape / consume-cursor; agenda id=9
+    posted. Shapes in `RESPONSE_SHAPES.md`. **DEFERRED (the meeting's fuller spec, not in Mathieu's ask):** the
+    `quorum_staleness_days` durable backoff (7→14→28 floored at a monthly heartbeat) + the richer
+    `last_meeting_status` enum + the manifest `pack_sha_at_attendance` field (I used a meetings column instead) —
+    follow-ups if the council still wants them. Original converged spec retained below for reference.
+36b. **Quorum-gated auto-meetings (NEW 2026-06-24, Logos agenda id=6).** Proposal: the 03:00 ET scheduler
     fires ONLY when ≥2 seats have a FRESH brain (pack sha / brainVersion changed since the last meeting
     that seat attended); otherwise SKIP — but RECORD the skip (`skipped: only N<2 fresh brains since last
     meeting` + the fresh/stale seat list), never silent. Fold the skip-reason into the #35 `missed_meeting`
