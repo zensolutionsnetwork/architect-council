@@ -871,15 +871,20 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
     inequality (`current != at_last_attended` — Nova's clock-skew fix, no timestamp compare); (e) counter =
     "days since last meeting convened OR scheduler last enabled, whichever is sooner"; every skip a RECORDED row
     the dashboard surfaces, fail-loud. **My hub side; Arke badge/cockpit. Ready to build (dedicated day session).**
-37. **Pin `corpus-status` etag byte form + 3-artifact atomicity in `RESPONSE_SHAPES.md` (NEW 2026-06-24, mtg
-    `18dd3ed5`). TOP UNBLOCK — 3 siblings (Arke/Nova/Logos) are blocked on this before they wire their
-    verify-after-mutate.** The room adopted `corpus-status?actor=<self>` (etag === local corpus sha256) but
-    flagged the open atomicity question: corpus/pack/manifest are three shas with a possible torn-state write
-    window (manifest-commits-last). Pin in RESPONSE_SHAPES.md: the exact etag byte form (bare hex sha256 of the
-    corpus blob vs the prefixed `corpus_version`) AND the atomicity guarantee — until confirmed, all seats verify
-    each artifact independently. **Caveat: requires a `council.ts` commit-order read so the atomicity claim is
-    CORRECT (getting it wrong = the silent-failure trap we keep catching) — small code-inspection + doc ship,
-    not a one-liner.** Next-session #1. CI-gated, no deploy over a live meeting.
+37. ~~**Pin `corpus-status` etag byte form + 3-artifact atomicity in `RESPONSE_SHAPES.md`.**~~ **DONE
+    2026-06-24 (day session, doc-only, CI-gated, no live meeting).** Read `council.ts` commit-order first
+    (corpus-status lines 88-105; manifest-commit-last cross-check lines 1035-1107) to ground the claim, then
+    pinned TWO things in `RESPONSE_SHAPES.md`: (a) **`etag` byte form** — bare lowercase 64-hex sha256 of the
+    whole corpus blob, a JSON string field NOT the HTTP `ETag` header (no quotes, no `W/`, no `sha256:` prefix;
+    the prefix lives only in `corpus_version`/`brainVersion`); verify = plain string-equality vs local
+    `sha256(corpus_blob)`. (b) New **"Three-artifact commit atomicity + the torn-state window"** section —
+    pack/corpus/manifest commit via three SEPARATE calls (no cross-artifact transaction); the manifest commits
+    LAST and is the only kind that cross-checks (409 `manifest_mismatch` on a torn pair), so a `2xx` manifest
+    commit IS the atomic-pair witness; during the torn window `corpus-status.etag` already reflects the new
+    corpus and a meeting opens the seat `stale`. Per-consumer guidance: corpus-landed = `corpus-status.etag`;
+    full-pair = `2xx` on the manifest commit; read-time pair view = the meeting-open pin (`paired`/`stale`/`none`,
+    surfaced as `manifestReady` on the owner dashboard). `lastUpdated` bumped. **Unblocks Arke/Nova/Logos
+    verify-after-mutate.** Hub agenda item posted so the family re-points before the next meeting.
 
 ## P2 — product arc + hygiene
 0. **Process standardization (STANDING GOAL, owner directive 2026-06-10)** — every member adopts

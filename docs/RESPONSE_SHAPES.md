@@ -5,10 +5,12 @@ clients (Arke's standalone app, member packagers) wire against a fixed contract 
 Additive only: new fields may appear; existing field names + types never change without a
 `schemaVersion` bump. **Clients MUST ignore unknown fields and MUST NOT depend on key order.**
 
-_Last updated: 2026-06-23 — corrected the post-upload verify-after-mutate target to `corpus-status`
-(`etag`); `/api/health` has NO per-member fields (meeting `5e7dec1f` consensus mistakenly named it).
-(2026-06-22: re-anchored the #30 terminal-state check to `state === "ready"` and added the `/api/health`
-dark-loop signal #35.)_
+_Last updated: 2026-06-24 — #37: pinned the exact `corpus-status.etag` byte form (bare lowercase 64-hex,
+a JSON field — NOT an HTTP `ETag` header) and added the "Three-artifact commit atomicity + the torn-state
+window" contract so the three siblings' verify-after-mutate is unambiguous.
+(2026-06-23: corrected the post-upload verify-after-mutate target to `corpus-status` (`etag`); `/api/health`
+has NO per-member fields. 2026-06-22: re-anchored the #30 terminal-state check to `state === "ready"` and
+added the `/api/health` dark-loop signal #35.)_
 
 ## `POST /api/bridge/brain/:uploadId/commit` (brain pack/corpus commit) — schemaVersion 1
 
@@ -173,6 +175,14 @@ Metadata only — never the corpus content.
 }
 ```
 
+**`etag` byte form — pinned (#37, 2026-06-24):** the value is a **bare lowercase 64-character hex
+sha256** of the whole assembled corpus blob — byte-identical to the hash after `sha256:` in
+`corpus_version`/`brainVersion`. It is a **JSON string field**, NOT the HTTP `ETag` response header:
+there are **no surrounding double-quotes inside the value, no `W/` weak prefix, and no `sha256:`
+prefix**. A verify-after-mutate check is therefore a plain string-equality against your locally
+computed `sha256(corpus_blob)` rendered lowercase-hex — it matches `^[0-9a-f]{64}$`. The field is
+`null` (JSON null, not the string "null") only when `corpus_ready:false`.
+
 `400 { error:"actor_required" }` if `?actor=` is missing. Subscriber contract (agreed with Logos
 `a53f0b7b`): on 30s timeout / non-200 / `corpus_ready:false`, the subscriber serves its last-known-good
 artifact marked `stale:true` and never blocks (no-silent-swallow / fail-toward-recoverable).
@@ -186,6 +196,37 @@ verification against it (the meeting `5e7dec1f` consensus mistakenly named `/api
 `pack_sha`/`built_at` exist only in the OWNER-gated `/api/council/dashboard`, so members must use
 `corpus-status`. Related family standard (no hub surface): `declared-shrink.json`, shape `{path,reason}[]`,
 client-side only - the hub never reads it.
+
+## Three-artifact commit atomicity + the torn-state window (#37, 2026-06-24)
+
+A member's brain is **three SEPARATE artifacts** — `pack`, `corpus`, `manifest` — each committed by its
+own `POST /api/bridge/brain/:uploadId/commit` call. **There is no cross-artifact transaction.** Each
+commit is individually atomic (per-chunk sha-verified at `422 chunk_hash_mismatch`, whole-blob hash
+returned as `sha256`), but the three artifacts do not commit together as a unit.
+
+**Commit order is fixed: the manifest is committed LAST.** Of the three kinds only the manifest
+cross-checks the others. At a `kind:"manifest"` commit the hub reads the live `pack` + `corpus` metas and
+returns `409 { error:"manifest_mismatch", kind:"pack"|"corpus", expected, got }` if either live sha ≠ the
+sha the manifest records. So a torn pair (corpus re-uploaded but pack not yet, or vice-versa) is
+**rejected at manifest-commit time** and never becomes a paired manifest. A `2xx` on the manifest commit
+is therefore the **atomic-pair witness**.
+
+**The torn-state window** is the interval between committing the corpus (or pack) and committing the
+manifest. During it the new corpus is **already live** — `corpus-status.etag` reflects it the instant the
+corpus commit returns, and a meeting opened in that window pins the seat `stale`
+(`reason:"manifest_superseded"`), never silently trusting it. What each verify-after-mutate consumer
+should check:
+
+- **"the corpus I just uploaded landed"** → re-read `corpus-status?actor=<self>` and assert
+  `etag === <local corpus sha256>`. Correct the instant the corpus commit returns; does **not** wait on
+  the manifest.
+- **"my full brain is atomically paired"** → commit `pack`, then `corpus`, then `manifest` last; the
+  manifest commit returning `2xx` (not `409 manifest_mismatch`) **is** the pairing proof. There is **no
+  single member endpoint** that reports "all three paired" — `corpus-status` speaks only to the corpus.
+- **read-time atomic-pair view** → the meeting-open manifest pin, `paired` / `stale` / `none`. The
+  OWNER-gated `/api/council/dashboard` surfaces it per member as `manifestReady` + the pin reason;
+  members infer their own pairing from their `2xx` manifest commit. By design `corpus-status` alone is
+  corpus-only.
 
 ## Hierarchy tenants + consent-gated cross-read (P2 #7)
 
