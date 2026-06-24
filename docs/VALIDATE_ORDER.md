@@ -13,7 +13,9 @@ ships a behavior change.
 (`422 { error:"invalid_hierarchy", errors:[...] }`), but the **first element** is the canonical
 "primary" error, so emission order is the contract.
 
-_Last updated: 2026-06-19 (Kairos). Joint ticket with Arke (#29 / meeting 2026-06-19)._
+_Last updated: 2026-06-24 (Kairos) — Part 1 order unchanged; added the Part 2 "Composition rule
+(non-coercion)" pinning that callers honor `canDirect` only when `resolveEffectiveAuthority` mode is
+`supervisor`. Arke's client mirror MATCHED both parts 2026-06-24 (#31). Joint ticket with Arke (#29)._
 
 ---
 
@@ -102,6 +104,23 @@ for the same reason. Decision order (first matching branch wins):
 2. a present `human` root → `{ mode:'owner' }` (owner precedence)
 3. else a present `supervisor` → `{ mode:'supervisor' }`
 4. else → `{ mode:'flat' }`
+
+### Composition rule (non-coercion) — BINDING
+
+`canDirect` is a **pure pair-capability check** by design: it has **no owner-precedence** and does **not**
+read `policy.canDirect` (invariant #6 bars `canDirect:true` on non-supervisors at validation, so the
+runtime gate keys only on `kind === 'supervisor'`). Owner-precedence is therefore the **caller's**
+responsibility, and every caller on both sides MUST compose it the same way:
+
+> Resolve authority with `resolveEffectiveAuthority(t, presence)` FIRST, and honor `canDirect(...)` **only
+> when `mode === 'supervisor'`**. When the owner (a present `human` root) is present, `mode === 'owner'`
+> and **no supervisor direction is honored** — the owner is never overridden.
+
+This is the structural expression of the supervisor non-coercion principle (owner 2026-06-19): a supervisor
+only directs within its subtree, presence-gated, and only while no owner is present to take precedence.
+The hub currently has **no runtime `canDirect` caller** (the module is a pure library by owner's chosen
+scope); when one is added it composes exactly as above. Hub and Arke's client confirmed matched on this
+composition 2026-06-24 (#31).
 
 ---
 
