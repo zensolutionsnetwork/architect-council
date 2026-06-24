@@ -2,16 +2,47 @@
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-23
-> (NIGHTLY 00:30 EDT: quiet day — no new code since the 06-22 evening session; all green — prod ok/vault,
-> CI+Push-on-main success on HEAD `789aa0c`, repo clean 0/0; no live meeting; newest meeting `b29a5e32`
-> (06-22 eve, already debriefed) — nothing new to debrief. #35 RESOLVED: scheduler RE-ENABLED 06-22 eve
-> (`enabled=true` @03:00 America/Toronto, voiceLoopEnabled=true; `/api/health` scheduler_enabled:true,
-> missed_meeting:false) — tonight's 06-23 03:00 ET run is the first clean fire since re-enabling and will
-> debrief at the 06-23 morning prep. Inbox: 1 OPEN — Nova `fd8d06d6` (acks + agenda-POST-shape ask +
-> verify-transcript.mjs paste request) — actionable, left OPEN for the day session, captured below.)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-24
+> (NIGHTLY 00:30 EDT: the 06-23 day session SHIPPED real code — `7647367` re-anchored meetings on MUTUAL
+> IMPROVEMENT with SOFT turn/USD targets (carryover+alert, not hard caps) app-tunable via new owner
+> `/council/limits`; `2cbe5ba` corpus-status now accepts PER-MEMBER secrets (resolveActor), so each seat
+> can verify its own upload. All green — prod ok/vault, CI+Push-on-main success on HEAD `2cbe5ba`, repo
+> clean 0/0; no live meeting (11 meetings, newest `5e7dec1f` 06-23 already debriefed) — nothing new to
+> debrief. The 06-24 03:00 ET run fires AFTER this ritual (last_meeting_created_at 2026-06-23T07:00:15Z,
+> missed_meeting:false, scheduler_enabled:true) → debriefs at the 06-24 morning prep. Inbox: 0 open.
+> Agenda: 3 open items (id=5 kairos verify-after-mutate correction; id=6 Logos quorum-gated auto-meetings;
+> id=7 Nova monolith-vs-bundler) — positions prepared in the pack; new hub-scheduler item #36 logged.)
 
 ## STATE AT A GLANCE
+- **NIGHTLY (2026-06-23 day → 2026-06-24 00:30 EDT) — the 06-23 day session shipped a real design change;
+  all green; no new meeting; inbox 0; scheduler armed.** HEAD is `2cbe5ba` (no longer the 06-23 morning-prep
+  commit). The day session shipped, after the morning prep (`5d4d654`): **`7647367` — meetings RE-ANCHORED
+  on "mutual improvement"** (src/voiceloop.ts +99/finalize.ts/council.ts/store.ts/cost.test.ts/route-auth.test.ts):
+  the hard 50-turn / per-meeting-USD CAPS become **SOFT TARGETS that carry over + alert** rather than block,
+  and are **app-tunable via a new owner endpoint `/council/limits`** (the goal is mutual improvement, not a
+  turn ceiling); **`7f4649d`** documents `/council/limits` + carryover/alert in RESPONSE_SHAPES; **`2cbe5ba`
+  — corpus-status now accepts PER-MEMBER secrets via `resolveActor`** (not just the hub env secret) so every
+  seat can verify its OWN `corpus-status?actor=self` upload (directly enables the verify-after-mutate content
+  check, incl. my own brain refresh). Plus doc-only `7ea9e3a` (agenda-post-as-ritual suggestion) + `1741f0d`
+  (#33 resolved record). Working tree clean, in sync with origin/main (0/0). Prod healthy (`/api/health`
+  ok:true, vault:true, **scheduler_enabled:true, missed_meeting:false, last_meeting_created_at
+  `2026-06-23T07:00:15Z`**). **CI + Push-on-main GREEN on `2cbe5ba`** (both `success`, 2026-06-24T01:08Z).
+  **No live meeting** (LIVE_ROUNDS_COUNT=0; 11 meetings all phase=report; newest `5e7dec1f` from 06-23,
+  already debriefed at the 06-23 morning prep — safe to push). **No new autonomous meeting since
+  `5e7dec1f`** — the 03:00 ET scheduler fires LATER tonight (06-24 03:00 Toronto, after this midnight
+  ritual), so nothing new to debrief; it appears for the 06-24 morning prep. **Inbox: 0 open.** **Agenda:
+  3 open items** — id=5 (kairos/high, my verify-after-mutate→corpus-status correction, already posted, do
+  NOT re-post); **id=6 (logos/normal) PROPOSE quorum-gated auto-meetings** (fire only when ≥2 seats have a
+  fresh brain; RECORD every skip, distinguish skipped-by-quorum from #35 missed_meeting — a hub-scheduler
+  item I'd own, logged as **#36**); **id=7 (nova/normal) monolith-vs-bundler** for admin.html/app.html.
+  Positions for all three folded into the pack's "What I owe THIS meeting". **No deploy this ritual beyond
+  the BACKLOG/CLAUDE doc refresh + brain re-pack** (push happened, no live meeting). **NEXT SESSION top 3:**
+  (1) **morning ritual — debrief the 06-24 03:00 ET autonomous meeting** (first run under the new soft-limit
+  regime — watch whether carryover/alert behaves vs the old hard caps) + check inbox; (2) **#31 mirror-align
+  ping to Arke** (await his `validateHierarchy` error-order confirm vs `VALIDATE_ORDER.md`); (3) **#36 + #29
+  JOINT with Arke** — Logos's quorum-gated scheduler (#36, my hub side + Arke cockpit/trigger) and the
+  `AGENT_CYCLE_AND_ACTING_NODE.md` 4-Q acting-node co-design. No solo code blockers remain. Bullets below
+  this line are the 06-23 MORNING PREP + earlier snapshots (history).
 - **MORNING PREP (2026-06-23 06:00) — the 03:00 ET scheduler FIRED its first clean run since re-enable;
   meeting DEBRIEFED; all green; inbox cleared to 0; one doc fix shipped.** HEAD is `75d6db8` (the midnight
   nightly's backlog/handoff commit) → this ritual adds the debrief + the RESPONSE_SHAPES correction +
@@ -598,6 +629,16 @@
 
 ## DONE (shipped + verified on prod)
 
+**2026-06-23 (day session):** **Meetings re-anchored on MUTUAL IMPROVEMENT** (`7647367`, CI-green) — the
+hard 50-turn / per-meeting-USD caps become SOFT TARGETS that carry over + alert rather than block; the
+meeting goal is steady mutual improvement, not a ceiling. App-tunable via a new owner endpoint
+`/council/limits` (shape in `RESPONSE_SHAPES.md`, `7f4649d`). Touched voiceloop.ts/finalize.ts/council.ts/
+store.ts + cost.test.ts/route-auth.test.ts. · **corpus-status accepts per-member secrets** (`2cbe5ba`) —
+`GET /api/bridge/corpus-status?actor=` now resolves the caller via `resolveActor` (member secret OR hub
+env secret), so every seat can run the verify-after-mutate content check (`etag === local corpus sha`)
+against its OWN upload — previously only the hub env secret resolved. (Plus doc-only `7ea9e3a` agenda-as-
+ritual suggestion + `1741f0d` #33-resolved record.)
+
 **Foundation (≤2026-06-08):** v1 council (paused) · env channel inbox + helpers · SITE_LIVE gate ·
 meeting orchestrator (turns, timeout auto-pass, roles, listen, dry-run, brainVersion pinning,
 owner-drive test, owner interjection, per-actor history) · council-jcs-1.0 canon byte-locked + CI ·
@@ -769,6 +810,17 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
     mirror return an identical first-error on a multi-violation tree. **REMAINING (next session):** per the
     no-substance-DM rule, raise "drafted at `6069409`, please mirror-align" to Arke via pack + COUNCIL_AGENDA;
     Arke confirms his mirror matches before either side ships against it.
+36. **Quorum-gated auto-meetings (NEW 2026-06-24, Logos agenda id=6).** Proposal: the 03:00 ET scheduler
+    fires ONLY when ≥2 seats have a FRESH brain (pack sha / brainVersion changed since the last meeting
+    that seat attended); otherwise SKIP — but RECORD the skip (`skipped: only N<2 fresh brains since last
+    meeting` + the fresh/stale seat list), never silent. Fold the skip-reason into the #35 `missed_meeting`
+    telling-apart so skipped-by-quorum reads as INTENTIONAL, not a miss. Signal already exists hub-side
+    (per-actor brain-meta pack sha + committed_at vs last-meeting timestamp — no agent instrumentation
+    needed). **My hub-scheduler side; Arke's cockpit/trigger side; Mathieu endorses.** Owner benefit:
+    meetings fire only when there's genuine cross-agent material, so he stops checking each day. My position
+    (prepared in the pack): sound + buildable; the skip must be a recorded ROW the dashboard surfaces, not
+    just a log line; pin down "fresh" precisely (pack sha changed since the last meeting that seat ATTENDED,
+    not just since any meeting). Discuss + design at the next meeting, then I build the scheduler half.
 
 ## P2 — product arc + hygiene
 0. **Process standardization (STANDING GOAL, owner directive 2026-06-10)** — every member adopts
@@ -885,16 +937,17 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
   dedicated round before homework (so Nova/Logos stay aware). Overlaps standing agenda item `d02e397`.
   **`14e824d0` REPORT-CLOSED 2026-06-19** — adopted: standing hub-change-review round already lives in
   COUNCIL_AGENDA + my pack; I carry the hub-side changelog into each meeting (quiet cycle, nothing to walk).
-- **Nova** (`fd8d06d6`, 2026-06-22, OPEN — Kairos owes a small day-session reply): two asks — (1) confirm
-  the exact `POST /api/council/agenda` body shape (fields + priority enum) so she can add an `agenda`
-  command to hub.mjs and self-post her monolith/bundler question (answer lives in `docs/RESPONSE_SHAPES.md`);
-  (2) paste `scripts/verify-transcript.mjs` source into her inbox (it's a `.mjs`, outside the corpus glob,
-  and she lacks the repo locally) so she can run it against her saved meeting #12 transcript and close her
-  carried trust-gap by REUSE. She also confirmed she'll wire the #35 three-state badge once Mathieu picks
-  the cockpit file (ties into her monolith/bundler question). Small, well-scoped — answer + report-close
-  next session. Plus the standing item: emit the **paired manifest** from her packager (closing homework) —
-  `fc5b1606` showed her seat fell back to per-kind `none(no_manifest)` (loud+logged, by design); not a hub
-  blocker.
+- **Nova** (`fd8d06d6` — CLOSED 2026-06-23 morning prep): both asks fulfilled — the `POST /api/council/agenda`
+  body shape (fields + `priority` enum `low|normal|high`) given, and `scripts/verify-transcript.mjs` source
+  file-carried into her inbox for her #12 trust-gap REUSE; report-closed → INBOX 0. She has since SELF-POSTED
+  her monolith/bundler question to the hub agenda (id=7, 2026-06-24) using the shape — so it now reaches the
+  next meeting on its own. **Next-meeting discussion (agenda id=7):** single-file front-ends (admin.html
+  ~2000 lines of JS, app.html PWA) vs split-into-modules-with-a-bundler, given plain git+Railway with no build
+  step; she wants proven guardrails (diff gates, smoke tests) that stop blind-merge regressions. My prepared
+  position (in the pack): keep single-file but add a CI diff-gate + a headless smoke test asserting key DOM
+  ids; if modularizing, native ES modules (`<script type=module>`) need no bundler on Railway static serving.
+  Standing item: emit the **paired manifest** from her packager (closing homework) — `fc5b1606` showed her
+  seat fell back to per-kind `none(no_manifest)` (loud+logged, by design); not a hub blocker.
 - **Logos**: living backlog on biblevoice.net (pack + corpus brain: ✅ committed).
 
 ## NOTE FOR THE NEXT SESSION

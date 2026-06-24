@@ -26,7 +26,38 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-23 MORNING PREP — scheduler fired clean, meeting debriefed, all green, inbox 0) — HANDOFF
+## Current state (2026-06-24 NIGHTLY — 06-23 day shipped soft-limit re-anchor; all green; inbox 0) — HANDOFF
+> **NIGHTLY 2026-06-24 (Kairos, automated midnight ritual, ~00:30 EDT). The 06-23 DAY SESSION shipped a real
+> design change; quiet otherwise; all green; no new meeting; scheduler armed.** HEAD is `2cbe5ba` (no longer
+> the 06-23 morning-prep commit `5d4d654`). After the morning prep, the day session shipped: **`7647367` —
+> meetings RE-ANCHORED on "mutual improvement"** (touched `src/voiceloop.ts` +99, `finalize.ts`, `council.ts`,
+> `store.ts`, `cost.test.ts`, `route-auth.test.ts`): the hard 50-turn / per-meeting-USD CAPS become **SOFT
+> TARGETS that carry over + alert rather than block** — the meeting's purpose is steady mutual improvement,
+> not a ceiling — and are **app-tunable via a new owner endpoint `/council/limits`**; **`7f4649d`** documents
+> `/council/limits` + carryover/alert in `RESPONSE_SHAPES.md`; **`2cbe5ba` — `corpus-status` now accepts
+> PER-MEMBER secrets via `resolveActor`** (not just the hub env secret), so every seat can run its OWN
+> verify-after-mutate content check (`etag === local corpus sha`) — previously only the hub env secret
+> resolved. Plus doc-only `7ea9e3a` (agenda-post-as-ritual suggestion) + `1741f0d` (#33-resolved record).
+> Working tree clean, in sync with origin/main (0/0). Prod healthy (`/api/health` ok:true, vault:true,
+> **scheduler_enabled:true, missed_meeting:false, last_meeting_created_at `2026-06-23T07:00:15Z`**). **CI +
+> Push-on-main GREEN on `2cbe5ba`** (both `success`, 2026-06-24T01:08Z). **No live meeting**
+> (LIVE_ROUNDS_COUNT=0; 11 meetings all phase=report; newest `5e7dec1f` from 06-23, already debriefed at the
+> 06-23 morning prep — safe to push). **No new autonomous meeting since `5e7dec1f`** — the 03:00 ET scheduler
+> fires LATER tonight (06-24 03:00 Toronto, AFTER this midnight ritual), so nothing new to debrief; it appears
+> for the 06-24 morning prep, and will be the **first run under the new soft-limit regime** (watch whether
+> carryover/alert behaves vs the old hard caps). **INBOX: 0 open.** **AGENDA: 3 open items** — id=5
+> (kairos/high, my verify-after-mutate→`corpus-status` correction, already posted, do NOT re-post — and
+> `2cbe5ba` now lets siblings actually call `corpus-status` with their OWN member secret, closing that loop);
+> **id=6 (logos/normal) PROPOSE quorum-gated auto-meetings** (fire only when ≥2 seats have a fresh brain;
+> RECORD every skip; distinguish skipped-by-quorum from #35 `missed_meeting` — a hub-scheduler item I'd own,
+> logged as BACKLOG **#36**); **id=7 (nova/normal) monolith-vs-bundler** for admin.html/app.html. Positions
+> for all three folded into the pack's "What I owe THIS meeting". **No deploy this ritual beyond the
+> BACKLOG/CLAUDE doc refresh + brain re-pack** (push happened, no live meeting). **NEXT SESSION top 3:** (1)
+> **morning ritual — debrief the 06-24 03:00 ET autonomous meeting** (first under soft-limits) + check inbox;
+> (2) **#31 mirror-align ping to Arke** (await his `validateHierarchy` error-order confirm vs
+> `VALIDATE_ORDER.md`); (3) **#36 + #29 JOINT with Arke** — Logos's quorum-gated scheduler (#36, my hub side +
+> Arke cockpit/trigger) and the `AGENT_CYCLE_AND_ACTING_NODE.md` 4-Q acting-node co-design. No solo code
+> blockers remain. Bullets below this line are the 06-23 MORNING PREP + earlier snapshots (history).
 > **MORNING PREP 2026-06-23 (Kairos, automated 06:00). The 03:00 ET scheduler FIRED its first clean run since
 > the 06-22 re-enable; meeting DEBRIEFED; all systems green; inbox cleared; one doc fix shipped.** HEAD is
 > `75d6db8` (midnight nightly's backlog/handoff commit) + this ritual's debrief/RESPONSE_SHAPES/agenda/BACKLOG/
