@@ -22,6 +22,7 @@ import {
   latestRealMeetingCreatedAtUtc,
   setMeetingAttendPackSha, lastAttendedPackSha, lastAttendedMeetingCreatedAtUtc,
   recordSchedulerRun, latestSchedulerRun, addStoryEntry, getStorySince, getStorySinceSeq,
+  upsertStandard, standardExists, ratifyStandard, listStandards,
   setMeetingLedger, setMeetingManifestPins,
   setVoiceRunning, closeStaleVoiceMeetings, usdSpentTodayUtc, vaultReady, listMeetingsForDashboard,
   createBrainUpload, getBrainUpload, putBrainChunk, brainReceived, assembleBrain,
@@ -395,6 +396,71 @@ councilRouter.get('/council/story', async (req, res) => {
     if (!since) { try { since = await lastAttendedMeetingCreatedAtUtc(a.actor); } catch { since = null; } }
     const entries = await getStorySince(since, limit);
     res.json({ ok: true, sinceSeq: null, since, count: entries.length, entries });
+  } catch (e) { internalError(res, e); }
+});
+
+// ---------- Adopted-standards record (#40, owner ruling 2026-06-25) ----------
+// DOCTRINE (owner 2026-06-25): a council meeting VOICE has no authority — it only PROPOSES. A standard is
+// ADOPTED only when each project's sovereign session re-uploads its own ratification. So: POST /standards
+// records a PROPOSAL (carries provenance, NO authority); POST /standards/:slug/ratify records ONE project's
+// accept/reject (member-authenticated as its own seat, or owner ON BEHALF OF a named seat to log a decision
+// that project already made in its own session — never to manufacture a voice's authority); GET /standards
+// lists each standard with its per-project ratification state. Contract pinned in docs/RESPONSE_SHAPES.md.
+const STD_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+function standardStatus(ratifications: any[]): { adoptedBy: string[]; rejectedBy: string[]; status: string } {
+  const adoptedBy = MEETING_DEFAULT.filter((a) => ratifications.some((r) => r.actor === a && r.decision === 'accept'));
+  const rejectedBy = MEETING_DEFAULT.filter((a) => ratifications.some((r) => r.actor === a && r.decision === 'reject'));
+  const status = adoptedBy.length === MEETING_DEFAULT.length ? 'adopted'
+    : (adoptedBy.length > 0 || rejectedBy.length > 0) ? 'partial' : 'proposed';
+  return { adoptedBy, rejectedBy, status };
+}
+councilRouter.post('/council/standards', async (req, res) => {
+  try {
+    const a = await resolveActor(req);
+    if (!a) return res.status(401).json({ error: 'unauthorized' });
+    const b = req.body || {};
+    const slug = clip(b.slug, 80);
+    if (!slug || !STD_SLUG_RE.test(slug)) return res.status(400).json({ error: 'bad_slug' });
+    const statement = clip(b.statement, 8000);
+    if (!statement) return res.status(400).json({ error: 'statement is required' });
+    const title = clip(b.title, 160) || null;
+    const proposedMeetingId = clip(b.proposedMeetingId, 80) || null;
+    const proposedBy = a.admin ? 'owner' : (a.actor === 'architect-council' ? 'kairos' : a.actor);
+    const r = await upsertStandard(slug, title, statement, proposedMeetingId, proposedBy);
+    res.json({ ok: true, seq: r.id, slug: r.slug, proposedBy, proposedMeetingId,
+      note: 'recorded as PROPOSED — no authority until each project ratifies from its own session' });
+  } catch (e) { internalError(res, e); }
+});
+councilRouter.post('/council/standards/:slug/ratify', async (req, res) => {
+  try {
+    const a = await resolveActor(req);
+    if (!a) return res.status(401).json({ error: 'unauthorized' });
+    const slug = clip(req.params.slug, 80);
+    if (!slug || !(await standardExists(slug))) return res.status(404).json({ error: 'no_such_standard' });
+    const b = req.body || {};
+    const decision = String(b.decision || '');
+    if (decision !== 'accept' && decision !== 'reject') return res.status(400).json({ error: 'bad_decision' });
+    const note = clip(b.note, 2000) || null;
+    // Attribution: a member ratifies AS ITS OWN seat (the architect-council house secret maps to the kairos
+    // seat). The owner (admin) MUST name a canonical seat in `actor` — used to log a decision a project already
+    // made in its own session (e.g. seeding Kairos's ACCEPT). The owner cannot ratify as an abstract "owner".
+    let actor: string;
+    if (a.admin) {
+      if (typeof b.actor !== 'string' || !MEETING_DEFAULT.includes(b.actor)) return res.status(400).json({ error: 'actor_required', message: 'owner must name a canonical seat in `actor`' });
+      actor = b.actor;
+    } else {
+      actor = a.actor === 'architect-council' ? 'kairos' : a.actor;
+    }
+    const r = await ratifyStandard(slug, actor, decision as 'accept' | 'reject', note);
+    res.json({ ok: true, ...r });
+  } catch (e) { internalError(res, e); }
+});
+councilRouter.get('/council/standards', async (req, res) => {
+  try {
+    const a = await resolveActor(req);
+    if (!a) return res.status(401).json({ error: 'unauthorized' });
+    const standards = (await listStandards()).map((s) => ({ ...s, ...standardStatus(s.ratifications) }));
+    res.json({ ok: true, count: standards.length, standards });
   } catch (e) { internalError(res, e); }
 });
 
@@ -847,19 +913,24 @@ councilRouter.get('/council/dashboard', requireOwner, async (_req, res) => {
       }
       return out;
     };
-    const [meetings, boots, backlogs, members, spentTodayUsd] = await Promise.all([
+    const [meetings, boots, backlogs, members, spentTodayUsd, standardsRaw] = await Promise.all([
       listMeetingsForDashboard(12).catch(() => []),
       getRecentBoots(8).catch(() => []),
       getAgentBacklogs().catch(() => []),
       memberStatus().catch(() => []),
       usdSpentTodayUtc().catch(() => 0),
+      listStandards().catch(() => []),
     ]);
+    // #40: adopted-standards with per-project ratification state (proposed | partial | adopted). A standard is
+    // adopted ONLY when every canonical seat has re-uploaded an accept from its own session — never a false
+    // unanimous green from a meeting voice's proposal alone.
+    const standards = standardsRaw.map((s: any) => ({ ...s, ...standardStatus(s.ratifications) }));
     const scheduler = { enabled: (await getSetting('hub_meeting_scheduler').catch(() => null)) === 'on',
       time: await getSchedTime(), tz: 'America/Toronto', voiceLoopEnabled: process.env.VOICE_LOOP_ENABLED === 'true' };
     // #36: the latest readiness-gate decision (seated/excluded seats + reason) so the owner sees WHY a
     // scheduled meeting ran with a subset, or skipped. Best-effort; null before the first gated fire.
     const lastSchedulerRun = await latestSchedulerRun().catch(() => null);
-    res.json({ ok: true, ts: Date.now(), vault: vaultReady(), scheduler, lastSchedulerRun, spentTodayUsd, meetings, members, boots, backlogs });
+    res.json({ ok: true, ts: Date.now(), vault: vaultReady(), scheduler, lastSchedulerRun, spentTodayUsd, meetings, members, boots, backlogs, standards });
   } catch (e) { internalError(res, e); }
 });
 // Member housekeeping (owner 2026-06-18): retire/restore a member row. GUARDED — a canonical council seat

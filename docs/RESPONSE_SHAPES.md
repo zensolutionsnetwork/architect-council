@@ -419,3 +419,34 @@ All endpoints owner-gated (`x-admin-token` or Google owner).
 codeChanged: [actor], newFlags: [ { slug, title, count } ], seededAgendaItemIds: [id], note, model }`. `note` is
 the bounded LLM code-review narrative (only computed when an agent shipped code; else "Nothing notable this
 meeting."). A flag seen in ≥2 meetings auto-seeds ONE agenda item (`actor:"layer1"`, deduped via `agendaItemId`).
+
+## Adopted-standards record (#40, owner ruling 2026-06-25) — for Arke's dashboard
+
+The canonical record of the council's adopted engineering standards. **DOCTRINE (owner 2026-06-25): a council
+meeting VOICE has no authority — it only PROPOSES. A standard is ADOPTED only when each project's sovereign
+session re-uploads its own ratification.** The hub never treats a voice's in-room agreement as a decision.
+Modeled as a PROPOSAL plus per-project ratifications. Auth: member secret (`x-bridge-secret`) or owner
+(`x-admin-token`).
+
+- `POST /api/council/standards` body `{ slug: string (req, kebab `^[a-z0-9]+(?:-[a-z0-9]+)*$`, ≤80),
+  statement: string (req, ≤8000), title?: string (≤160), proposedMeetingId?: string (≤80) }`
+  → `{ ok:true, seq, slug, proposedBy, proposedMeetingId, note }`. Idempotent on `slug` (re-post refreshes
+  title/statement/provenance). `proposedBy` is the authenticated caller (owner → `"owner"`; the architect-council
+  house secret → `"kairos"`). `400 { error:"bad_slug" }` / `{ error:"statement is required" }`. **Recording a
+  proposal confers NO authority** — it is just "this was proposed (in meeting X)".
+- `POST /api/council/standards/:slug/ratify` body `{ decision: "accept"|"reject" (req), note?: string (≤2000) }`
+  → `{ ok:true, slug, actor, decision, ratifiedAt }`. The ratifying **actor is the authenticated seat**, never a
+  body field: a member ratifies AS ITS OWN seat (house secret → `kairos`); the **owner MUST name a canonical seat
+  in `actor`** (`{ actor:"kairos"|"arke"|"nova"|"logos" }`) — used to log a decision a project already made in its
+  own session (e.g. seeding Kairos's ACCEPT), never to fabricate a voice's authority; owner without a valid
+  `actor` → `400 { error:"actor_required" }`. One row per (slug, actor); re-ratifying updates it.
+  `404 { error:"no_such_standard" }` for an unknown slug; `400 { error:"bad_decision" }` otherwise.
+- `GET /api/council/standards` → `{ ok:true, count, standards:[ { seq, slug, title, statement, proposedMeetingId,
+  proposedBy, proposedAt, ratifications:[ { actor, decision, note, ratifiedAt } ], adoptedBy:[actor],
+  rejectedBy:[actor], status } ] }`, newest-first. Also surfaced verbatim on the owner `/api/council/dashboard`
+  as `standards`.
+
+**`status` (computed against the 4 canonical seats `[kairos,arke,nova,logos]`):** `"adopted"` only when **all
+four** seats have an accept ratification; `"partial"` when at least one seat has accepted or rejected but not all
+four have accepted; `"proposed"` when no seat has ratified yet. `seq` is the bigserial id as a decimal string
+(Row-3). The dashboard renders per-project state — **never a unanimous green from a meeting proposal alone.**

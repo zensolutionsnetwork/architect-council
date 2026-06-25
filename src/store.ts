@@ -200,6 +200,19 @@ export async function initDb(): Promise<void> {
   await q.query(`ALTER TABLE story_log ADD COLUMN IF NOT EXISTS pack_sha text`);
   await q.query(`ALTER TABLE story_log ADD COLUMN IF NOT EXISTS corpus_sha text`);
   await q.query(`ALTER TABLE story_log ADD COLUMN IF NOT EXISTS built_at timestamptz`);
+  // Adopted-standards record (#40, owner ruling 2026-06-25: hub table is canonical). DOCTRINE: a council
+  // meeting VOICE has no authority — it only PROPOSES. A standard becomes ADOPTED only when each project's
+  // sovereign session re-uploads its own ratification. So the model is two tables: `adopted_standards` is the
+  // PROPOSAL (provenance = the meeting it was proposed in; carries NO authority on its own), and
+  // `adopted_standard_ratifications` holds one member-authenticated ACCEPT/REJECT per project. A standard is
+  // "adopted" only once every canonical seat has re-uploaded an accept from its own session.
+  await q.query(`CREATE TABLE IF NOT EXISTS adopted_standards (
+    id bigserial PRIMARY KEY, slug text NOT NULL UNIQUE, title text, statement text NOT NULL,
+    proposed_meeting_id text, proposed_by text, proposed_at timestamptz NOT NULL DEFAULT now())`);
+  await q.query(`CREATE TABLE IF NOT EXISTS adopted_standard_ratifications (
+    id bigserial PRIMARY KEY, standard_slug text NOT NULL, actor text NOT NULL,
+    decision text NOT NULL, note text, ratified_at timestamptz NOT NULL DEFAULT now(),
+    UNIQUE (standard_slug, actor))`);
 }
 
 // ---- Boot-stamp log (P1 #8) -------------------------------------------------
@@ -694,6 +707,60 @@ export async function getStorySinceSeq(sinceSeq: string | null, limit = 500): Pr
      FROM story_log WHERE id > $1::bigint ORDER BY id ASC LIMIT $2`,
     [since, Math.min(Math.max(Number(limit) || 500, 1), 2000)]);
   return rows.map(mapStoryRow);
+}
+// ---- Adopted-standards record (#40, owner 2026-06-25) -----------------------
+/** Record/refresh a PROPOSED standard (idempotent on slug). Carries provenance (the meeting it was proposed
+ *  in + who recorded it) but NO authority — authority comes only from per-project ratifications below. */
+export async function upsertStandard(slug: string, title: string | null, statement: string,
+  proposedMeetingId: string | null, proposedBy: string | null): Promise<{ id: string; slug: string }> {
+  const { rows } = await db().query<any>(
+    `INSERT INTO adopted_standards (slug, title, statement, proposed_meeting_id, proposed_by)
+     VALUES ($1,$2,$3,$4,$5)
+     ON CONFLICT (slug) DO UPDATE SET title=EXCLUDED.title, statement=EXCLUDED.statement,
+       proposed_meeting_id=COALESCE(EXCLUDED.proposed_meeting_id, adopted_standards.proposed_meeting_id),
+       proposed_by=COALESCE(EXCLUDED.proposed_by, adopted_standards.proposed_by)
+     RETURNING id, slug`,
+    [slug, title, statement, proposedMeetingId, proposedBy]);
+  return { id: String(rows[0].id), slug: rows[0].slug };
+}
+export async function standardExists(slug: string): Promise<boolean> {
+  const { rows } = await db().query(`SELECT 1 FROM adopted_standards WHERE slug=$1`, [slug]);
+  return rows.length > 0;
+}
+/** Record one project's ratification of a standard (one row per (slug, actor); a project may change its
+ *  decision — latest wins). Written ONLY for an authenticated caller; a meeting voice cannot reach this. */
+export async function ratifyStandard(slug: string, actor: string, decision: 'accept' | 'reject',
+  note: string | null): Promise<{ slug: string; actor: string; decision: string; ratifiedAt: string }> {
+  const { rows } = await db().query<any>(
+    `INSERT INTO adopted_standard_ratifications (standard_slug, actor, decision, note)
+     VALUES ($1,$2,$3,$4)
+     ON CONFLICT (standard_slug, actor) DO UPDATE SET decision=EXCLUDED.decision, note=EXCLUDED.note, ratified_at=now()
+     RETURNING standard_slug, actor, decision,
+       to_char(ratified_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS ratified_at`,
+    [slug, actor, decision, note]);
+  const r = rows[0];
+  return { slug: r.standard_slug, actor: r.actor, decision: r.decision, ratifiedAt: r.ratified_at };
+}
+/** All standards (newest-first by proposal) each with its ratification rows. Status is left to the caller,
+ *  which knows the canonical seat list (the store is seat-agnostic). */
+export async function listStandards(): Promise<any[]> {
+  const { rows } = await db().query<any>(
+    `SELECT id, slug, title, statement, proposed_meeting_id, proposed_by,
+       to_char(proposed_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS proposed_at
+     FROM adopted_standards ORDER BY id DESC`);
+  const { rows: rat } = await db().query<any>(
+    `SELECT standard_slug, actor, decision, note,
+       to_char(ratified_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS ratified_at
+     FROM adopted_standard_ratifications ORDER BY ratified_at ASC, id ASC`);
+  const bySlug = new Map<string, any[]>();
+  for (const r of rat) {
+    const arr = bySlug.get(r.standard_slug) || [];
+    arr.push({ actor: r.actor, decision: r.decision, note: r.note || null, ratifiedAt: r.ratified_at });
+    bySlug.set(r.standard_slug, arr);
+  }
+  return rows.map((r) => ({ seq: String(r.id), slug: r.slug, title: r.title || null, statement: r.statement,
+    proposedMeetingId: r.proposed_meeting_id || null, proposedBy: r.proposed_by || null, proposedAt: r.proposed_at,
+    ratifications: bySlug.get(r.slug) || [] }));
 }
 /** Hard-delete a meeting row by id (owner-only purge of stuck/test meetings). Returns true if a row went. */
 export async function deleteMeeting(id: string): Promise<boolean> {
