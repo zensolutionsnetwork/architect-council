@@ -66,11 +66,18 @@
   (owner 2026-06-25): NO account creation** — the only valid account is a single env `OWNER_EMAIL`
   (matpay@zen-solutions.net); no register/signup; password is set via an emailed one-time token to that inbox
   ("set from my inbox", uses existing Resend mailer) + console-key break-glass. Endpoints:
-  /api/auth/{request-password,set-password,login,logout,me}. **NEXT on this track:** await Arke's migration plan + his answers to
-  the 4 auth questions (token storage / TTL / register bootstrap / multi-hub-profile), then I implement the auth
-  endpoints (back-end) while Arke builds the login screen (front-end). **+ owner-report faithfulness guard shipped
-  (`bd166c8`)** — meeting = proposals not executed work; no more "committed to a file" drift. Bullet below this
-  line is the 06-25 MORNING PREP (history).
+  /api/auth/{request-password,set-password,login,logout,me}. **+ owner-report faithfulness guard shipped
+  (`bd166c8`)** — meeting = proposals not executed work; no more "committed to a file" drift.
+  **+ OWNER AUTH IMPLEMENTED (back-end) `8355384` — CI-green + prod-smoked.** owners (seeded from OWNER_EMAIL, no
+  password until set) + owner_sessions + owner_password_tokens; scrypt (no native dep); requireOwner additive
+  (console key OR Google OR owner Bearer session); NO account creation; password "set from inbox" via one-time
+  emailed token (Resend, already wired). Prod smoke PASS (me/login/logout 401; request-password non-owner 200
+  no-send; set-password bad-token 400); route-auth 49/0. **OWNER ACTION when ready:** POST /api/auth/request-password
+  {email: matpay@zen-solutions.net} -> one-time link+token to the inbox (15-min) -> POST /api/auth/set-password
+  {token, newPassword>=12}. OWNER_EMAIL falls back to the known owner; APP_BASE_URL defaults to architectscouncil.com.
+  The /set-password PAGE is Arke's front-end (not built yet) — until then use the emailed TOKEN via the API directly.
+  **WAITING ON Arke:** login screen + his 4 front-end answers (token storage / session TTL / bootstrap-flow /
+  multi-hub). Bullet below this line is the 06-25 MORNING PREP (history).
 - **MORNING PREP (2026-06-25 06:00) — debriefed the first #36-gated AND first convergence-round meeting; all
   green; inbox 0; agenda 0; 4 seats fresh+paired.** HEAD `538366f` (midnight nightly handoff) + this ritual's
   debrief/BACKLOG/CLAUDE refresh. Prod healthy (`/api/health` ok:true, vault:true, **scheduler_enabled:true,
