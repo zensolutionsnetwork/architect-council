@@ -21,7 +21,7 @@ import {
   createMeeting, getMeeting, updateMeeting, listMeetings, listMeetingsForActor, setMeetingOwnerReport, deleteMeeting,
   latestRealMeetingCreatedAtUtc,
   setMeetingAttendPackSha, lastAttendedPackSha, lastAttendedMeetingCreatedAtUtc,
-  recordSchedulerRun, latestSchedulerRun, addStoryEntry, getStorySince,
+  recordSchedulerRun, latestSchedulerRun, addStoryEntry, getStorySince, getStorySinceSeq,
   setMeetingLedger, setMeetingManifestPins,
   setVoiceRunning, closeStaleVoiceMeetings, usdSpentTodayUtc, vaultReady, listMeetingsForDashboard,
   createBrainUpload, getBrainUpload, putBrainChunk, brainReceived, assembleBrain,
@@ -370,21 +370,31 @@ councilRouter.post('/council/story', async (req, res) => {
     try { const pm = await getBrainV2Meta(a.actor, 'pack'); if (pm) { packSha = String(pm.sha256); builtAt = pm.committed_at || null; } } catch { /* absent → null */ }
     try { const cm = await getBrainV2Meta(a.actor, 'corpus'); if (cm) { corpusSha = String(cm.sha256); builtAt = cm.committed_at || builtAt; } } catch { /* absent → null */ }
     const r = await addStoryEntry(a.actor, content, meetingId, { title, tags, packSha, corpusSha, builtAt });
-    res.json({ ok: true, id: r.id, actor: a.actor, createdAt: r.createdAt, meetingId, title, tags, packSha, corpusSha, builtAt });
+    // seq (#39) is the canonical monotonic cursor handle = the entry id as a decimal string; id retained for back-compat.
+    res.json({ ok: true, seq: r.id, id: r.id, actor: a.actor, createdAt: r.createdAt, meetingId, title, tags, packSha, corpusSha, builtAt });
   } catch (e) { internalError(res, e); }
 });
 councilRouter.get('/council/story', async (req, res) => {
   try {
     const a = await resolveActor(req);
     if (!a) return res.status(401).json({ error: 'unauthorized' });
-    // Cursor: an explicit valid `since` ISO wins; otherwise default to the caller's last-attended meeting
-    // (the natural "since I last connected"). The owner, who attends no meeting, defaults to the full log.
+    const limit = Number(req.query.limit) > 0 ? Number(req.query.limit) : 500;
+    // Cursor precedence (#39): the canonical half-open-exclusive SEQ cursor wins when `?sinceSeq=` is given;
+    // it is validated decimal (Row-3) here at the boundary, BigInt-checked, then read as `seq > sinceSeq`.
+    // Otherwise the legacy timestamp path: an explicit valid `since` ISO, else the caller's last-attended
+    // meeting (the natural "since I last connected"). The owner, who attends no meeting, defaults to the full log.
+    const rawSeq = String(req.query.sinceSeq || '');
+    if (rawSeq) {
+      if (!/^(0|[1-9][0-9]*)$/.test(rawSeq)) return res.status(400).json({ error: 'bad_sinceSeq' });
+      try { BigInt(rawSeq); } catch { return res.status(400).json({ error: 'bad_sinceSeq' }); }
+      const entries = await getStorySinceSeq(rawSeq, limit);
+      return res.json({ ok: true, sinceSeq: rawSeq, since: null, count: entries.length, entries });
+    }
     const rawSince = String(req.query.since || '');
     let since: string | null = (rawSince && !Number.isNaN(Date.parse(rawSince))) ? rawSince : null;
     if (!since) { try { since = await lastAttendedMeetingCreatedAtUtc(a.actor); } catch { since = null; } }
-    const limit = Number(req.query.limit) > 0 ? Number(req.query.limit) : 500;
     const entries = await getStorySince(since, limit);
-    res.json({ ok: true, since, count: entries.length, entries });
+    res.json({ ok: true, sinceSeq: null, since, count: entries.length, entries });
   } catch (e) { internalError(res, e); }
 });
 
@@ -1212,7 +1222,7 @@ export async function healthMeetingSignal(): Promise<{ last_meeting_created_at: 
   // #36: the last scheduled-fire decision (opened | skipped_quorum | no_voice_loop | already_live | error |
   // null). Lets the cockpit distinguish an intentional readiness SKIP from a real miss without exposing seats.
   let last_scheduler_status: string | null = null;
-  try { const r = await latestSchedulerRun(); last_scheduler_status = r ? String(r.decision) : null; } catch { /* default null */ }
+  try { const r = await latestSchedulerRun(); last_scheduler_status = r ? String(r.status) : null; } catch { /* default null */ }
   return { last_meeting_created_at, missed_meeting, scheduler_enabled, last_scheduler_status };
 }
 // #36 readiness gate (owner 2026-06-24). A seat is FRESH if it has a committed pack whose sha differs from
@@ -1247,20 +1257,20 @@ async function fireScheduledMeeting(): Promise<void> {
   const excluded = readiness.filter((r) => r.status !== 'fresh').map((r) => ({ actor: r.actor, reason: r.status }));
   if (fresh.length < QUORUM_MIN) {
     console.warn(`[hub:sched] skip — quorum not met (${fresh.length}/${QUORUM_MIN} fresh): ${readiness.map((r) => r.actor + '=' + r.status).join(', ')}`);
-    await recordSchedulerRun('skipped_quorum', null, [], excluded, { fresh, quorumMin: QUORUM_MIN, readiness }).catch(() => {});
+    await recordSchedulerRun('skipped_quorum', null, [], excluded, { fresh, freshCount: fresh.length, quorumMin: QUORUM_MIN, readiness }).catch(() => {});
     return;
   }
   const base = `http://127.0.0.1:${process.env.PORT || '8080'}`;
   const H = { 'x-admin-token': tok, 'content-type': 'application/json' };
   try {
     const openRes = await fetch(base + '/api/meeting/open', { method: 'POST', headers: H, body: JSON.stringify({ participants: fresh, agenda: SCHED_AGENDA }) });
-    if (!openRes.ok) { console.warn('[hub:sched] open failed ' + openRes.status); await recordSchedulerRun('error', null, fresh, excluded, { openStatus: openRes.status }).catch(() => {}); return; }
+    if (!openRes.ok) { console.warn('[hub:sched] open failed ' + openRes.status); await recordSchedulerRun('error', null, fresh, excluded, { openStatus: openRes.status, freshCount: fresh.length }).catch(() => {}); return; }
     const open: any = await openRes.json();
     const id = open.meetingId;
     const runRes = await fetch(base + `/api/council/meeting/${id}/run-autonomous`, { method: 'POST', headers: H, body: JSON.stringify({}) });
     console.log(`[hub:sched] opened ${id} seats=[${fresh.join(',')}] excluded=[${excluded.map((e) => e.actor + ':' + e.reason).join(',')}] + run-autonomous -> ${runRes.status}`);
-    await recordSchedulerRun('opened', id, fresh, excluded, { runStatus: runRes.status }).catch(() => {});
-  } catch (e) { console.warn('[hub:sched] fire error: ' + (e as Error).message); await recordSchedulerRun('error', null, fresh, excluded, { error: (e as Error).message }).catch(() => {}); }
+    await recordSchedulerRun('opened', id, fresh, excluded, { runStatus: runRes.status, freshCount: fresh.length }).catch(() => {});
+  } catch (e) { console.warn('[hub:sched] fire error: ' + (e as Error).message); await recordSchedulerRun('error', null, fresh, excluded, { error: (e as Error).message, freshCount: fresh.length }).catch(() => {}); }
 }
 
 export function startScheduler(): void {

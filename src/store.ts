@@ -613,14 +613,35 @@ export async function recordSchedulerRun(decision: string, meetingId: string | n
 }
 export async function latestSchedulerRun(): Promise<any | null> {
   const { rows } = await db().query<any>(
-    `SELECT decision, meeting_id, seated, excluded, detail,
+    `SELECT id, decision, meeting_id, seated, excluded, detail,
        to_char(at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS at
      FROM scheduler_runs ORDER BY at DESC, id DESC LIMIT 1`);
   if (!rows[0]) return null;
   const r = rows[0];
-  return { decision: r.decision, meetingId: r.meeting_id || null, at: r.at,
-    seated: Array.isArray(r.seated) ? r.seated : [], excluded: Array.isArray(r.excluded) ? r.excluded : [],
-    detail: r.detail && typeof r.detail === 'object' ? r.detail : {} };
+  const seated = Array.isArray(r.seated) ? r.seated : [];
+  const excluded = Array.isArray(r.excluded) ? r.excluded : [];
+  const detail = r.detail && typeof r.detail === 'object' ? r.detail : {};
+  const status = String(r.decision);
+  // Row-1 adopted standard `last-scheduler-status-shape` (proposed mtg ba750c9a 2026-06-25, #38). Canonical
+  // object. A scheduler_runs row is APPEND-ONLY and never updated, so run_id (its bigserial id) is an immutable
+  // handle. run_id is serialized as a DECIMAL STRING (Row-3 `json-64bit-as-decimal-string`) since the id is a
+  // 64-bit bigserial. seated_actors is [] on any non-opened status — only an actually-opened meeting has real
+  // seats. fresh_count is the fresh-quorum size at fire time. error is a plain string|null lifted from detail
+  // (raw server text; owner-gated surface only — do not echo to a public/external consumer unredacted).
+  // Legacy keys (decision/meetingId/at/seated) are retained as DEPRECATED aliases for one transition cycle so
+  // Arke's live cockpit does not break on deploy; drop them next cycle once he re-points to the new keys.
+  const seated_actors = status === 'opened' ? seated : [];
+  const fresh_count =
+    Number.isFinite(Number(detail.freshCount)) ? Number(detail.freshCount)
+    : Array.isArray(detail.fresh) ? detail.fresh.length
+    : (status === 'opened' ? seated.length : 0);
+  const error = (detail.error != null && detail.error !== '') ? String(detail.error) : null;
+  return {
+    run_id: String(r.id), status, fired_at: r.at, seated_actors, excluded,
+    meeting_id: r.meeting_id || null, fresh_count, error,
+    // deprecated legacy aliases (one-cycle back-compat; remove once Arke re-points):
+    decision: status, meetingId: r.meeting_id || null, at: r.at, seated: seated_actors, detail,
+  };
 }
 
 // ---- Chronicle story repository (owner 2026-06-24) --------------------------
@@ -637,7 +658,20 @@ export async function addStoryEntry(actor: string, content: string, meetingId: s
     [actor, String(content), meetingId, opts.title ?? null, tags, opts.packSha ?? null, opts.corpusSha ?? null, opts.builtAt ?? null]);
   return { id: String(rows[0].id), createdAt: rows[0].created_at };
 }
-/** All story entries created strictly AFTER `sinceIso` (null/epoch → all), oldest-first, capped. */
+// Row-3 adopted standard `json-64bit-as-decimal-string` (proposed mtg ba750c9a 2026-06-25, #39): a story
+// entry's monotonic `seq` is the bigserial id rendered as a DECIMAL STRING (the id is 64-bit; JSON numbers
+// lose precision past 2^53). story_log is APPEND-ONLY, so seq is immutable and strictly increasing. The
+// canonical chronicle cursor is the HALF-OPEN-EXCLUSIVE boundary `seq > sinceSeq` (Logos's ordering catch +
+// Nova's idempotency catch closed from both sides by one monotonic seq): strict `>` makes a re-read with the
+// last-seen seq return exactly the un-consumed tail with no duplicate and no gap, regardless of created_at
+// ties or clock skew. `seq` is emitted on every entry; both reader functions return the identical entry shape.
+function mapStoryRow(r: any) {
+  return { seq: String(r.id), id: String(r.id), actor: r.actor, content: r.content, meetingId: r.meeting_id || null,
+    title: r.title || null, tags: Array.isArray(r.tags) ? r.tags : [], packSha: r.pack_sha || null,
+    corpusSha: r.corpus_sha || null, builtAt: r.built_at || null, createdAt: r.created_at };
+}
+/** All story entries created strictly AFTER `sinceIso` (null/epoch → all), oldest-first, capped. Legacy
+ *  timestamp cursor; the seq cursor below is canonical for new consumers. */
 export async function getStorySince(sinceIso: string | null, limit = 500): Promise<any[]> {
   const since = sinceIso || '1970-01-01T00:00:00Z';
   const { rows } = await db().query<any>(
@@ -646,9 +680,20 @@ export async function getStorySince(sinceIso: string | null, limit = 500): Promi
        to_char(built_at  at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS built_at
      FROM story_log WHERE created_at > $1 ORDER BY created_at ASC, id ASC LIMIT $2`,
     [since, Math.min(Math.max(Number(limit) || 500, 1), 2000)]);
-  return rows.map((r) => ({ id: String(r.id), actor: r.actor, content: r.content, meetingId: r.meeting_id || null,
-    title: r.title || null, tags: Array.isArray(r.tags) ? r.tags : [], packSha: r.pack_sha || null,
-    corpusSha: r.corpus_sha || null, builtAt: r.built_at || null, createdAt: r.created_at }));
+  return rows.map(mapStoryRow);
+}
+/** Canonical chronicle read: all entries with seq strictly greater than `sinceSeq` (half-open-exclusive),
+ *  oldest-first by seq, capped. `sinceSeq` is a validated decimal string (the caller asserts the regex +
+ *  BigInt() at the route boundary); passed to Postgres as ::bigint. sinceSeq "0"/null → the whole log. */
+export async function getStorySinceSeq(sinceSeq: string | null, limit = 500): Promise<any[]> {
+  const since = (sinceSeq && /^(0|[1-9][0-9]*)$/.test(sinceSeq)) ? sinceSeq : '0';
+  const { rows } = await db().query<any>(
+    `SELECT id, actor, content, meeting_id, title, tags, pack_sha, corpus_sha,
+       to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
+       to_char(built_at  at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS built_at
+     FROM story_log WHERE id > $1::bigint ORDER BY id ASC LIMIT $2`,
+    [since, Math.min(Math.max(Number(limit) || 500, 1), 2000)]);
+  return rows.map(mapStoryRow);
 }
 /** Hard-delete a meeting row by id (owner-only purge of stuck/test meetings). Returns true if a row went. */
 export async function deleteMeeting(id: string): Promise<boolean> {
