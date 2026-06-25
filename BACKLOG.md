@@ -3,6 +3,17 @@
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
 > Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-25
+> (MORNING PREP 06:00: debriefed the 03:00 ET autonomous meeting `ba750c9a` — the FIRST run under the #36
+> readiness gate AND the FIRST execution of owner directive #10's convergence code-review round. Gate
+> `decision=opened`, seated all 4, excluded 0, fresh quorum=4. 16 turns / 0 PASS / 4 rounds / `completed` /
+> $1.2495 / verify-transcript PASS / all 4 seats 2.1 paired — 8th consecutive autonomous self-close. The round
+> CONVERGED: three ratified `adopted_standards` rows [last-scheduler-status-shape · imapflow-safe-teardown ·
+> json-64bit-as-decimal-string]. My judged-ACCEPT homework → BACKLOG #38/#39/#40. One synthesizer flag [report
+> said standards "committed to docs/ADOPTED_STANDARDS.md" — file doesn't exist; the commit is owed, #40]. Prod
+> healthy [ok/vault/scheduler_enabled:true, missed_meeting:false, last_scheduler_status `opened`], CI green on
+> `538366f`, repo clean 0/0, all 4 seats fresh+paired, inbox 0, agenda 0 [meeting consumed id=8-12]. One owner
+> ruling owed: #40 adopted-standards source-of-truth. Earlier-history parenthetical below.)
+>
 > (NIGHTLY ~00:30 EDT: quiet after a heavy 06-24 day session that shipped #37 [corpus-status etag byte form +
 > 3-artifact atomicity pinned in RESPONSE_SHAPES.md, `78863d1`], #36 [readiness gate + stale-seat exclusion +
 > chronicle `story_log`, `5aaa363`], the #31 VALIDATE_ORDER non-coercion composition-rule pin [`d556610`, Arke
@@ -16,6 +27,40 @@
 > actually CONVERGE** — the new lead topic; owner asks the family to bring proposals for HOW to run it.)
 
 ## STATE AT A GLANCE
+- **MORNING PREP (2026-06-25 06:00) — debriefed the first #36-gated AND first convergence-round meeting; all
+  green; inbox 0; agenda 0; 4 seats fresh+paired.** HEAD `538366f` (midnight nightly handoff) + this ritual's
+  debrief/BACKLOG/CLAUDE refresh. Prod healthy (`/api/health` ok:true, vault:true, **scheduler_enabled:true,
+  missed_meeting:false, last_meeting_created_at `2026-06-25T07:00:11Z`, last_scheduler_status `opened`**). **CI
+  + Push-on-main GREEN on `538366f`** (all 7 gate check-runs success). Git clean, in sync origin/main (0/0).
+  **No live meeting** (LIVE_ROUNDS_COUNT=0; 13 meetings all phase=report). **Brain freshness: ALL FOUR seats
+  paired + fresh** (kairos 04:33Z, arke 06:03Z, nova 05:19Z, logos 06-24 20:57Z; all corpus+pack+manifest
+  true). **#36 READINESS GATE — FIRST LIVE EXERCISE, CLEAN:** `lastSchedulerRun` `decision=opened`,
+  `seated=[kairos,arke,nova,logos]`, `excluded=[]`, fresh quorum=4; `last_scheduler_status` went null→`opened`.
+  Gate scores+records+surfaces exactly as designed (exclusion path still unexercised — no seat was stale).
+  **DEBRIEFED `ba750c9a`** (`council/KAIROS_DEBRIEF_2026-06-25.md`): created 07:00:11Z → closed 07:06:21Z, 4
+  seats, **16 turns / 0 PASS / 4 rounds**, endedReason **`completed`**, **$1.2495289** (owner-report $0.0414,
+  layer1 $0.0204), **verify-transcript.mjs PASS** (sha `22d6731b…fff7c`), **all 4 seats manifest-2.1 paired**.
+  **8th consecutive fully-autonomous self-close.** **DIRECTIVE #10 — the convergence code-review round ran for
+  the FIRST time and actually CONVERGED:** the room produced **three ratified `adopted_standards` rows** before
+  anyone shipped a line — **Row 1 `last-scheduler-status-shape`** (object gains `run_id`+`error`, `seated_actors:[]`
+  on non-opened, all 4 adopt), **Row 2 `imapflow-safe-teardown`** (Nova's `safeClose`, `on` not `once`, the inline
+  comment IS the standard), **Row 3 `json-64bit-as-decimal-string`** (`^(0|[1-9][0-9]*)$` + BigInt at boundary,
+  all 4 adopt, first applied to story `seq`). **MY HOMEWORK (judged ACCEPT, debrief §2) → BACKLOG #38** (migrate
+  `last_scheduler_status` to the Row-1 shape + immutability/error-guidance doc), **#39** (story-entry `seq`
+  decimal-string + half-open boundary + immutability), **#40** (seed the adopted_standards rows — BLOCKED on
+  Mathieu's source-of-truth ruling). #38+#39+error-doc = one RESPONSE_SHAPES pass, day session, no live-meeting
+  deploy. **VOICE INTEGRITY:** clean on the agency axis (all proposals to the architect session). **ONE
+  synthesizer flag:** the owner-report says the standards were "committed to `docs/ADOPTED_STANDARDS.md`" — that
+  file does NOT exist; the commit is owed (#40), not done. Voices were precise; only the report's tense is ahead.
+  **ECONOMICS:** 2nd consecutive 16t/~$1.25 run (06-24 was 16t/$1.2515) — the soft-limit steady state, just under
+  the SS2 $1.30-2 envelope, all substance. Trend to watch; tune `/council/limits` only if a run pushes >18t/$1.50
+  without proportional value. **Inbox 0; agenda 0** (meeting consumed id=8/9/10 + Nova id=11 + Logos id=12).
+  **No deploy this ritual beyond the debrief + BACKLOG/CLAUDE refresh + brain re-pack.** **NEXT SESSION top 3:**
+  (1) **build the RESPONSE_SHAPES + `last_scheduler_status`/`seq` migration (#38+#39)** — coordinate the badge
+  shape with Arke; (2) **#40 adopted_standards seed** — once Mathieu rules on source-of-truth; (3) **#29 JOINT
+  with Arke** (full-corpus through the gate + acting-node) + keep the convergence round as standing structure.
+  **TO ASK MATHIEU:** #40 source-of-truth (hub table vs per-repo markdown). No solo code blockers remain.
+  Bullets below this line are the 06-25 NIGHTLY + earlier snapshots (history).
 - **NIGHTLY (2026-06-24 day → 2026-06-25 00:30 EDT) — quiet after a heavy 06-24 day session; all green; inbox
   cleared to 0; #36 readiness gate first-fires tonight.** HEAD is `24a10f7` (TWO commits past the day-session
   handoff's `5aaa363`). Full 06-24 ship-set, in order: **`78863d1` #37** (corpus-status etag byte form +
@@ -854,6 +899,28 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
    — his copy carries them, mine has §1–§6; get his byte-exact text so the canonical doc + packager don't drift.
 
 ## P1 — alongside / right after the loop
+38. **`last_scheduler_status` shape migration (NEW 2026-06-25, meeting `ba750c9a` adopted-standard Row 1).**
+    The live object is `{decision, meetingId, at, seated, excluded, detail}` — it does NOT match the
+    ratified Row-1 `adopted_standards` shape. Migrate the hub object + `RESPONSE_SHAPES.md` to:
+    `{run_id, status(opened|skipped_quorum|skipped_disabled|failed), fired_at, seated_actors([] on any
+    non-opened), excluded[{actor,reason}], meeting_id, fresh_count, error(null unless failed)}`; pin the
+    immutability note (`scheduler_runs` rows append-only, a re-fire/override writes a new `run_id`, never
+    update-in-place) and the `error`-consumer guidance (truncate 200, textContent never innerHTML).
+    Consumed by Arke's cockpit badge / Nova's Activity journal / Logos's admin page — coordinate the badge
+    shape with Arke before/at deploy. Dedicated build; do NOT deploy over a live meeting.
+39. **Story-entry `seq` field (NEW 2026-06-25, Row 3 first application).** Add `seq` to `story_log` entries,
+    **serialized as a decimal string** (JSON number mangles a 64-bit int past 2^53; assert
+    `^(0|[1-9][0-9]*)$` then `BigInt()` at the boundary). Pin in `RESPONSE_SHAPES.md`: half-open-exclusive
+    read boundary (`seq > checkpoint`, entries strictly AFTER the consumer's last-attended meeting) +
+    immutability (a correction appends a new `seq`, never an in-place edit). Closes Nova's idempotency +
+    Logos's ordering catch with one field. Folds into the #38 doc pass.
+40. **Seed the `adopted_standards` rows + surface on the owner dashboard (NEW 2026-06-25, owner directive #10).**
+    Kairos seeds the hub artifact table with the three ratified rows (last-scheduler-status-shape /
+    imapflow-safe-teardown / json-64bit-as-decimal-string); Arke/Nova/Logos mirror a local
+    `ADOPTED_STANDARDS.md`. **BLOCKED on an owner ruling (see WAITING ON / Flag a):** which copy is
+    authoritative — hub table or per-repo markdown? Recommend hub-table-authoritative + markdown as a
+    generated mirror, but Mathieu's call before I build the sync. `docs/ADOPTED_STANDARDS.md` does NOT yet
+    exist in the hub repo; the owner-report's "committed" phrasing was synthesizer-ahead-of-reality.
 4. `council-prep` / `council-debrief` skills (Arke drafts; Mathieu installs via Settings→Capabilities)
    + directive trigger (env-task kind `directive`, §15).
 5. ~~Retire legacy single-row backlog endpoints~~ **DONE** (`3032593`, Arke `1a405574`) — see DONE.
@@ -1049,7 +1116,15 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
     `meeting-codereview-purpose-converge`.)
 
 ## WAITING ON
-- **Mathieu**: effectively NOTHING blocking. (1) **Layer-1 Manager + agenda/directive — RESOLVED + BUILT
+- **Mathieu (NEW 2026-06-25, ONE owner ruling owed):** the `adopted_standards` **source-of-truth** (blocks
+  BACKLOG #40). The first convergence round (meeting `ba750c9a`) ratified three standards but split the
+  seeding — Kairos seeds the hub artifact table; Arke/Nova/Logos each mirror a local `ADOPTED_STANDARDS.md`.
+  Two copies, no sync = drift risk. Which is authoritative — hub table (single source, agents read it) or
+  per-repo markdown (agents own, hub aggregates)? Recommend hub-table-authoritative + markdown as a generated
+  mirror, but it's the owner's call before I build the sync. ALSO low-urgency security flag (record-only): the
+  `scheduler_runs.error` field is raw unredacted server text — fine while the dashboard is owner-gated; needs a
+  redaction pass IF the cockpit/dashboard ever goes externally reachable.
+- **Mathieu**: effectively NOTHING ELSE blocking. (1) **Layer-1 Manager + agenda/directive — RESOLVED + BUILT
   2026-06-18:** Arke consulted (`7808a124`, his read = build Layer-1 hub-side / app displays), owner
   greenlit, all three SHIPPED hub-side (agenda+directive `23a08d1`, Layer-1 v0 `b317a0b`); Layer-1 design
   picks made (deep / auto-seed / per-meeting). (2) **auto-scheduler SHIPPED + ACTIVATED (`beeac4c`)**;
@@ -1063,9 +1138,12 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
 - **Kairos (own queue)**: **the 06-24 homework is SHIPPED** — #37 (etag/atomicity pin, `78863d1`), #36
   (readiness gate + chronicle store, `5aaa363`), #31 VALIDATE_ORDER Part-2 non-coercion pin (`d556610`), and the
   chronicle entry title/tags + provenance (`24a10f7`) all landed CI-green. **#31 mirror-align is now CONFIRMED
-  both directions** (Arke matched both sides at `d556610`) — that thread closes. **REMAINING (next meeting):**
-  bring the **convergence-code-review-round proposal** (owner directive id=10, the new lead topic) + watch for
-  Arke's #36/#29 app-side co-design (readiness-gate cockpit/badge + acting-node). Earlier: the 06-19 homework
+  both directions** (Arke matched both sides at `d556610`) — that thread closes. **NEW from meeting `ba750c9a`
+  (2026-06-25, first convergence round): three judged-ACCEPT homework items → BACKLOG #38 (`last_scheduler_status`
+  shape migration to the adopted Row-1 shape), #39 (story-entry `seq` decimal-string), #40 (seed the
+  `adopted_standards` rows — BLOCKED on Mathieu's source-of-truth ruling).** #38+#39+the `error`-guidance doc
+  ship as one RESPONSE_SHAPES pass; do NOT deploy over a live meeting. **WATCH:** Arke's #36/#29 app-side
+  co-design (readiness-gate cockpit/badge + acting-node). Earlier: the 06-19 homework
   (#30 KEYSTONE / #32 / #34) all landed in `6069409`. **#33 RESOLVED 2026-06-23 (day session).** Truth-check: NO 90s sleep exists anywhere in the
   prep path (0 `Start-Sleep` across the bridge-app `.ps1` helpers; neither scheduled `SKILL.md` has one) —
   the meeting voice's "I added a 90s sleep to my prep" was a stale-mental-model overstatement (the prep

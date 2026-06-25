@@ -26,7 +26,50 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-25 NIGHTLY — quiet after a big 06-24 day session; all green; inbox 0; agenda id=8/9/10; #36 gate first-fires tonight) — HANDOFF
+## Current state (2026-06-25 MORNING PREP — debriefed the first #36-gated + first convergence-round meeting `ba750c9a`; all green; inbox 0; agenda 0; homework→#38/#39/#40) — HANDOFF
+> **MORNING PREP 2026-06-25 (Kairos, automated 06:00). DEBRIEFED the 03:00 ET autonomous meeting `ba750c9a` —
+> the FIRST run under the #36 readiness gate AND the FIRST execution of owner directive #10's convergence
+> code-review round. All green; inbox 0; agenda 0; 4 seats fresh+paired.** HEAD `538366f` (midnight nightly
+> handoff) + this ritual's debrief/BACKLOG/CLAUDE refresh. Prod healthy (`/api/health` ok:true, vault:true,
+> **scheduler_enabled:true, missed_meeting:false, last_meeting_created_at `2026-06-25T07:00:11Z`,
+> last_scheduler_status `opened`**). **CI + Push-on-main GREEN on `538366f`** (all 7 gate check-runs success).
+> Git clean, in sync origin/main (0/0). **No live meeting** (LIVE_ROUNDS_COUNT=0; 13 meetings all phase=report).
+> **ALL FOUR seats paired + fresh** (kairos 04:33Z / arke 06:03Z / nova 05:19Z / logos 06-24 20:57Z; all
+> corpus+pack+manifest true). **#36 GATE — FIRST LIVE EXERCISE, CLEAN:** `lastSchedulerRun` `decision=opened`,
+> `seated=[kairos,arke,nova,logos]`, `excluded=[]`, fresh quorum=4; `last_scheduler_status` null→`opened`. The
+> gate scores+records+surfaces exactly as designed (the exclusion path is still unexercised — no seat was
+> stale). **DEBRIEFED `ba750c9a`** (`council/KAIROS_DEBRIEF_2026-06-25.md`): created 07:00:11Z → closed
+> 07:06:21Z, 4 seats, **16 turns / 0 PASS / 4 rounds**, endedReason **`completed`**, **$1.2495289** (owner-report
+> $0.0414, layer1 $0.0204), **verify-transcript.mjs PASS** (sha `22d6731b…fff7c`), **all 4 seats manifest-2.1
+> paired** — **8th consecutive fully-autonomous self-close.** **DIRECTIVE #10 RAN FOR THE FIRST TIME AND
+> CONVERGED:** the room produced **three ratified `adopted_standards` rows** before anyone shipped a line — Row 1
+> **`last-scheduler-status-shape`** (object gains `run_id`+`error`; `seated_actors:[]` on any non-opened status;
+> all 4 adopt), Row 2 **`imapflow-safe-teardown`** (Nova's `safeClose` = `on('error')`+`logout().catch`+`finally
+> close`; `on` not `once` because the client is discarded; the inline comment IS the standard), Row 3
+> **`json-64bit-as-decimal-string`** (serialize a 64-bit `seq` as a decimal string, assert `^(0|[1-9][0-9]*)$`
+> then `BigInt()` at the boundary; all 4 adopt; first applied to story `seq`). One insight closed Nova's
+> idempotency catch + Logos's ordering catch from two sides (one monotonic `seq` + half-open-exclusive boundary).
+> **MY HOMEWORK (all judged ACCEPT, debrief §2; framed as proposals, no false execution-claims) → BACKLOG #38**
+> (migrate the live `last_scheduler_status` `{decision,meetingId,at,seated,excluded,detail}` to the Row-1 shape
+> `{run_id,status,fired_at,seated_actors,excluded[{actor,reason}],meeting_id,fresh_count,error}` + immutability +
+> error-consumer-guidance doc), **#39** (story-entry `seq` decimal-string + half-open boundary + immutability in
+> RESPONSE_SHAPES), **#40** (seed the three adopted_standards rows to the hub artifact table + dashboard —
+> **BLOCKED on Mathieu's source-of-truth ruling**). #38+#39+error-doc ship as ONE RESPONSE_SHAPES pass, day
+> session, no live-meeting deploy. **VOICE INTEGRITY:** clean on the agency axis. **ONE SYNTHESIZER FLAG:** the
+> auto owner-report narrates the standards as "committed to `docs/ADOPTED_STANDARDS.md`" — that file does NOT
+> exist; the commit is owed (#40), not done. The voices were precise (turn 13: "the hub artifact table, or a
+> markdown seed file if the table ships separately"); only the report's tense is ahead of reality. Same category
+> as prior synthesizer "built"-for-"proposed" drift. **ECONOMICS:** 2nd consecutive 16t/~$1.25 run (06-24 was
+> 16t/$1.2515) — the soft-limit steady state, just under the SS2 $1.30-2 envelope, all substance; trend to watch,
+> tune `/council/limits` only if a run pushes >18t/$1.50 without proportional value. **Inbox 0; agenda 0**
+> (meeting consumed id=8/9/10 + Nova id=11 + Logos id=12). **No deploy this ritual beyond the debrief +
+> BACKLOG/CLAUDE refresh + brain re-pack.** **NEXT SESSION top 3:** (1) **build the RESPONSE_SHAPES +
+> `last_scheduler_status`/`seq` migration (#38+#39)** — coordinate the badge shape with Arke; (2) **#40
+> adopted_standards seed** once Mathieu rules on source-of-truth; (3) **#29 JOINT with Arke** (full-corpus
+> through the gate + acting-node) + keep the convergence round as the standing structure. **TO ASK MATHIEU:**
+> #40 source-of-truth (hub table vs per-repo markdown); low-urgency security flag — `scheduler_runs.error` is raw
+> unredacted server text (fine while owner-gated; redact if the cockpit ever goes external). No solo code
+> blockers remain. Bullets below this line are the 06-25 NIGHTLY snapshot (history).
 > **NIGHTLY 2026-06-25 (Kairos, automated midnight ritual, ~00:30 EDT). The 06-24 day session shipped a heavy
 > additive batch (#37 + #36 + #31 pin + chronicle entry shape); quiet since; all green; inbox cleared to 0; the
 > #36 readiness gate has NOT fired yet (first exercises live tonight at 03:00 ET).** HEAD is `24a10f7` (no
