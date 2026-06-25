@@ -1,7 +1,0 @@
-# DAILY_HANDOFF — retired pointer
-
-**The single handoff anchor is now `CLAUDE.md` → "Current state" section** (loaded automatically
-at every Cowork session start). This file stopped being updated on 2026-06-08 and was diverging
-from the real anchor, so it was retired on 2026-06-09 (Fable review, finding 2.6).
-
-History: see git log for this file's prior contents.

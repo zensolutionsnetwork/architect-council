@@ -246,9 +246,12 @@ export async function createOwnerSession(tokenHash: string, ownerId: string, exp
   await db().query(`INSERT INTO owner_sessions (token_hash, owner_id, expires_at) VALUES ($1,$2,$3)`, [tokenHash, ownerId, expiresAt.toISOString()]);
 }
 export async function getOwnerSession(tokenHash: string): Promise<{ ownerId: string; email: string; expiresAt: string } | null> {
+  // Valid iff not past its (sliding) expiry AND within the 90-day ABSOLUTE max age from creation — a stolen
+  // token can't be refreshed forever (hardening 2026-06-25).
   const { rows } = await db().query<any>(
     `SELECT s.owner_id, o.email, to_char(s.expires_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS expires_at
-     FROM owner_sessions s JOIN owners o ON o.id=s.owner_id WHERE s.token_hash=$1 AND s.expires_at > now()`, [tokenHash]);
+     FROM owner_sessions s JOIN owners o ON o.id=s.owner_id
+     WHERE s.token_hash=$1 AND s.expires_at > now() AND s.created_at > now() - interval '90 days'`, [tokenHash]);
   return rows[0] ? { ownerId: String(rows[0].owner_id), email: rows[0].email, expiresAt: rows[0].expires_at } : null;
 }
 export async function touchOwnerSession(tokenHash: string, newExpiry: Date): Promise<void> {

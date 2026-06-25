@@ -46,6 +46,12 @@ app.get('/api/health', async (_req, res) => {
   res.json({ ok: true, service: 'architect-council', vault: vaultReady(), ts: Date.now(), ...signal });
 });
 
+// Hardening (2026-06-25): a STRICTER per-IP limiter on the sensitive UNAUTHENTICATED owner-auth entry points
+// — brute-force on /login, inbox-flood on /request-password, token-guessing on /set-password. /auth/me and
+// /auth/logout are authenticated (Bearer) and covered by the global limiter. Fail-open like the global one.
+const authLimiter = rateLimit({ windowMs: 15 * 60_000, max: 20 });
+app.use(['/api/auth/login', '/api/auth/request-password', '/api/auth/set-password'], authLimiter);
+
 // Bridge (hub as a member) + council broker.
 app.use('/api', bridgeRouter);
 app.use('/api', councilRouter);

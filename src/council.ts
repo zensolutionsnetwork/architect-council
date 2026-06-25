@@ -332,6 +332,10 @@ function bearerToken(req: Request): string | null {
   const m = h.match(/^Bearer\s+(.+)$/i);
   return m ? m[1].trim() : null;
 }
+// Login timing equalization: always perform exactly ONE scrypt verify — even when the email/owner/password
+// doesn't exist — so response latency never reveals whether the submitted email is the owner's. Cached once.
+let DUMMY_PW_HASH = '';
+function dummyPwHash(): string { if (!DUMMY_PW_HASH) DUMMY_PW_HASH = hashPassword(crypto.randomBytes(24).toString('hex')); return DUMMY_PW_HASH; }
 
 async function requireOwner(req: Request, res: Response, next: NextFunction): Promise<void> {
   const tok = process.env.COUNCIL_ADMIN_TOKEN;
@@ -393,7 +397,11 @@ councilRouter.post('/auth/login', async (req, res) => {
     const email = String(b.email || '').trim().toLowerCase();
     const pw = String(b.password || '');
     const owner = await getOwner();
-    const ok = !!owner && email === owner.email && verifyPassword(pw, owner.passwordHash);
+    // Verify against the real hash only when email+owner+password all line up; otherwise verify against a
+    // dummy hash so the response time can't distinguish "wrong email" from "wrong password" (no email oracle).
+    const realTarget = (owner && email === owner.email && owner.passwordHash) ? owner.passwordHash : null;
+    const pwOk = verifyPassword(pw, realTarget || dummyPwHash());
+    const ok = !!realTarget && pwOk;
     if (!ok) return res.status(401).json({ error: 'invalid_credentials' });
     const raw = newToken(); const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
     await createOwnerSession(sha256hex(raw), owner!.id, expiresAt);
