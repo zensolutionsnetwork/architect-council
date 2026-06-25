@@ -52,7 +52,25 @@
   tense-drift; root now fixed (standards have a real hub home + correct proposed-state); did NOT touch the
   autonomous synthesizer prompt mid-day — watch at the next debrief. **NEXT:** drop the #38 legacy aliases once
   Arke re-points; **#29 JOINT with Arke** (full-corpus through the gate + acting-node) + keep the convergence
-  round standing. Bullet below this line is the 06-25 MORNING PREP (history).
+  round standing. **ALSO (owner planning, 2026-06-25 PM) — PRODUCT DIRECTION set + Arke move kicked off
+  (memory `mams-per-owner-hub-and-app-control-plane`):** split is now explicit — **Arke = front-end/client app,
+  Kairos = back-end/server hub**, RESPONSE_SHAPES the seam. Decisions: (a) Arke's SEAT moves to this machine +
+  Claude account as a separate tenant; Nova+Logos stay on the other account; all four still auth to the one hub.
+  (b) Arke's APP installs on BOTH computers, owner-scoped only (no member secret), both logged into ONE owner
+  identity. (c) Owner login = **email+password** (Mathieu sets it), hub-side auth. (d) **Per-owner HUB INSTANCE**
+  (not shared multi-tenant) — a new owner stands up their own hub+agents. (e) End goal: the app is the SINGLE
+  control surface for the whole project. (f) Long-term capstone: consent-gated INTER-ACCOUNT (federated) meetings.
+  SENT: owner directive to Arke to PLAN the move (`489e08ad`, kind=directive) + Kairos heads-up (`ce9dd499`).
+  SHIPPED: **`31ec128` docs/OWNER_AUTH_CONTRACT_DRAFT.md** (DRAFT, NOT implemented — email/password owner auth:
+  owners+owner_sessions tables, argon2id, Bearer session, requireOwner becomes additive). **REVISED same session
+  (owner 2026-06-25): NO account creation** — the only valid account is a single env `OWNER_EMAIL`
+  (matpay@zen-solutions.net); no register/signup; password is set via an emailed one-time token to that inbox
+  ("set from my inbox", uses existing Resend mailer) + console-key break-glass. Endpoints:
+  /api/auth/{request-password,set-password,login,logout,me}. **NEXT on this track:** await Arke's migration plan + his answers to
+  the 4 auth questions (token storage / TTL / register bootstrap / multi-hub-profile), then I implement the auth
+  endpoints (back-end) while Arke builds the login screen (front-end). **+ owner-report faithfulness guard shipped
+  (`bd166c8`)** — meeting = proposals not executed work; no more "committed to a file" drift. Bullet below this
+  line is the 06-25 MORNING PREP (history).
 - **MORNING PREP (2026-06-25 06:00) — debriefed the first #36-gated AND first convergence-round meeting; all
   green; inbox 0; agenda 0; 4 seats fresh+paired.** HEAD `538366f` (midnight nightly handoff) + this ritual's
   debrief/BACKLOG/CLAUDE refresh. Prod healthy (`/api/health` ok:true, vault:true, **scheduler_enabled:true,

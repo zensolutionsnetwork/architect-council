@@ -7,9 +7,12 @@
 
 ## Model
 
-**One owner per hub instance.** This hub belongs to a single human owner (Mathieu, on his instance). A second
-human runs **their own** hub instance with their own owner account — there is no multi-owner table on one hub.
-So "register" is a **one-time instance claim**, not open signup.
+**One owner per hub instance, and for now NO account creation at all** (owner directive 2026-06-25). The single
+valid owner identity is a **fixed, env-configured `OWNER_EMAIL`** (Mathieu's, set in Railway env — kept out of
+this public repo). There is **no signup/registration endpoint** and no way to create another account on this
+instance. A second human runs **their own** hub instance with their own `OWNER_EMAIL`. The owner's password is
+established **via an email flow to that inbox** (below) — "the password I set from my inbox" — binding account
+control to the email address the owner controls.
 
 The four agents (kairos/arke/nova/logos) are this owner's agents. Owner auth gates the owner-facing control
 surface; member (seat) secrets are unchanged and unrelated — the app never holds one.
@@ -24,10 +27,17 @@ surface; member (seat) secrets are unchanged and unrelated — the app never hol
 
 ## Endpoints (all under `/api/auth`, HTTPS only)
 
-- `POST /api/auth/register` — **claim the instance.** Body `{ email, password }`. **Gated** (see Security): the
-  human who deployed the hub claims it with the console owner key (`x-admin-token`). `409 { error:"owner_exists" }`
-  if already claimed. Password policy: min length ≥ 12, reject trivial/breached. On success auto-logs-in →
-  `{ ok:true, owner:{ id, email }, token, expiresAt }`.
+- ~~`POST /api/auth/register`~~ — **REMOVED. No account creation.** The single owner row is seeded once from
+  `OWNER_EMAIL` (with no password until set via the email flow below).
+- `POST /api/auth/request-password` — Body `{ email }`. If `email` matches `OWNER_EMAIL`, the hub emails a
+  **one-time, short-expiry (≈15 min) set-password token** to that address via the existing Resend mailer (the
+  owner email is already wired — `src/mailer.ts`, `OWNER_REPORT_FROM`). **Always returns `200 { ok:true }`**
+  regardless of the input (no enumeration — it only ever emails the one fixed address). This is the "set the
+  password from my inbox" flow.
+- `POST /api/auth/set-password` — Body `{ token, newPassword }`. Validates the emailed token (single-use,
+  unexpired), sets/rotates the password (argon2id), invalidates other sessions, and logs in →
+  `{ ok:true, owner:{ id, email }, token, expiresAt }`. `400 { error:"invalid_or_expired_token" }` otherwise.
+  The console owner key (`x-admin-token`) is a **break-glass** alternative to set the password without email.
 - `POST /api/auth/login` — Body `{ email, password }`. `200 { ok:true, owner:{ id, email }, token, expiresAt }`.
   On a bad email **or** bad password → `401 { error:"invalid_credentials" }` (identical either way — **no user
   enumeration**). Rate-limited with backoff/lockout after N failures.
@@ -62,15 +72,19 @@ Password + token are secrets: only the hash is stored; never in logs, chat, comm
 errors never reveal which field was wrong. Tokens are opaque random (not JWTs carrying PII). HTTPS only. Bearer
 header (not a cookie) avoids CSRF. Rate-limit + lockout on login.
 
-**Registration must be gated.** If register were open "when no owner exists," a stranger could claim a freshly
-deployed public hub first. So `register` requires the **console owner key** (`x-admin-token`) — the human who
-deployed the hub already has it and claims the account once. (Alternative: localhost-only first-run claim.)
+**No registration, single fixed owner.** There is no signup — the only account is `OWNER_EMAIL`. The password is
+set/rotated only by someone who controls that inbox (the emailed one-time token) or who holds the console owner
+key (break-glass). `request-password` returns `200` unconditionally and only ever emails the one fixed address,
+so it leaks nothing and cannot be used to create or probe accounts. The emailed token is single-use, short-lived,
+and stored only as a hash.
 
 ## Open questions for Arke + Mathieu
 
 1. Token storage in the Electron app — OS keychain (recommended) vs encrypted file?
 2. Session TTL + sliding refresh — proposed 30-day sliding, 90-day absolute max. OK?
-3. Registration bootstrap — console-key claim (recommended) vs localhost-only first-run?
+3. Confirm the "set password from my inbox" flow: a one-time emailed token (≈15-min expiry) to `OWNER_EMAIL`,
+   with the console key as break-glass. (Owner stated 2026-06-25: **NO account creation**; the only valid account
+   is the single configured `OWNER_EMAIL`.)
 4. Password-reset path (no email server today) — owner-key reset for now, email-based later?
 5. Does the app need multiple saved hub profiles (for the future where one human owns more than one hub), or
    strictly one hub per install for now?
