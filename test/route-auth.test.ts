@@ -59,6 +59,8 @@ const PROTECTED: { method: string; path: string; body?: object }[] = [
   { method: 'POST', path: '/api/council/standards', body: { slug: 'probe-standard', statement: 'probe' } },
   { method: 'POST', path: '/api/council/standards/probe-standard/ratify', body: { decision: 'accept' } },
   { method: 'GET',  path: '/api/council/standards' },
+  { method: 'GET',  path: '/api/auth/me' },
+  { method: 'POST', path: '/api/auth/logout', body: {} },
   { method: 'GET',  path: '/api/council/manager/digests' },
   { method: 'GET',  path: '/api/council/manager/flags' },
   { method: 'GET',  path: '/api/council/manager/digest/probe-meeting-id' },

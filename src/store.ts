@@ -213,6 +213,62 @@ export async function initDb(): Promise<void> {
     id bigserial PRIMARY KEY, standard_slug text NOT NULL, actor text NOT NULL,
     decision text NOT NULL, note text, ratified_at timestamptz NOT NULL DEFAULT now(),
     UNIQUE (standard_slug, actor))`);
+  // Owner authentication (email/password, owner directive 2026-06-25). ONE owner per hub instance, seeded from
+  // OWNER_EMAIL; NO signup. owner_sessions = opaque Bearer tokens (only the sha256 hash stored). password tokens
+  // = one-time, short-expiry tokens emailed to the owner inbox to set the password ("set from my inbox").
+  await q.query(`CREATE TABLE IF NOT EXISTS owners (
+    id bigserial PRIMARY KEY, email text NOT NULL UNIQUE, password_hash text,
+    created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now())`);
+  await q.query(`CREATE TABLE IF NOT EXISTS owner_sessions (
+    token_hash text PRIMARY KEY, owner_id bigint NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(), last_seen_at timestamptz NOT NULL DEFAULT now(),
+    expires_at timestamptz NOT NULL)`);
+  await q.query(`CREATE TABLE IF NOT EXISTS owner_password_tokens (
+    token_hash text PRIMARY KEY, owner_id bigint NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(), expires_at timestamptz NOT NULL, used_at timestamptz)`);
+  // Seed the single owner row (no password until set via the email flow). Idempotent.
+  await q.query(`INSERT INTO owners (email) VALUES ($1) ON CONFLICT (email) DO NOTHING`, [ownerEmailConfigured()]);
+}
+
+// ---- Owner authentication (owner directive 2026-06-25) ----------------------
+/** The single configured owner email for this hub instance (env, falls back to the known owner). Lowercased. */
+export function ownerEmailConfigured(): string {
+  return String(process.env.OWNER_EMAIL || process.env.OWNER_GOOGLE_EMAIL || 'matpay@zen-solutions.net').trim().toLowerCase();
+}
+export async function getOwner(): Promise<{ id: string; email: string; passwordHash: string | null } | null> {
+  const { rows } = await db().query<any>(`SELECT id, email, password_hash FROM owners WHERE email=$1`, [ownerEmailConfigured()]);
+  return rows[0] ? { id: String(rows[0].id), email: rows[0].email, passwordHash: rows[0].password_hash || null } : null;
+}
+export async function setOwnerPasswordHash(ownerId: string, hash: string): Promise<void> {
+  await db().query(`UPDATE owners SET password_hash=$1, updated_at=now() WHERE id=$2`, [hash, ownerId]);
+}
+export async function createOwnerSession(tokenHash: string, ownerId: string, expiresAt: Date): Promise<void> {
+  await db().query(`INSERT INTO owner_sessions (token_hash, owner_id, expires_at) VALUES ($1,$2,$3)`, [tokenHash, ownerId, expiresAt.toISOString()]);
+}
+export async function getOwnerSession(tokenHash: string): Promise<{ ownerId: string; email: string; expiresAt: string } | null> {
+  const { rows } = await db().query<any>(
+    `SELECT s.owner_id, o.email, to_char(s.expires_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS expires_at
+     FROM owner_sessions s JOIN owners o ON o.id=s.owner_id WHERE s.token_hash=$1 AND s.expires_at > now()`, [tokenHash]);
+  return rows[0] ? { ownerId: String(rows[0].owner_id), email: rows[0].email, expiresAt: rows[0].expires_at } : null;
+}
+export async function touchOwnerSession(tokenHash: string, newExpiry: Date): Promise<void> {
+  await db().query(`UPDATE owner_sessions SET last_seen_at=now(), expires_at=$2 WHERE token_hash=$1`, [tokenHash, newExpiry.toISOString()]);
+}
+export async function deleteOwnerSession(tokenHash: string): Promise<void> {
+  await db().query(`DELETE FROM owner_sessions WHERE token_hash=$1`, [tokenHash]);
+}
+export async function deleteOwnerSessionsForOwner(ownerId: string): Promise<void> {
+  await db().query(`DELETE FROM owner_sessions WHERE owner_id=$1`, [ownerId]);
+}
+export async function createPasswordToken(tokenHash: string, ownerId: string, expiresAt: Date): Promise<void> {
+  await db().query(`INSERT INTO owner_password_tokens (token_hash, owner_id, expires_at) VALUES ($1,$2,$3)`, [tokenHash, ownerId, expiresAt.toISOString()]);
+}
+/** Atomically consume a set-password token: single-use AND unexpired. Returns the ownerId or null. */
+export async function consumePasswordToken(tokenHash: string): Promise<{ ownerId: string } | null> {
+  const { rows } = await db().query<any>(
+    `UPDATE owner_password_tokens SET used_at=now()
+     WHERE token_hash=$1 AND used_at IS NULL AND expires_at > now() RETURNING owner_id`, [tokenHash]);
+  return rows[0] ? { ownerId: String(rows[0].owner_id) } : null;
 }
 
 // ---- Boot-stamp log (P1 #8) -------------------------------------------------

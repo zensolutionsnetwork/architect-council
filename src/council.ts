@@ -10,7 +10,7 @@ import { architectReply, reviewProposal, councilBrain, synthesizeOwnerReport, OW
 import { runVoiceLoop, isVoiceRunning } from './voiceloop.js';
 import { capsFromEnv, dailyBudgetExhausted, emptyTotals, addUsage } from './cost.js';
 import { projectTranscript, transcriptSha256Hex } from './protocol.js';
-import { sendOwnerReportEmail } from './mailer.js';
+import { sendOwnerReportEmail, sendPasswordSetEmail } from './mailer.js';
 import {
   upsertMember, listMembers, setMemberActive, getMember,
   consumeJoinToken, issueJoinToken,
@@ -31,6 +31,8 @@ import {
   getHierarchy, setHierarchy, listHierarchies, deleteHierarchy,
   createAgendaItem, listOpenAgenda, getAgendaItem, archiveAgendaItem, pinOpenAgendaToMeeting,
   getManagerDigest, listManagerDigests, listManagerFlags,
+  getOwner, setOwnerPasswordHash, createOwnerSession, getOwnerSession, touchOwnerSession,
+  deleteOwnerSession, deleteOwnerSessionsForOwner, createPasswordToken, consumePasswordToken,
 } from './store.js';
 import { validateHierarchy, canCrossRead, type Tenant, type ShareScope } from './hierarchy.js';
 import { finalizeMeetingClose } from './finalize.js';
@@ -299,14 +301,122 @@ async function googleOwnerOk(req: Request): Promise<boolean> {
     return d.aud === clientId && d.email === OWNER_GOOGLE_EMAIL() && (d.email_verified === 'true' || d.email_verified === true);
   } catch { return false; }
 }
+// ---- Owner email/password auth helpers (owner directive 2026-06-25) ---------
+// Password hashing uses Node's built-in scrypt (no native dep added to the Railway build). Tokens (session +
+// emailed set-password) are opaque random; only their sha256 hash is ever stored. NEVER log a password or token.
+const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30-day sliding owner session
+const PW_TOKEN_TTL_MS = 15 * 60 * 1000;          // 15-min one-time set-password token
+const MIN_PW_LEN = 12;
+const SCRYPT = { N: 16384, r: 8, p: 1, keylen: 64, maxmem: 64 * 1024 * 1024 };
+// (sha256hex is defined once, later in this file, and reused here at request time.)
+function newToken(): string { return crypto.randomBytes(32).toString('base64url'); }
+function hashPassword(pw: string): string {
+  const salt = crypto.randomBytes(16);
+  const dk = crypto.scryptSync(pw, salt, SCRYPT.keylen, SCRYPT);
+  return `scrypt$${SCRYPT.N}$${SCRYPT.r}$${SCRYPT.p}$${salt.toString('hex')}$${dk.toString('hex')}`;
+}
+function verifyPassword(pw: string, stored: string | null): boolean {
+  if (!stored) return false;
+  try {
+    const p = stored.split('$'); // scrypt$N$r$p$salt$hash
+    if (p[0] !== 'scrypt') return false;
+    const N = Number(p[1]), r = Number(p[2]), pp = Number(p[3]);
+    const salt = Buffer.from(p[4], 'hex'); const hash = Buffer.from(p[5], 'hex');
+    const dk = crypto.scryptSync(pw, salt, hash.length, { N, r, p: pp, maxmem: SCRYPT.maxmem });
+    return dk.length === hash.length && crypto.timingSafeEqual(dk, hash);
+  } catch { return false; }
+}
+function bearerToken(req: Request): string | null {
+  const h = req.headers['authorization'];
+  if (!h || typeof h !== 'string') return null;
+  const m = h.match(/^Bearer\s+(.+)$/i);
+  return m ? m[1].trim() : null;
+}
+
 async function requireOwner(req: Request, res: Response, next: NextFunction): Promise<void> {
-  // Fail-closed (council 2026-06-07): if NO owner-auth mechanism is configured, 503 — never an open door.
   const tok = process.env.COUNCIL_ADMIN_TOKEN;
-  if (!tok && !process.env.GOOGLE_CLIENT_ID) { res.status(503).json({ error: 'owner_auth_not_configured' }); return; }
+  // 1) console key, 2) Google owner ID token, 3) owner email/password session (Bearer) — any one passes.
   if (tok && safeEqual(req.headers['x-admin-token'], tok)) return next();
   if (await googleOwnerOk(req)) return next();
+  const bt = bearerToken(req);
+  if (bt) {
+    const th = sha256hex(bt);
+    const sess = await getOwnerSession(th).catch(() => null);
+    if (sess) { void touchOwnerSession(th, new Date(Date.now() + SESSION_TTL_MS)).catch(() => {}); return next(); }
+  }
+  // Fail-closed (council 2026-06-07): 503 ONLY when no owner-auth mechanism is usable at all — a console token,
+  // a Google client, or an owner that has set a password (so a session path exists). Otherwise plain 401.
+  const owner = await getOwner().catch(() => null);
+  if (!tok && !process.env.GOOGLE_CLIENT_ID && !(owner && owner.passwordHash)) { res.status(503).json({ error: 'owner_auth_not_configured' }); return; }
   res.status(401).json({ error: 'unauthorized' });
 }
+
+// ---- Owner auth endpoints (owner directive 2026-06-25; contract docs/OWNER_AUTH_CONTRACT_DRAFT.md) ----------
+// NO account creation: the single owner is seeded from OWNER_EMAIL. Password is established via a one-time token
+// emailed to that inbox. login/request-password/set-password are PUBLIC entry points (they carry their own
+// credential/token); logout/me require a valid session. Generic errors only — never reveal which field was wrong.
+councilRouter.post('/auth/request-password', async (req, res) => {
+  try {
+    const email = String((req.body || {}).email || '').trim().toLowerCase();
+    const owner = await getOwner();
+    if (owner && email === owner.email) {
+      const raw = newToken();
+      await createPasswordToken(sha256hex(raw), owner.id, new Date(Date.now() + PW_TOKEN_TTL_MS));
+      const base = (process.env.APP_BASE_URL || 'https://architectscouncil.com').replace(/\/$/, '');
+      const link = `${base}/set-password?token=${encodeURIComponent(raw)}`;
+      void sendPasswordSetEmail(owner.email, raw, link).catch(() => {});
+    }
+    // ALWAYS 200 — only ever emails the one fixed address, so this leaks nothing (no enumeration).
+    res.json({ ok: true });
+  } catch (e) { internalError(res, e); }
+});
+councilRouter.post('/auth/set-password', async (req, res) => {
+  try {
+    const b = req.body || {};
+    const token = String(b.token || '');
+    const newPassword = String(b.newPassword || '');
+    if (!token) return res.status(400).json({ error: 'token_required' });
+    if (newPassword.length < MIN_PW_LEN) return res.status(400).json({ error: 'weak_password', message: `min ${MIN_PW_LEN} chars` });
+    const consumed = await consumePasswordToken(sha256hex(token));
+    if (!consumed) return res.status(400).json({ error: 'invalid_or_expired_token' });
+    await setOwnerPasswordHash(consumed.ownerId, hashPassword(newPassword));
+    await deleteOwnerSessionsForOwner(consumed.ownerId); // rotating the password ends other sessions
+    const owner = await getOwner();
+    const raw = newToken(); const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
+    await createOwnerSession(sha256hex(raw), consumed.ownerId, expiresAt);
+    res.json({ ok: true, owner: { id: consumed.ownerId, email: owner ? owner.email : null }, token: raw, expiresAt: expiresAt.toISOString() });
+  } catch (e) { internalError(res, e); }
+});
+councilRouter.post('/auth/login', async (req, res) => {
+  try {
+    const b = req.body || {};
+    const email = String(b.email || '').trim().toLowerCase();
+    const pw = String(b.password || '');
+    const owner = await getOwner();
+    const ok = !!owner && email === owner.email && verifyPassword(pw, owner.passwordHash);
+    if (!ok) return res.status(401).json({ error: 'invalid_credentials' });
+    const raw = newToken(); const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
+    await createOwnerSession(sha256hex(raw), owner!.id, expiresAt);
+    res.json({ ok: true, owner: { id: owner!.id, email: owner!.email }, token: raw, expiresAt: expiresAt.toISOString() });
+  } catch (e) { internalError(res, e); }
+});
+councilRouter.post('/auth/logout', async (req, res) => {
+  try {
+    const bt = bearerToken(req);
+    if (!bt) return res.status(401).json({ error: 'unauthorized' });
+    await deleteOwnerSession(sha256hex(bt));
+    res.json({ ok: true });
+  } catch (e) { internalError(res, e); }
+});
+councilRouter.get('/auth/me', async (req, res) => {
+  try {
+    const bt = bearerToken(req);
+    if (!bt) return res.status(401).json({ error: 'unauthorized' });
+    const sess = await getOwnerSession(sha256hex(bt));
+    if (!sess) return res.status(401).json({ error: 'unauthorized' });
+    res.json({ ok: true, owner: { id: sess.ownerId, email: sess.email }, expiresAt: sess.expiresAt });
+  } catch (e) { internalError(res, e); }
+});
 // RETIRED 2026-06-11 (Arke 1a405574): the single-row /council/admin/backlog GET/POST pair.
 // Per-agent rows (POST /council/backlog/agent) + the composed read (GET /council/backlog) replaced
 // them; Arke's panel and the /backlog board both confirmed live on the new endpoints.

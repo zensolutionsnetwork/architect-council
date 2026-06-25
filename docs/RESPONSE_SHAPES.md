@@ -5,7 +5,10 @@ clients (Arke's standalone app, member packagers) wire against a fixed contract 
 Additive only: new fields may appear; existing field names + types never change without a
 `schemaVersion` bump. **Clients MUST ignore unknown fields and MUST NOT depend on key order.**
 
-_Last updated: 2026-06-25 — #38 migrated `lastSchedulerRun` to the Row-1 adopted-standard shape
+_Last updated: 2026-06-25 (PM) — added OWNER EMAIL/PASSWORD AUTH (`/api/auth/*`): single fixed `OWNER_EMAIL`,
+no signup, password set via a one-time token emailed to that inbox; opaque Bearer session; `requireOwner`
+extended additively (console key OR Google OR owner session). Full contract in `docs/OWNER_AUTH_CONTRACT_DRAFT.md`.
+Earlier 2026-06-25 — #38 migrated `lastSchedulerRun` to the Row-1 adopted-standard shape
 (`run_id`/`status`/`fired_at`/`seated_actors`/`excluded`/`meeting_id`/`fresh_count`/`error`; legacy keys kept
 one cycle as deprecated aliases; append-only/immutable; `error` consumer guidance) and #39 added the chronicle
 `seq` (Row-3 64-bit-decimal-string) + the half-open `sinceSeq` cursor on `GET /api/council/story`. These are the
@@ -450,3 +453,28 @@ Modeled as a PROPOSAL plus per-project ratifications. Auth: member secret (`x-br
 four** seats have an accept ratification; `"partial"` when at least one seat has accepted or rejected but not all
 four have accepted; `"proposed"` when no seat has ratified yet. `seq` is the bigserial id as a decimal string
 (Row-3). The dashboard renders per-project state — **never a unanimous green from a meeting proposal alone.**
+
+## Owner email/password auth (`/api/auth/*`, owner directive 2026-06-25) — for Arke's login screen
+
+Per-owner hub instance, **one fixed owner, no signup**. The owner is seeded from `OWNER_EMAIL` (env; falls back to
+the known owner). The password is set via a one-time token **emailed to that inbox**. Sessions are opaque random
+Bearer tokens (only the sha256 hash is stored). `requireOwner` now accepts ANY of: console key (`x-admin-token`),
+Google owner ID token, **or a valid owner session** (`Authorization: Bearer <token>`) — additive, nothing breaks.
+Full design + security notes: `docs/OWNER_AUTH_CONTRACT_DRAFT.md`.
+
+- `POST /api/auth/request-password` — body `{ email }`. **Always** `200 { ok:true }` (only ever emails the one
+  fixed `OWNER_EMAIL`, so it leaks nothing — no enumeration). Emails a one-time, ~15-min set-password token/link.
+- `POST /api/auth/set-password` — body `{ token, newPassword (≥12) }`. Validates the single-use, unexpired token,
+  sets the password (scrypt), invalidates other sessions, logs in →
+  `{ ok:true, owner:{ id, email }, token, expiresAt }`. `400 invalid_or_expired_token` / `weak_password` / `token_required`.
+- `POST /api/auth/login` — body `{ email, password }`. `200 { ok:true, owner:{ id, email }, token, expiresAt }`,
+  else `401 { error:"invalid_credentials" }` (identical for bad email or bad password — no enumeration). The token
+  is a 30-day sliding session; send it as `Authorization: Bearer <token>` on owner-gated calls.
+- `POST /api/auth/logout` — `Authorization: Bearer <token>` → `200 { ok:true }` (deletes the session). `401` if no token.
+- `GET  /api/auth/me` — `Authorization: Bearer <token>` → `200 { ok:true, owner:{ id, email }, expiresAt }` or `401`.
+  The app calls this on launch to choose login-screen vs cockpit.
+
+**App contract:** on launch read the stored token → `GET /api/auth/me` → 200 cockpit / 401 login. Login posts
+`{email,password}`, store the token in the OS keychain (never plaintext on disk), carry it as `Bearer` on every
+owner-gated call. The login screen has **no "create account"** — only Login + "Set / forgot password" (which calls
+`request-password` and tells the user to check the owner inbox). The app holds **no member/seat secret**.

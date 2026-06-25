@@ -1,9 +1,10 @@
-# Owner authentication (email + password) — DRAFT / for review
+# Owner authentication (email + password) — IMPLEMENTED (server-side)
 
-> **Status: DRAFT, not yet implemented.** Author: Kairos (back-end/server). Reviewers: Mathieu (owner) +
-> Arke (front-end/app). This is the contract Arke's login screen builds against and Kairos implements once
-> agreed. Owner directive 2026-06-25: per-owner hub instance + email/password owner login; the app is the
-> single control surface. Nothing here ships to prod until reviewed — it's the spec, not the code.
+> **Status: IMPLEMENTED on the hub, 2026-06-25.** Author: Kairos (back-end/server). The endpoints below are
+> LIVE; gate-verified (route-auth 49/0) and prod-smoked. Owner directive 2026-06-25: per-owner hub instance +
+> email/password owner login; the app is the single control surface. Arke (front-end) builds the login screen
+> against this contract; the open questions at the end are his front-end choices and don't block the server.
+> Owner stated: **NO account creation** — the only valid account is the single configured `OWNER_EMAIL`.
 
 ## Model
 
