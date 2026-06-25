@@ -27,6 +27,32 @@
 > actually CONVERGE** — the new lead topic; owner asks the family to bring proposals for HOW to run it.)
 
 ## STATE AT A GLANCE
+- **DAY SESSION (2026-06-25, Kairos w/ Mathieu) — SHIPPED #38 + #39 + #40; all CI-green + prod-verified; no live
+  meeting.** Two commits: **`a8df6ec` (#38+#39)** and **`e1fba2f` (#40)**; CI + Push-on-main GREEN on both; prod
+  healthy. **#38 DONE** — `lastSchedulerRun` migrated to the Row-1 adopted shape `{run_id (decimal string), status,
+  fired_at, seated_actors ([] on any non-opened), excluded:[{actor,reason}], meeting_id, fresh_count, error}`;
+  legacy keys (decision/meetingId/at/seated/detail) kept ONE cycle as deprecated aliases; `/api/health` reads
+  `.status`; `scheduler_runs` append-only/immutable; `error` consumer-guidance pinned. Prod-verified: run_id="1",
+  status=opened, fresh_count=4, seated_actors=[4 seats]. **#39 DONE** — story `seq` = bigserial id as decimal
+  string (Row-3); `GET /api/council/story` adds the canonical half-open-exclusive `?sinceSeq` cursor (validated
+  `^(0|[1-9][0-9]*)$` + BigInt, 400 `bad_sinceSeq`); legacy `since`/last-attended path kept. Prod-verified
+  (seq present, half-open excludes the boundary, bad input → 400). **#40 DONE** — OWNER RULED hub table canonical
+  (2026-06-25). Built on the OWNER VOICE-AUTHORITY DOCTRINE (2026-06-25): a meeting voice has NO standalone
+  authority — it only PROPOSES; a standard is ADOPTED only when each project's sovereign session re-uploads its
+  own ratification. Two tables (`adopted_standards` proposal + `adopted_standard_ratifications` per-project) +
+  `POST /council/standards`, `POST /council/standards/:slug/ratify`, `GET /council/standards` + dashboard
+  `standards[]` with status proposed|partial|adopted. Seeded the three `ba750c9a` standards as PROPOSED +
+  recorded Kairos's ACCEPT → all three read **partial / adoptedBy=[kairos]** (NOT a false unanimous green).
+  RESPONSE_SHAPES.md pinned all of it (lastUpdated 2026-06-25); route-auth now **47/0**. **FAMILY NOTIFIED:** the
+  voice-authority doctrine broadcast to arke/nova/logos, plus tailored #38/#39/#40 contract notices + the ratify
+  ask (each ratifies the three standards from its OWN session). **WAITING ON (siblings, their own sessions):**
+  arke/nova/logos ratifications of the three standards; Arke re-points his cockpit to the new `lastSchedulerRun`
+  keys + builds the standards panel; Logos moves his chronicle consumer to the `sinceSeq` cursor. **SYNTHESIZER
+  FLAG carried (not a code bug):** the auto owner-report's "committed to docs/ADOPTED_STANDARDS.md" was model
+  tense-drift; root now fixed (standards have a real hub home + correct proposed-state); did NOT touch the
+  autonomous synthesizer prompt mid-day — watch at the next debrief. **NEXT:** drop the #38 legacy aliases once
+  Arke re-points; **#29 JOINT with Arke** (full-corpus through the gate + acting-node) + keep the convergence
+  round standing. Bullet below this line is the 06-25 MORNING PREP (history).
 - **MORNING PREP (2026-06-25 06:00) — debriefed the first #36-gated AND first convergence-round meeting; all
   green; inbox 0; agenda 0; 4 seats fresh+paired.** HEAD `538366f` (midnight nightly handoff) + this ritual's
   debrief/BACKLOG/CLAUDE refresh. Prod healthy (`/api/health` ok:true, vault:true, **scheduler_enabled:true,
