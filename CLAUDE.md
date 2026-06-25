@@ -26,7 +26,50 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-24 DAY SESSION — #37 + #36 readiness gate + chronicle store SHIPPED; all green; inbox 0; agenda id=8/9) — HANDOFF
+## Current state (2026-06-25 NIGHTLY — quiet after a big 06-24 day session; all green; inbox 0; agenda id=8/9/10; #36 gate first-fires tonight) — HANDOFF
+> **NIGHTLY 2026-06-25 (Kairos, automated midnight ritual, ~00:30 EDT). The 06-24 day session shipped a heavy
+> additive batch (#37 + #36 + #31 pin + chronicle entry shape); quiet since; all green; inbox cleared to 0; the
+> #36 readiness gate has NOT fired yet (first exercises live tonight at 03:00 ET).** HEAD is `24a10f7` (no
+> longer the day session's `5aaa363` — TWO more commits landed after the day-session handoff was written:
+> `d556610` and `24a10f7`). Today's full 06-24 ship-set, in order: `78863d1` **#37 — corpus-status etag byte
+> form + 3-artifact atomicity pinned in `docs/RESPONSE_SHAPES.md`** (the top unblock for all three siblings'
+> verify-after-mutate) + `4c931a0` handoff; `5aaa363` **#36 — readiness gate + stale-seat exclusion + chronicle
+> story repository** (the 03:00 scheduler now scores each seat fresh|stale|no_brain, seats only the >=2 fresh
+> quorum, RECORDS every decision to `scheduler_runs` surfaced on `/api/health.last_scheduler_status` + dashboard
+> `lastSchedulerRun`; new append-only `story_log` + `POST`/`GET /api/council/story`) + `611e9e9` handoff; then
+> **`d556610` — #31 VALIDATE_ORDER.md: pinned the Part-2 non-coercion composition rule, Arke matched both sides**
+> (so `validateHierarchy` returns an identical first-error on a multi-violation tree — #31 mirror-align is now
+> CONFIRMED both directions, no longer just "drafted"); and **`24a10f7` — chronicle `story_log` entries gained
+> optional `title`/`tags` + server-derived provenance** (responding to Logos's consume-design reply `f6164bf6`,
+> the answer to the entry-shape question raised at #36 ship). Working tree clean, in sync with origin/main (0/0).
+> Prod healthy (`/api/health` ok:true, vault:true, **scheduler_enabled:true, missed_meeting:false,
+> last_meeting_created_at `2026-06-24T07:00:12Z`, last_scheduler_status:null**). **CI + Push-on-main GREEN on
+> `24a10f7`** (and `d556610`). **No live meeting** (LIVE_ROUNDS_COUNT=0; 12 meetings all phase=report; newest
+> `18dd3ed5` from the 06-24 03:00 ET run, already debriefed at the 06-24 morning prep — safe to push). **No new
+> autonomous meeting since `18dd3ed5`** — the 03:00 ET scheduler fires LATER tonight (06-25 03:00 Toronto, AFTER
+> this midnight ritual), so nothing new to debrief; it appears for the 06-25 morning prep and is the **FIRST run
+> under the #36 readiness gate** (`last_scheduler_status` is null now — it gets its first non-null value tonight;
+> the morning prep must check `lastSchedulerRun`/`last_scheduler_status` = which seats were seated vs excluded,
+> and whether all four packed a fresh brain). **INBOX: was 1 OPEN — Logos `de1f042e`** (pure-FYI correction: his
+> earlier admin-token-401 concern was his OWN wrong-header probe — BibleVoice adminAuth reads `Authorization:
+> Bearer`, he'd tested boot-log with `x-admin-token`; re-tested correctly = 200, ADMIN_API_TOKEN valid, nothing
+> rotated, boot-log confirms deploy `d8ab62c`/cycle:false) — **report-closed (no action owed to Kairos) → INBOX
+> 0.** **AGENDA: 3 open items** — id=8 (kairos/normal, my #37 etag/atomicity pin, already posted, do NOT re-post),
+> id=9 (kairos/normal, my #36 readiness-gate + chronicle explainer, already posted, do NOT re-post), and **id=10
+> (OWNER/high) — NEW LEAD TOPIC, Mathieu's directive: make the code-review round actually CONVERGE** (compare each
+> agent's implementations of the same thing, pick the single best, ALL adopt it or record why not; resolve
+> compatibility gaps IN THE ROOM not in days of follow-up DMs; output a short "adopted standard" list before
+> close; owner asks the family to bring proposals for HOW to run this round — structure, who presents what, how
+> the adopted-standard list is recorded/tracked). Positions on all three folded into the pack's "What I owe THIS
+> meeting", with id=10 as the lead. Matches memory `meeting-codereview-purpose-converge`. **No deploy this ritual
+> beyond the BACKLOG/CLAUDE doc refresh + brain re-pack** (push happened, no live meeting). **NEXT SESSION top 3:**
+> (1) **morning ritual — debrief the 06-25 03:00 ET autonomous meeting** (FIRST run under the #36 readiness gate —
+> check `lastSchedulerRun`/`last_scheduler_status` for seated-vs-excluded + whether all four were fresh) + check
+> inbox; (2) **bring my convergence-code-review-round proposal** (owner directive id=10) — the new standing
+> meeting structure; my ops position is in the pack; (3) **#36 + #29 JOINT with Arke** (his cockpit/badge for the
+> readiness gate + scheduler_runs surface; the acting-node co-design) — #31 mirror-align is now CONFIRMED both
+> sides (`d556610`), so that thread closes. No solo code blockers remain. Bullets below this line are the 06-24
+> DAY SESSION snapshot (history).
 > **DAY SESSION 2026-06-24 (Kairos, w/ Mathieu, "do any task you need before next meeting"). SHIPPED #37 — the
 > top unblock for all three siblings' verify-after-mutate. HEAD `78863d1`, CI + Push-on-main GREEN, prod healthy,
 > tree clean 0/0, no live meeting.** Grounded the claim in a `council.ts` commit-order read first (corpus-status
