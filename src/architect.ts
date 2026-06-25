@@ -165,6 +165,7 @@ export async function synthesizeOwnerReport(agenda: string, turns: { actor: stri
     + '"## 2. Direction" — consensus on company direction vs the owner’s instructions to each project (flag any divergence plainly); '
     + '"## 3. Friction" — friction encountered + how it was resolved, and which fixes the other agents should adopt; '
     + '"## 4. Flags" — anything else worth the owner’s attention (cost, security, ethics, risks, opportunities). '
+    + 'CRITICAL faithfulness rule: a council meeting produces PROPOSALS, not executed work — the voices advise the owner and their projects; they do NOT commit code, write files, or deploy. Never state that anything was "committed", "built", "shipped", "merged", or written to a named file (e.g. a docs/*.md) unless the transcript explicitly says that work already happened OUTSIDE this meeting. Describe in-meeting agreements as proposed/recommended, and treat an "adopted" standard as binding only once each project ratifies it from its own session. When in doubt, write "proposed", never "done". '
     + 'Be concrete and faithful to the transcript; if a section has nothing, say "Nothing to report." Keep the whole report under 400 words.';
   const convo = `Agenda: ${agenda || '(none)'}\n\n` + turns.map((t) => `[${t.actor}] ${t.text}`).join('\n').slice(-24000);
   // Charge this synthesis call to the meeting ledger (caller folds usage). One bounded Sonnet call.
