@@ -24,6 +24,7 @@ import {
   recordSchedulerRun, latestSchedulerRun, addStoryEntry, getStorySince, getStorySinceSeq,
   getMeetingTranslation, saveMeetingTranslation,
   listAgentHomes, getAgentHome, initiateTransfer, getTransfer, listTransfersForMachine, saveTransferBundle, getTransferBundle, completeTransfer,
+  registerMachine, listMachines,
   upsertStandard, standardExists, ratifyStandard, listStandards,
   setMeetingLedger, setMeetingManifestPins,
   setVoiceRunning, closeStaleVoiceMeetings, usdSpentTodayUtc, vaultReady, listMeetingsForDashboard,
@@ -1517,6 +1518,26 @@ councilRouter.post('/council/transfer/:id/complete', requireOwner, async (req, r
     if (!r.ok) return res.status(r.reason === 'not_found' ? 404 : 409).json({ error: r.reason || 'conflict' });
     const t = await getTransfer(req.params.id);
     res.json({ ok: true, transfer: t });
+  } catch (e) { internalError(res, e); }
+});
+
+// Machine PRESENCE registry (Arke cef127e6, 2026-06-26). Each app instance registers its hostname on launch
+// + ~60s heartbeat so the transfer destination can be a dropdown. Presence only; agent_homes stays the
+// source of truth for where each agent lives. Owner-gated. A machine is marked stale if unseen > 5 min.
+councilRouter.post('/council/machines/register', requireOwner, async (req, res) => {
+  try {
+    const name = clipName((req.body || {}).machine_name, 120);
+    if (!name) return res.status(400).json({ error: 'machine_name_required' });
+    await registerMachine(name);
+    res.json({ ok: true, machine_name: name });
+  } catch (e) { internalError(res, e); }
+});
+councilRouter.get('/council/machines', requireOwner, async (_req, res) => {
+  try {
+    const rows = await listMachines();
+    const now = Date.now();
+    const machines = rows.map((m) => ({ machine_name: m.machine_name, last_seen: m.last_seen, stale: (now - Date.parse(m.last_seen)) > 5 * 60_000 }));
+    res.json({ ok: true, machines });
   } catch (e) { internalError(res, e); }
 });
 

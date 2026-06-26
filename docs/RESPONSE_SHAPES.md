@@ -390,6 +390,13 @@ app config), base64, ≤32MB.
 **Atomicity:** the hub owning "who is home" is what guarantees an agent runs on exactly one PC — single-source
 enforced centrally, replacing the manual task-deletion timing of the first arke move.
 
+### Machine presence registry (Arke `cef127e6`) — destination dropdown
+Presence only; `agent_homes` stays the source of truth for where each agent lives. Each app instance registers
+its hostname on launch + a ~60s heartbeat so the transfer panel can offer a dropdown of the owner's PCs.
+- `POST /api/council/machines/register` `{ machine_name }` (owner-gated) → `{ ok, machine_name }`. Upserts `last_seen=now()`.
+- `GET /api/council/machines` (owner-gated) → `{ ok, machines:[{ machine_name, last_seen, stale }] }`, most-recent
+  first. `stale=true` when `last_seen` is older than 5 minutes.
+
 **`error` consumer guidance:** `error` is non-null only on `status:"error"` and carries **raw, unredacted
 server text** (e.g. an exception message or a failed open's HTTP status detail). It is surfaced **only** on
 the OWNER-gated dashboard — never on the public `/api/health` probe (which exposes only the coarse

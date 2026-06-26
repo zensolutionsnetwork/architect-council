@@ -249,6 +249,11 @@ export async function initDb(): Promise<void> {
   await q.query(`CREATE TABLE IF NOT EXISTS transfer_bundles (
     transfer_id text PRIMARY KEY, content_b64 text NOT NULL, sha256 text, size int,
     created_at timestamptz NOT NULL DEFAULT now())`);
+  // Machine PRESENCE registry (Arke cef127e6): each app instance registers its hostname on launch + a ~60s
+  // heartbeat so the transfer panel can show a dropdown of the owner's PCs (no typing). Presence only — the
+  // agent_homes registry above stays the source of truth for WHERE each agent actually lives.
+  await q.query(`CREATE TABLE IF NOT EXISTS machines (
+    machine_name text PRIMARY KEY, last_seen timestamptz NOT NULL DEFAULT now())`);
   // Seed the single owner row (no password until set via the email flow). Idempotent.
   await q.query(`INSERT INTO owners (email) VALUES ($1) ON CONFLICT (email) DO NOTHING`, [ownerEmailConfigured()]);
 }
@@ -842,6 +847,19 @@ export async function completeTransfer(id: string, toMachine: string): Promise<{
     return { ok: true };
   } catch (e) { await client.query('ROLLBACK').catch(() => {}); throw e; }
   finally { client.release(); }
+}
+
+// ---- Machine presence registry (Arke cef127e6, 2026-06-26) ------------------
+export async function registerMachine(name: string): Promise<void> {
+  await db().query(
+    `INSERT INTO machines (machine_name, last_seen) VALUES ($1, now())
+     ON CONFLICT (machine_name) DO UPDATE SET last_seen=now()`, [name]);
+}
+export async function listMachines(): Promise<Array<{ machine_name: string; last_seen: string }>> {
+  const { rows } = await db().query<any>(
+    `SELECT machine_name, to_char(last_seen at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS last_seen
+     FROM machines ORDER BY last_seen DESC`);
+  return rows;
 }
 
 // ---- Chronicle story repository (owner 2026-06-24) --------------------------
