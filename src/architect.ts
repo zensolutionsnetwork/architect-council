@@ -211,7 +211,7 @@ export async function synthesizeMeetingTranslation(
     + newTurns.map((t) => `#${t.seq} [${t.actor}] ${clip(t.text, 1500)}`).join('\n');
   const user = clip(`Agenda: ${agenda || '(none)'}\n\n${priorCompact}\n\n${newRaw}`, 18000);
   try {
-    const out = await callClaudeUsage([{ type: 'text', text: sys }], [{ role: 'user', content: user }], 1100, OWNER_REPORT_MODEL);
+    const out = await callClaudeUsage([{ type: 'text', text: sys }], [{ role: 'user', content: user }], 1400, OWNER_REPORT_MODEL);
     const text = out.text || '';
     const a = text.indexOf('{'), b = text.lastIndexOf('}');
     let parsed: any = {};

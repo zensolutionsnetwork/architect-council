@@ -1400,29 +1400,41 @@ councilRouter.get('/council/meeting/:id/summary', requireOwner, async (req, res)
     const since = (sinceRaw != null && sinceRaw !== '') ? Math.max(0, Number(sinceRaw) || 0) : null;
     if (nowCount === 0) return res.json({ ok: false, notReady: true, meetingId: m.id, throughSeq: 0 });
     const prior = await getMeetingTranslation(m.id).catch(() => null);
-    const haveSeq = prior ? prior.throughSeq : 0;
     let allTurns: any[] = prior ? prior.turns : [];
     let summary = prior ? prior.summary : '';
     let perActor: any[] = prior ? prior.perActor : [];
-    if (nowCount > haveSeq) {
-      // Only the DELTA is translated (one bounded cheap call); cache makes repeated polls free.
-      const newTurns = speak.slice(haveSeq).map((t) => ({ seq: t.seq, actor: t.actor, text: t.text }));
-      const out = await synthesizeMeetingTranslation(m.agenda || '', allTurns as any, newTurns);
-      if (out.newGists.length || out.summary) {
-        allTurns = allTurns.concat(out.newGists);
-        summary = out.summary || summary;
-        perActor = out.perActor.length ? out.perActor : perActor;
-        await saveMeetingTranslation(m.id, { throughSeq: nowCount, summary, perActor, turns: allTurns, model: OWNER_REPORT_MODEL, usage: out.usage }).catch(() => {});
-        if (out.usage && (out.usage.input_tokens || out.usage.output_tokens)) {
-          const led = (m.cost_ledger && m.cost_ledger.total) ? m.cost_ledger : { total: emptyTotals(), perAgent: {} };
-          led.total = addUsage(led.total, OWNER_REPORT_MODEL, out.usage);
-          led.perAgent['translator'] = addUsage(led.perAgent['translator'] || emptyTotals(), OWNER_REPORT_MODEL, out.usage);
-          await setMeetingLedger(m.id, led).catch(() => {});
-        }
+    // Resume from ACTUAL coverage, not through_seq alone: if a prior call truncated (fewer gists than
+    // turns), turns.length is the true watermark, so we re-translate the gap instead of dropping it.
+    let cursor = Math.min(prior ? prior.throughSeq : 0, allTurns.length);
+    // Translate in bounded batches so a long backfill can't truncate; advance ONLY by gists actually
+    // produced. Cap calls per request to bound latency/spend — a very long meeting finishes over a few
+    // polls. The cache means once covered, later polls cost zero.
+    const BATCH = 6, MAX_CALLS = 6;
+    let calls = 0, ledgerChanged = false;
+    const led = (m.cost_ledger && m.cost_ledger.total) ? m.cost_ledger : { total: emptyTotals(), perAgent: {} };
+    while (cursor < nowCount && calls < MAX_CALLS) {
+      const batch = speak.slice(cursor, cursor + BATCH).map((t) => ({ seq: t.seq, actor: t.actor, text: t.text }));
+      const out = await synthesizeMeetingTranslation(m.agenda || '', allTurns, batch);
+      calls++;
+      if (out.usage && (out.usage.input_tokens || out.usage.output_tokens)) {
+        led.total = addUsage(led.total, OWNER_REPORT_MODEL, out.usage);
+        led.perAgent['translator'] = addUsage(led.perAgent['translator'] || emptyTotals(), OWNER_REPORT_MODEL, out.usage);
+        ledgerChanged = true;
       }
+      const got = out.newGists.slice(0, batch.length);
+      if (!got.length) break; // produced nothing this batch — stop (avoid a stall); a later poll retries
+      allTurns = allTurns.concat(got);
+      summary = out.summary || summary;
+      perActor = out.perActor.length ? out.perActor : perActor;
+      cursor += got.length;
+      if (got.length < batch.length) break; // partial batch — persist progress; next poll resumes the gap
     }
+    if (allTurns.length) {
+      await saveMeetingTranslation(m.id, { throughSeq: cursor, summary, perActor, turns: allTurns, model: OWNER_REPORT_MODEL }).catch(() => {});
+    }
+    if (ledgerChanged) await setMeetingLedger(m.id, led).catch(() => {});
     const outTurns = (since != null) ? allTurns.filter((t) => Number(t.seq) >= since) : allTurns;
-    res.json({ ok: true, meetingId: m.id, phase: m.phase, throughSeq: nowCount, summary, perActor, turns: outTurns });
+    res.json({ ok: true, meetingId: m.id, phase: m.phase, throughSeq: cursor, complete: cursor >= nowCount, summary, perActor, turns: outTurns });
   } catch (e) { internalError(res, e); }
 });
 
