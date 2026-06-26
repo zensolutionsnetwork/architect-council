@@ -26,7 +26,22 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-26 MIDDAY — Kairos manual session, Mathieu present: SHIPPED #41 + #38 + owner-auth finalize in one deploy, prod-verified; architect-council HEAD `8ce1c4f`; CI green; #42 still owed) — HANDOFF
+## Current state (2026-06-26 MIDDAY/PM — Kairos manual session, Mathieu present: shipped #41, #38, owner-auth finalize, hub /set-password page, OWNER_EMAIL fix, and the plain-English meeting TRANSLATOR — all prod-verified; architect-council HEAD `ddd060e`; CI green; #42 still owed) — HANDOFF
+> **PM ADDENDUM 2026-06-26 (same session).** After the morning batch, more shipped + prod-verified:
+> • **Owner login unblocked end-to-end.** Root cause of "no set-password email": the hub's `OWNER_EMAIL` was the
+>   hotmail address, not zen — Mathieu corrected it on Railway. Then the email link 404'd because the hub served
+>   no `/set-password`; added `public/set-password.html`+`.js` + an ungated route (`0fdd350`). Mathieu has now SET
+>   his owner password — owner auth works end-to-end (sliding Bearer sessions live).
+> • **Plain-English meeting TRANSLATOR (owner request)** — `GET /api/council/meeting/:id/summary?since=` (owner-
+>   gated): live + persisted plain summary + per-actor gist + per-turn plain lines (`meeting_translations`), the
+>   "translated transcript" Mathieu can read back later. Cheap: batched cheap-model synthesis, cached per
+>   through_seq (zero spend on no-new-turns), watermark advances only by gists produced (self-heals truncation),
+>   charged to `ledger.translator`. Shipped `12d96e2`+fix `ddd060e`; prod-verified on `ba750c9a` (16/16 turns,
+>   cache hit on repeat). Contract pinned in RESPONSE_SHAPES. Arke builds the cockpit toggle against it.
+> • Mailer note: sender is Resend sandbox `onboarding@resend.dev` — delivers only to the Resend-verified zen
+>   address; verifying a domain + setting `OWNER_REPORT_FROM` is needed IF reset mail must reach other inboxes.
+> **NEXT:** Arke seat-move #43 (needs ARKE_SECRET, with Mathieu).
+
 > **MIDDAY SESSION 2026-06-26 (Kairos, manual — Mathieu present).** Cleared the carry-over hub work while Arke
 > builds the migration front-end (Role B). One deploy (commit `8ce1c4f`); all four gates pass; CI green; Railway
 > rolled over and BOTH fixes prod-verified:

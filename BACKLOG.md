@@ -11,7 +11,13 @@
 > **OWNER-AUTH FINALIZED** [Arke ratified the 5 front-end choices via env-task `31a518de`: OS-keychain token,
 > 30d SLIDING no-absolute-max, set-from-inbox, one-hub-per-install, Bearer cutover; hub already matched, added
 > sliding on GET /auth/me, promoted OWNER_AUTH_CONTRACT_DRAFT.md to FINALIZED]. Inbox: `31a518de` replied+closed.
-> **STILL OWED: #42** [nightly re-pack must mutate pack content + verify upload landed]. architect-council HEAD `8ce1c4f`.
+> **STILL OWED: #42** [nightly re-pack must mutate pack content + verify upload landed]. architect-council HEAD `ddd060e`.
+> PM ADDENDUM (same session): owner login unblocked end-to-end — fixed hub OWNER_EMAIL (was hotmail, now zen, Mathieu
+> set it on Railway) + added the hub-served /set-password page (`0fdd350`); Mathieu has SET his owner password.
+> SHIPPED the owner-requested plain-English meeting TRANSLATOR `GET /api/council/meeting/:id/summary` (live +
+> persisted plain summary/per-actor/per-turn in meeting_translations; batched cheap-model, cached per through_seq,
+> self-healing watermark, charged to ledger.translator; `12d96e2`+`ddd060e`; prod-verified on ba750c9a 16/16,
+> cache-hit on repeat; contract pinned in RESPONSE_SHAPES). #43 seat-move (needs ARKE_SECRET, with Mathieu) pending.
 > **NEXT (needs Mathieu) — #43 Role-A "A2" SEAT MOVE:** Arke (`a8b798ee`) delivered the migration plan
 > (`council/ARKE_MIGRATION_PLAN_2026-06-26.md`) + shipped the owner login screen (front-end `dae1242`, .env.template
 > `47fc043`). A2 = move the **'arke' seat onto THIS machine**: clone the standalone-client repo (own .git), copy
