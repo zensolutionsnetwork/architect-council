@@ -479,9 +479,19 @@ Full design + security notes: `docs/OWNER_AUTH_CONTRACT_DRAFT.md`.
   is a 30-day sliding session; send it as `Authorization: Bearer <token>` on owner-gated calls.
 - `POST /api/auth/logout` — `Authorization: Bearer <token>` → `200 { ok:true }` (deletes the session). `401` if no token.
 - `GET  /api/auth/me` — `Authorization: Bearer <token>` → `200 { ok:true, owner:{ id, email }, expiresAt }` or `401`.
-  The app calls this on launch to choose login-screen vs cockpit.
+  The app calls this on launch to choose login-screen vs cockpit. It **slides the session** (a launch counts as
+  activity) and returns the REFRESHED `expiresAt`, so a daily launch alone keeps the 30-day window alive.
 
 **App contract:** on launch read the stored token → `GET /api/auth/me` → 200 cockpit / 401 login. Login posts
 `{email,password}`, store the token in the OS keychain (never plaintext on disk), carry it as `Bearer` on every
 owner-gated call. The login screen has **no "create account"** — only Login + "Set / forgot password" (which calls
 `request-password` and tells the user to check the owner inbox). The app holds **no member/seat secret**.
+
+**Bearer forwarding (cutover shape — confirmed for Arke 2026-06-26).** The standalone app keeps the owner session
+out of the renderer entirely: the raw Bearer lives ONLY in the app's local-server memory (never disk, never the
+renderer). Flow is **renderer → app local server → hub** — the local server attaches `Authorization: Bearer <token>`
+to every owner-gated hub call (no CORS dance, no token in the browser context). Hub-side, `requireOwner` accepts
+that Bearer **additively** alongside the console key (`x-admin-token`) and Google, so the cutover is a no-flag-day
+swap: `x-admin-token` keeps working until the app flips owner-gated calls to Bearer. The hub does NOT distinguish
+*which* proof was used — only that one is valid. On a `401` from any owner-gated call mid-session, the app drops to
+the login screen (session expired or revoked).

@@ -11,7 +11,16 @@
 > **OWNER-AUTH FINALIZED** [Arke ratified the 5 front-end choices via env-task `31a518de`: OS-keychain token,
 > 30d SLIDING no-absolute-max, set-from-inbox, one-hub-per-install, Bearer cutover; hub already matched, added
 > sliding on GET /auth/me, promoted OWNER_AUTH_CONTRACT_DRAFT.md to FINALIZED]. Inbox: `31a518de` replied+closed.
-> **STILL OWED: #42** [nightly re-pack must mutate pack content + verify upload landed]. architect-council HEAD `8ce1c4f`.)
+> **STILL OWED: #42** [nightly re-pack must mutate pack content + verify upload landed]. architect-council HEAD `8ce1c4f`.
+> **NEXT (needs Mathieu) — #43 Role-A "A2" SEAT MOVE:** Arke (`a8b798ee`) delivered the migration plan
+> (`council/ARKE_MIGRATION_PLAN_2026-06-26.md`) + shipped the owner login screen (front-end `dae1242`, .env.template
+> `47fc043`). A2 = move the **'arke' seat onto THIS machine**: clone the standalone-client repo (own .git), copy
+> .env.template→.env with **ARKE_SECRET filled by Mathieu out-of-band** (COUNCIL_AGENT_ID=arke, endpoint
+> https://architectscouncil.com), pick a free PORT (4475 if 4471 taken), prove live as 'arke' via
+> `council-prep-upload.ts` → `corpus-status?actor=arke` fresh sha, recreate the EOD+morning brain-prep scheduled
+> tasks here; ONLY then delete the old-machine 'arke' tasks (single-source-of-arke never broken). Sequenced AFTER
+> Mathieu sets his owner password + the seat lands. Bearer-forwarding shape Arke asked for is now CONFIRMED in
+> RESPONSE_SHAPES.md ("Bearer forwarding (cutover shape)").)
 > (MORNING PREP 06:00 2026-06-26: no meeting overnight [#36 skipped_quorum, the nightly recorded it]. KEY FINDING:
 > the nightly's claimed brain re-pack did NOT land on the hub — Kairos was STALE at the 03:00 fire
 > (packSha==lastPackSha `f255f3f9`, hub corpus built 06-25 04:33Z) and was itself a cause of the sub-quorum, not
