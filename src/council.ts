@@ -6,7 +6,7 @@
  */
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import crypto from 'node:crypto';
-import { architectReply, reviewProposal, councilBrain, synthesizeOwnerReport, OWNER_REPORT_MODEL } from './architect.js';
+import { architectReply, reviewProposal, councilBrain, synthesizeOwnerReport, synthesizeMeetingTranslation, OWNER_REPORT_MODEL } from './architect.js';
 import { runVoiceLoop, isVoiceRunning } from './voiceloop.js';
 import { capsFromEnv, dailyBudgetExhausted, emptyTotals, addUsage } from './cost.js';
 import { projectTranscript, transcriptSha256Hex } from './protocol.js';
@@ -22,6 +22,7 @@ import {
   latestRealMeetingCreatedAtUtc,
   setMeetingAttendPackSha, lastAttendedPackSha, lastAttendedMeetingCreatedAtUtc,
   recordSchedulerRun, latestSchedulerRun, addStoryEntry, getStorySince, getStorySinceSeq,
+  getMeetingTranslation, saveMeetingTranslation,
   upsertStandard, standardExists, ratifyStandard, listStandards,
   setMeetingLedger, setMeetingManifestPins,
   setVoiceRunning, closeStaleVoiceMeetings, usdSpentTodayUtc, vaultReady, listMeetingsForDashboard,
@@ -1377,6 +1378,51 @@ councilRouter.get('/bridge/brain-content/:actor', async (req, res) => {
     if (!a.admin && a.actor !== req.params.actor && !scope.includes('code')) return res.status(403).json({ error: 'consent_scope_denied' });
     res.setHeader('x-brain-version', got.meta.brain_version || '');
     res.json({ ...got.meta, contentBase64: got.content.toString('base64') });
+  } catch (e) { internalError(res, e); }
+});
+
+// Plain-English meeting "translator" (owner request 2026-06-26). Owner-gated. Builds/serves an
+// incremental plain-language summary + per-actor gist + per-turn plain lines for a meeting — so the
+// cockpit can show a LIVE glance while a meeting runs, and the owner can read the meeting back later.
+// Cheap + cached: through_seq = SPEAK turns covered; a poll with no new turns spends ZERO model tokens
+// (returns the stored row). ?since=<seq> trims the returned per-turn list to seq >= since; the overall
+// summary is always the full current state. 404 unknown id; { ok:false, notReady:true } before any turn.
+councilRouter.get('/council/meeting/:id/summary', requireOwner, async (req, res) => {
+  try {
+    const m = await getMeeting(req.params.id);
+    if (!m) return res.status(404).json({ error: 'not_found' });
+    const transcript = Array.isArray(m.transcript) ? m.transcript : [];
+    const speak = transcript
+      .filter((t: any) => t && t.kind === 'speak' && t.payload)
+      .map((t: any, i: number) => ({ seq: i, actor: String(t.actor || 'unknown'), text: clip(String(t.payload.text ?? ''), 4000) }));
+    const nowCount = speak.length;
+    const sinceRaw = req.query.since;
+    const since = (sinceRaw != null && sinceRaw !== '') ? Math.max(0, Number(sinceRaw) || 0) : null;
+    if (nowCount === 0) return res.json({ ok: false, notReady: true, meetingId: m.id, throughSeq: 0 });
+    const prior = await getMeetingTranslation(m.id).catch(() => null);
+    const haveSeq = prior ? prior.throughSeq : 0;
+    let allTurns: any[] = prior ? prior.turns : [];
+    let summary = prior ? prior.summary : '';
+    let perActor: any[] = prior ? prior.perActor : [];
+    if (nowCount > haveSeq) {
+      // Only the DELTA is translated (one bounded cheap call); cache makes repeated polls free.
+      const newTurns = speak.slice(haveSeq).map((t) => ({ seq: t.seq, actor: t.actor, text: t.text }));
+      const out = await synthesizeMeetingTranslation(m.agenda || '', allTurns as any, newTurns);
+      if (out.newGists.length || out.summary) {
+        allTurns = allTurns.concat(out.newGists);
+        summary = out.summary || summary;
+        perActor = out.perActor.length ? out.perActor : perActor;
+        await saveMeetingTranslation(m.id, { throughSeq: nowCount, summary, perActor, turns: allTurns, model: OWNER_REPORT_MODEL, usage: out.usage }).catch(() => {});
+        if (out.usage && (out.usage.input_tokens || out.usage.output_tokens)) {
+          const led = (m.cost_ledger && m.cost_ledger.total) ? m.cost_ledger : { total: emptyTotals(), perAgent: {} };
+          led.total = addUsage(led.total, OWNER_REPORT_MODEL, out.usage);
+          led.perAgent['translator'] = addUsage(led.perAgent['translator'] || emptyTotals(), OWNER_REPORT_MODEL, out.usage);
+          await setMeetingLedger(m.id, led).catch(() => {});
+        }
+      }
+    }
+    const outTurns = (since != null) ? allTurns.filter((t) => Number(t.seq) >= since) : allTurns;
+    res.json({ ok: true, meetingId: m.id, phase: m.phase, throughSeq: nowCount, summary, perActor, turns: outTurns });
   } catch (e) { internalError(res, e); }
 });
 

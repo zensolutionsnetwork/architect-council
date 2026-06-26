@@ -5,7 +5,10 @@ clients (Arke's standalone app, member packagers) wire against a fixed contract 
 Additive only: new fields may appear; existing field names + types never change without a
 `schemaVersion` bump. **Clients MUST ignore unknown fields and MUST NOT depend on key order.**
 
-_Last updated: 2026-06-26 — #41: `/api/health.missed_meeting` now reads `false` on a RECENT intentional
+_Last updated: 2026-06-26 (PM) — added the PLAIN-ENGLISH MEETING TRANSLATOR `GET /api/council/meeting/:id/summary`
+(owner-gated; live + persisted plain summary + per-actor gist + per-turn plain lines; cheap, cached per
+through_seq, charged to ledger.translator) for the cockpit live view and reading meetings back later.
+Earlier 2026-06-26 — #41: `/api/health.missed_meeting` now reads `false` on a RECENT intentional
 scheduler decision (`skipped_quorum`/`already_live`), recency-guarded so a dead scheduler still alarms. #38:
 the deprecated `lastSchedulerRun` aliases (decision/meetingId/at/seated/detail) were DROPPED (Arke confirmed
 zero consumers). Owner auth FINALIZED (Arke ratified the 5 front-end choices, env-task `31a518de`): 30-day
@@ -325,6 +328,37 @@ no-op), surfaced coarsely on `/api/health.last_scheduler_status` and in full on 
 **Immutability:** `scheduler_runs` is append-only — a fire writes exactly one row and never updates it, so
 `run_id` is a stable handle and the object for a given `run_id` never changes. The dashboard shows the
 single latest row.
+
+## `GET /api/council/meeting/:id/summary?since=<seq>` (plain-English translator, owner request 2026-06-26)
+
+Owner-gated (`x-admin-token` OR owner `Bearer`). A live, plain-English "translator" for a meeting — and a
+persisted record to read back later. While a meeting runs it summarizes the transcript so far; once closed it
+serves the final summary. Cheap + cached: the hub re-summarizes ONLY when new SPEAK turns have landed, so
+repeated polls cost zero model spend. The one bounded synthesis call (cheap model, `claude-sonnet-4-6`) is
+charged to the meeting cost ledger under `perAgent.translator`.
+
+```jsonc
+// 200 — has at least one spoken turn:
+{
+  "ok": true,
+  "meetingId": "ba750c9a-...",
+  "phase": "report",          // live = "rounds"; finished = "report"
+  "throughSeq": 16,           // number of SPEAK turns covered (the cache key)
+  "summary": "Plain 3-6 sentence overview of what the room actually did.",
+  "perActor": [ { "actor": "kairos", "gist": "one-line plain gist of their position" } ],
+  "turns": [ { "seq": 0, "actor": "nova", "gist": "one plain sentence of what they said" } ]
+}
+// 200 — no turns yet:        { "ok": false, "notReady": true, "meetingId": "...", "throughSeq": 0 }
+// 404 — unknown meeting id:  { "error": "not_found" }
+```
+
+**Semantics:** `seq` indexes SPEAK turns only (passes are skipped), 0-based, stable and append-only.
+`throughSeq` = how many speak turns are reflected. `?since=<seq>` trims the returned `turns[]` to
+`seq >= since` for cheap incremental polling; `summary` + `perActor` always reflect the FULL current state.
+`turns[]` is the accumulated plain-English record — the "translated transcript" — built incrementally and
+persisted (`meeting_translations`), so reading a finished meeting is a free cache hit. Cockpit proxy (Arke):
+`/api/rooms/summary?meetingId=...` polling every few seconds; render `summary` + `perActor`, expand `turns`
+for the full plain transcript.
 
 **`error` consumer guidance:** `error` is non-null only on `status:"error"` and carries **raw, unredacted
 server text** (e.g. an exception message or a failed open's HTTP status detail). It is surfaced **only** on

@@ -226,6 +226,14 @@ export async function initDb(): Promise<void> {
   await q.query(`CREATE TABLE IF NOT EXISTS owner_password_tokens (
     token_hash text PRIMARY KEY, owner_id bigint NOT NULL,
     created_at timestamptz NOT NULL DEFAULT now(), expires_at timestamptz NOT NULL, used_at timestamptz)`);
+  // Plain-English meeting "translation" (owner request 2026-06-26): a persisted, incrementally-built
+  // glanceable summary + per-actor gist + per-turn plain lines — both the cockpit LIVE translator and a
+  // readable record of the meeting to read back later. One row per meeting; through_seq = how many SPEAK
+  // turns are covered (the cache key: a poll with no new turns spends zero model tokens).
+  await q.query(`CREATE TABLE IF NOT EXISTS meeting_translations (
+    meeting_id text PRIMARY KEY, through_seq int NOT NULL DEFAULT 0, summary text,
+    per_actor jsonb NOT NULL DEFAULT '[]', turns jsonb NOT NULL DEFAULT '[]', model text, usage jsonb,
+    updated_at timestamptz NOT NULL DEFAULT now())`);
   // Seed the single owner row (no password until set via the email flow). Idempotent.
   await q.query(`INSERT INTO owners (email) VALUES ($1) ON CONFLICT (email) DO NOTHING`, [ownerEmailConfigured()]);
 }
@@ -713,6 +721,33 @@ export async function latestSchedulerRun(): Promise<any | null> {
     run_id: String(r.id), status, fired_at: r.at, seated_actors, excluded,
     meeting_id: r.meeting_id || null, fresh_count, error,
   };
+}
+
+// ---- Plain-English meeting translation (owner request 2026-06-26) -----------
+export async function getMeetingTranslation(meetingId: string): Promise<{ throughSeq: number; summary: string; perActor: any[]; turns: any[]; model: string | null; updatedAt: string } | null> {
+  const { rows } = await db().query<any>(
+    `SELECT through_seq, summary, per_actor, turns, model,
+       to_char(updated_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS updated_at
+     FROM meeting_translations WHERE meeting_id=$1`, [meetingId]);
+  if (!rows[0]) return null;
+  const r = rows[0];
+  return {
+    throughSeq: Number(r.through_seq) || 0,
+    summary: r.summary || '',
+    perActor: Array.isArray(r.per_actor) ? r.per_actor : [],
+    turns: Array.isArray(r.turns) ? r.turns : [],
+    model: r.model || null,
+    updatedAt: r.updated_at,
+  };
+}
+export async function saveMeetingTranslation(meetingId: string, t: { throughSeq: number; summary: string; perActor: any[]; turns: any[]; model: string; usage?: any }): Promise<void> {
+  await db().query(
+    `INSERT INTO meeting_translations (meeting_id, through_seq, summary, per_actor, turns, model, usage, updated_at)
+     VALUES ($1,$2,$3,$4::jsonb,$5::jsonb,$6,$7::jsonb, now())
+     ON CONFLICT (meeting_id) DO UPDATE SET
+       through_seq=EXCLUDED.through_seq, summary=EXCLUDED.summary, per_actor=EXCLUDED.per_actor,
+       turns=EXCLUDED.turns, model=EXCLUDED.model, usage=EXCLUDED.usage, updated_at=now()`,
+    [meetingId, t.throughSeq, t.summary || '', JSON.stringify(t.perActor || []), JSON.stringify(t.turns || []), t.model || '', JSON.stringify(t.usage || {})]);
 }
 
 // ---- Chronicle story repository (owner 2026-06-24) --------------------------

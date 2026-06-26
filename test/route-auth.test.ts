@@ -40,6 +40,7 @@ const PROTECTED: { method: string; path: string; body?: object }[] = [
   { method: 'GET',  path: '/api/bridge/corpus-status?actor=logos' },
   { method: 'GET',  path: '/api/council/boots' },
   { method: 'GET',  path: '/api/council/meetings/route-auth-probe-id/status' },
+  { method: 'GET',  path: '/api/council/meeting/route-auth-probe-id/summary' },
   { method: 'GET',  path: '/api/council/hierarchy' },
   { method: 'GET',  path: '/api/council/hierarchy/probe-tenant' },
   { method: 'PUT',  path: '/api/council/hierarchy/probe-tenant', body: { tree: { tenantId: 'x', nodes: [] } } },

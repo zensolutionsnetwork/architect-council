@@ -187,6 +187,43 @@ export async function synthesizeManagerNarrative(input: string): Promise<{ note:
   catch (e) { return { note: `(manager-note error: ${(e as Error).message})`, usage: {} }; }
 }
 
+/** Plain-English meeting TRANSLATION (owner request 2026-06-26): powers the cockpit "translator" AND a
+ *  readable record to revisit later. ONE bounded Sonnet call. Given the agenda, the prior per-turn plain
+ *  gists (compact context) and the NEW raw speak turns since last time, returns: an overall plain summary
+ *  (3-6 sentences), a one-line gist per actor, and a one-line plain gist for each NEW turn. Cheap by design
+ *  (cheap model, capped input, only the delta is translated each call). Fail-soft → empty on error. */
+export async function synthesizeMeetingTranslation(
+  agenda: string,
+  priorGists: { seq: number; actor: string; gist: string }[],
+  newTurns: { seq: number; actor: string; text: string }[],
+): Promise<{ summary: string; perActor: { actor: string; gist: string }[]; newGists: { seq: number; actor: string; gist: string }[]; usage: any }> {
+  if (!CHAT_API_KEY() || !newTurns.length) return { summary: '', perActor: [], newGists: [], usage: {} };
+  const sys = 'You are a live TRANSLATOR for a human owner (Mathieu) watching an AI council meeting. Turn the agents\' '
+    + 'turns into plain, to-the-point English a non-engineer can skim. NO jargon, NO hype, NO preamble. Be faithful to what '
+    + 'was actually said — never invent. For each NEW turn, write ONE short plain sentence of what that agent actually said or '
+    + 'proposed. Then give a ONE-LINE gist per agent of their position so far, and an OVERALL summary of 3-6 short sentences. '
+    + 'Reply ONLY as valid JSON: {"summary":"<3-6 sentences>","perActor":[{"actor":"<name>","gist":"<one line>"}],'
+    + '"newGists":[{"seq":<int>,"actor":"<name>","gist":"<one plain sentence>"}]}. Keep every line tight.';
+  const priorCompact = priorGists.length
+    ? ('Plain-English so far:\n' + priorGists.map((g) => `#${g.seq} [${g.actor}] ${g.gist}`).join('\n'))
+    : '(meeting just started)';
+  const newRaw = 'NEW turns to translate (seq | actor | what they said):\n'
+    + newTurns.map((t) => `#${t.seq} [${t.actor}] ${clip(t.text, 1500)}`).join('\n');
+  const user = clip(`Agenda: ${agenda || '(none)'}\n\n${priorCompact}\n\n${newRaw}`, 18000);
+  try {
+    const out = await callClaudeUsage([{ type: 'text', text: sys }], [{ role: 'user', content: user }], 1100, OWNER_REPORT_MODEL);
+    const text = out.text || '';
+    const a = text.indexOf('{'), b = text.lastIndexOf('}');
+    let parsed: any = {};
+    if (a >= 0 && b > a) { try { parsed = JSON.parse(text.slice(a, b + 1)); } catch { /* fall through to empty */ } }
+    const perActor = Array.isArray(parsed.perActor)
+      ? parsed.perActor.filter((x: any) => x && x.actor != null).map((x: any) => ({ actor: clip(x.actor, 40), gist: clip(x.gist, 400) })) : [];
+    const newGists = Array.isArray(parsed.newGists)
+      ? parsed.newGists.filter((x: any) => x && x.actor != null && Number.isFinite(Number(x.seq))).map((x: any) => ({ seq: Number(x.seq), actor: clip(x.actor, 40), gist: clip(x.gist, 600) })) : [];
+    return { summary: clip(parsed.summary || '', 4000), perActor, newGists, usage: out.usage || {} };
+  } catch (e) { return { summary: `(translation error: ${(e as Error).message})`, perActor: [], newGists: [], usage: {} }; }
+}
+
 /** The architect-council brain/handoff snapshot it shares with peers. */
 export function councilBrain(): string {
   return `# Brain / handoff — architect-council\nUpdated: ${new Date().toISOString()}\n\n${COUNCIL_KNOWLEDGE}\n\n`
