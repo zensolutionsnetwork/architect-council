@@ -92,6 +92,12 @@ app.get('/backlog', (_req, res) => {
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
   res.sendFile(path.join(publicDir, 'backlog.html'));
 });
+// /set-password: the owner password-set page reached from the one-time email link. EXEMPT from SITE_LIVE
+// (the owner must be able to set their password before the marketing site is public) and unauthenticated by
+// design — the one-time token in the URL IS the credential, validated server-side by POST /api/auth/set-password.
+// The strict default CSP applies: the page loads an external same-origin script (/set-password.js, served by
+// express.static) and does a same-origin fetch (connect-src 'self'); no inline script, no third-party origins.
+app.get('/set-password', (_req, res) => res.sendFile(path.join(publicDir, 'set-password.html')));
 
 const port = Number(process.env.PORT) || 8080;
 app.listen(port, async () => {
