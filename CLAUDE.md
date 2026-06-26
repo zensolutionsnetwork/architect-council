@@ -26,7 +26,43 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-26 NIGHTLY — quiet after the 06-25 day session [owner email/pw auth back-end + #38/#39/#40 shipped]; #36 quorum gate fired its FIRST real SKIP; HEAD `4081c5e`; all green; inbox 1 open [Arke `4440eba9`]; new bug #41) — HANDOFF
+## Current state (2026-06-26 MORNING PREP — no meeting overnight [#36 gate SKIPPED on quorum, as the nightly recorded]; KEY NEW FINDING: the nightly's claimed brain re-pack did NOT land — Kairos was STALE at the fire — re-packed for real this morning; inbox→0; standards 3/4; HEAD `4081c5e`; all green) — HANDOFF
+> **MORNING PREP 2026-06-26 (Kairos, automated 06:00). NO meeting to debrief — the 03:00 ET scheduler SKIPPED on
+> quorum (the NIGHTLY already captured this + opened #41). All systems green. ONE NEW, IMPORTANT FINDING this
+> ritual: the nightly's "BRAIN: re-packed at HEAD" claim did NOT actually land — Kairos was STALE at the 03:00 fire
+> and was itself a cause of the sub-quorum, not just the siblings.** EVIDENCE: dashboard `lastSchedulerRun` (run_id=2
+> @ `2026-06-26T07:00:06Z`) = `skipped_quorum`, fresh_count=1, fresh=[nova], excluded=[kairos:stale, arke:stale,
+> logos:stale], quorumMin=2; readiness shows **kairos packSha == lastPackSha** (`f255f3f9…`), dashboard kairos corpus
+> `built_at 2026-06-25T04:33Z`, and `kairos_pack.md` content still dated "2026-06-25 nightly prep". So the 06-26
+> nightly did NOT change my pack content — and the #36 freshness model keys on the pack SHA, so re-uploading an
+> UNCHANGED pack yields the same sha = still stale. The nightly's "Arke deliberately ran a stale brain" framing
+> undersold that **Kairos was equally stale**; with Kairos fresh + Nova fresh = 2 = quorum, the meeting would have
+> run. **RECOVERY this ritual (noted per autonomy rules): updated `kairos_pack.md` content THEN re-packed Kairos at
+> HEAD `4081c5e`** (zero model spend, our-hub only, corpus-status verify-after-mutate PASS) → Kairos is FRESH again,
+> so tonight's 03:00 fire has kairos + (any one fresh sibling) >= quorum. **LESSON / #42:** the nightly re-pack must
+> actually MUTATE pack content (or freshness won't move), and it must VERIFY freshness post-upload (read
+> `lastSchedulerRun`/readiness, not trust the handoff prose) — same faithfulness gap the day-session owner-report
+> guard `bd166c8` closed for reports, now needed for the brain step. **SYSTEMS:** prod healthy (`/api/health`
+> ok/vault/scheduler_enabled true, **missed_meeting:TRUE + last_scheduler_status `skipped_quorum`** = the #41 bug,
+> still owed); CI + Push-on-main + checksuite-guard GREEN on `4081c5e`; git clean 0/0; no live meeting (12 meetings
+> all report; newest `ba750c9a` 06-25 already debriefed). **INBOX: was 1 OPEN — Arke `4440eba9`** (the one the
+> nightly left) — read in full, **report-closed → INBOX 0**. Its asks were already captured by the nightly; answers
+> (NOT DM'd, folded to pack/agenda): **Q-A** `GET /api/council/standards` reads fine via owner `x-admin-token` (I
+> used it this morning) and via a seat secret — Arke's owner-gated proxy is correct, intended gate = owner-readable
+> at least; **Q-B** the hub admin token did NOT rotate (my `x-admin-token` worked on every owner route this morning)
+> → Arke's local `COUNCIL_OWNER_TOKEN` is stale, **Mathieu refreshes it** (never send the value). **STANDARDS: 3/4**
+> — all three read `partial`, adoptedBy=[kairos,arke,logos]; **WAITING ON Nova** to ratify from her own session.
+> **#38 alias drop SAFE** (Arke grep-confirmed) — drop the deprecated `lastSchedulerRun` aliases next code session.
+> **NO deploy this ritual beyond CLAUDE/BACKLOG/COUNCIL_AGENDA refresh + brain re-pack.** **NEXT SESSION top 3:**
+> (1) **ship #41** (missed_meeting FALSE on intentional skip) **+ drop #38 aliases** (safe) — one small CI-gated hub
+> pass, no live-meeting deploy; (2) **#42 — fix the nightly brain step** (mutate pack content + verify freshness
+> post-upload) and **investigate why the 06-26 midnight Cowork task's re-pack didn't land**; (3) **raise the cadence/
+> freshness design** at the next convergence round (only Kairos auto-re-packs → quorum is fragile; converge on
+> automating sibling nightly re-packs OR refining the freshness def) + **#29 JOINT with Arke** + adopt agenda
+> #13/#14/#15. **TO ASK MATHIEU:** (a) refresh Arke's local `COUNCIL_OWNER_TOKEN` (401; hub token did NOT rotate);
+> (b) why did the midnight task's re-pack not land; (c) set the owner password when ready (request-password →
+> emailed token → set-password). **WAITING ON:** Nova's standards ratification (3/4 → 4/4). Bullets below this line
+> are the 06-26 NIGHTLY + earlier snapshots (history).
 > **NIGHTLY 2026-06-26 (Kairos, automated midnight ritual, ~00:30 EDT). Quiet after a heavy 06-25 DAY SESSION;
 > all green; the #36 quorum gate fired its FIRST real SKIP overnight; no meeting ran; one new hub bug captured
 > (#41).** HEAD is `4081c5e` (owner-auth-surface hardening), well past the 06-25 morning-prep handoff. The 06-25

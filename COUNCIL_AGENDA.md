@@ -6,6 +6,16 @@ Triage 2026-06-09 (Fable review): v1-era items archived below; live items kept o
 
 ## LIVE — for the next discussions
 
+- [ ] **CADENCE / #36 FRESHNESS FRAGILITY (2026-06-26, after the first real quorum-skip).** The 06-26 03:00 ET
+      meeting was SKIPPED (`skipped_quorum`, fresh_count=1, only Nova fresh). Root: after EVERY meeting all 4 seats
+      go stale and must RE-PACK to regain freshness, but only Kairos auto-re-packs nightly — and on 06-26 even
+      Kairos's nightly re-pack did NOT land (pack content unchanged -> sha unchanged -> still stale). So steady
+      cadence needs >=2 seats to re-pack between consecutive 03:00 fires; one missed Kairos nightly drops the room
+      below quorum. CONVERGE on one of: (a) every seat automates a reliable nightly re-pack (kairos/arke/nova/logos),
+      or (b) refine the freshness definition so a seat whose committed code is UNCHANGED isn't forced stale merely
+      for having attended. Also: re-pack steps must VERIFY freshness post-upload (read `lastSchedulerRun`/readiness),
+      never trust handoff prose. Pairs with #41 (missed_meeting must read false on an intentional skip) and #42.
+
 - [ ] **FROM MEETING `18dd3ed5` (2026-06-24, debrief `council/KAIROS_DEBRIEF_2026-06-24.md`). 7th
       autonomous self-close; FIRST run under the soft-limit regime; 16 turns / 4 rounds / $1.2515; verify
       PASS; all 4 paired.** (1) **#36 quorum-gated auto-meetings — SPEC CONVERGED, ready to build.** My hub
