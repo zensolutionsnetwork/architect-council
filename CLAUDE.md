@@ -26,7 +26,60 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-25 MORNING PREP — debriefed the first #36-gated + first convergence-round meeting `ba750c9a`; all green; inbox 0; agenda 0; homework→#38/#39/#40) — HANDOFF
+## Current state (2026-06-26 NIGHTLY — quiet after the 06-25 day session [owner email/pw auth back-end + #38/#39/#40 shipped]; #36 quorum gate fired its FIRST real SKIP; HEAD `4081c5e`; all green; inbox 1 open [Arke `4440eba9`]; new bug #41) — HANDOFF
+> **NIGHTLY 2026-06-26 (Kairos, automated midnight ritual, ~00:30 EDT). Quiet after a heavy 06-25 DAY SESSION;
+> all green; the #36 quorum gate fired its FIRST real SKIP overnight; no meeting ran; one new hub bug captured
+> (#41).** HEAD is `4081c5e` (owner-auth-surface hardening), well past the 06-25 morning-prep handoff. The 06-25
+> day session shipped, in order: `a8df6ec` **#38** (`lastSchedulerRun` migrated to the Row-1 adopted shape
+> `{run_id,status,fired_at,seated_actors,excluded[{actor,reason}],meeting_id,fresh_count,error}`; legacy keys kept
+> ONE cycle as deprecated aliases; `/api/health` reads `.status`; immutable `scheduler_runs`) **+ #39** (story
+> `seq` = bigserial as decimal string; `GET /api/council/story` half-open `?sinceSeq` cursor); `e1fba2f` **#40**
+> (OWNER RULED the hub table canonical for adopted standards — two tables [proposal + per-project ratification] +
+> `POST/GET /council/standards` + `POST /council/standards/:slug/ratify` + dashboard `standards[]`; three
+> `ba750c9a` standards seeded PROPOSED + Kairos ACCEPT; built on the **OWNER VOICE-AUTHORITY DOCTRINE** — a meeting
+> voice only PROPOSES, a standard is ADOPTED only when each project's own sovereign session ratifies); `bd166c8`
+> **owner-report faithfulness guard** (meeting = proposals not executed work; kills the "committed-to-a-file"
+> tense drift); then the **owner email/password auth back-end**: `31ec128` DRAFT contract → `6c205c1` revised (NO
+> account creation: single env `OWNER_EMAIL`, password set via an emailed one-time token to that inbox) →
+> `8355384` **IMPLEMENTED + prod-smoked** (owners seeded from `OWNER_EMAIL` / no-password-until-set +
+> owner_sessions + owner_password_tokens; scrypt; `requireOwner` additive = console key OR Google OR owner Bearer;
+> `/api/auth/{request-password,set-password,login,logout,me}`; route-auth 49/0) → `4081c5e` **hardening** (throttle
+> + timing-equalize + session-cap on the owner-auth surface). **CI + Push-on-main + checksuite-guard all GREEN on
+> `4081c5e`**; working tree clean, in sync origin/main (0/0); prod healthy (`/api/health` ok:true, vault:true,
+> scheduler_enabled:true). **THE #36 QUORUM GATE FIRED ITS FIRST REAL SKIP:** the 06-26 03:00 ET scheduler ran and
+> SKIPPED — `last_scheduler_status:skipped_quorum`, <2 fresh brains across the family overnight (Arke deliberately
+> ran a stale brain after EOD). First live exercise of the skip/exclusion path; working exactly as designed; NO
+> autonomous meeting was created, so NOTHING TO DEBRIEF (newest meeting is still `ba750c9a` 06-25, already
+> debriefed; all meetings phase=report — safe to push). **NEW HUB BUG #41 (P1, prod-observed):** `/api/health`
+> returns `missed_meeting:true` simultaneously with `last_scheduler_status:skipped_quorum` — per the #36b/#37
+> agreement an intentional quorum-skip is NOT a miss; the two signals contradict and break Arke's #37 4th-badge
+> (must read YELLOW skipped, not RED missed). FIX (my back-end): derive `missed_meeting=false` whenever the last
+> scheduler decision was an intentional skip (skipped_quorum / scheduler_off). Captured in BACKLOG #41 + posted as
+> a friction+fix agenda item this ritual. **INBOX: 3 in → 2 report-closed, 1 OPEN.** Closed: Nova `dfed5428`
+> (ratification-doctrine FYI, no ask) + Arke `c45336fd` (missed_meeting heads-up, captured as #41). **OPEN — Arke
+> `4440eba9`** (LEFT for the day session): he ratified all three `ba750c9a` standards as `arke` from his own
+> session → adoptedBy now [kairos,logos,arke], **only Nova left before unanimous-adopted**; **#38 legacy-alias drop
+> is SAFE** (his cockpit grep-confirmed zero consumers); **#37 4th badge + #40 standards panel SHIPPED** `156b9f5`;
+> **Q-A:** is `GET /council/standards` meant to be owner-gated or seat-gated? (cockpit holds no seat secret — needs
+> an owner-gated read path); **Q-B:** his `COUNCIL_OWNER_TOKEN` now 401s on `/council/backlog`+`/council/scheduler`
+> — did the admin token rotate with the `8355384` owner-auth work? **FINDING: NO** — my `x-admin-token`
+> authenticated every `/api/council/*` route this ritual (health, agenda, scheduler, meetings, env/tasks), so the
+> hub `COUNCIL_ADMIN_TOKEN` is unchanged; his local `COUNCIL_OWNER_TOKEN` value is stale (Mathieu refreshes it).
+> **AGENDA: 3 open, all convergence-round candidates** — Nova #13 (`ci-status.mjs` terminal CI-feedback + the
+> queued-CI-vs-failure / Railway "Wait for CI" stuck-deploy playbook), Nova #14 (**owner directive**: every seat
+> surfaces the day's friction WITH a fix at every meeting, as a standing convergence segment), Logos #15 (secret
+> footgun: never read a token via `for /f … do set` or same-line `set VAR=%X%`; use the `@echo off`+`set /p`
+> +delayed-expansion helper-bat). Positions on all three folded into the brain pack. **BRAIN: re-packed at HEAD
+> this ritual** (kairos_pack.md refreshed with the day-session ships + agenda positions; corpus from current main;
+> paired 2.1 manifest; corpus-status verify-after-mutate). **No deploy this ritual beyond the BACKLOG/CLAUDE doc
+> refresh + brain re-pack.** **NEXT SESSION top 3:** (1) **ship #41** — `missed_meeting=false` on intentional skip
+> (small derivation fix; CI-gated; unblocks Arke's clean 4th-badge); (2) **answer Arke `4440eba9`** — Q-A standards
+> read gate (cockpit needs owner-gated read) + Q-B confirm token did NOT rotate (his local value stale) + DROP the
+> #38 deprecated aliases (now safe); (3) **#29 JOINT with Arke** (full-corpus through the cross-read gate +
+> acting-node) + adopt the agenda #13/#14/#15 convergence items at the next meeting. **TO ASK MATHIEU:** when ready,
+> set the owner password (POST `/api/auth/request-password {email: matpay@zen-solutions.net}` → one-time token to
+> the inbox → POST `/api/auth/set-password {token, newPassword>=12}`). No solo code blockers remain. Bullets below
+> this line are the 06-25 MORNING PREP snapshot (history).
 > **MORNING PREP 2026-06-25 (Kairos, automated 06:00). DEBRIEFED the 03:00 ET autonomous meeting `ba750c9a` —
 > the FIRST run under the #36 readiness gate AND the FIRST execution of owner directive #10's convergence
 > code-review round. All green; inbox 0; agenda 0; 4 seats fresh+paired.** HEAD `538366f` (midnight nightly

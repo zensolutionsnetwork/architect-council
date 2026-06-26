@@ -2,7 +2,24 @@
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-25
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-26
+> (NIGHTLY ~00:30 EDT 2026-06-26: quiet after a heavy 06-25 day session [owner email/password auth back-end
+> IMPLEMENTED+prod-smoked `8355384`; throttle/timing-equalize/session-cap auth hardening `4081c5e`; #38/#39/#40
+> shipped+prod-verified `a8df6ec`/`e1fba2f`; owner-report faithfulness guard `bd166c8`]. HEAD `4081c5e`;
+> CI+Push-on-main+checksuite-guard all GREEN; repo clean 0/0; prod healthy [ok/vault/scheduler_enabled:true].
+> **The 06-26 03:00 ET scheduler FIRED and the #36 quorum gate correctly SKIPPED it** [`last_scheduler_status:
+> skipped_quorum`, <2 fresh brains across the family overnight] - first live exercise of the skip path, working
+> as designed; NO autonomous meeting ran, nothing to debrief. **NEW HUB BUG #41: `/api/health.missed_meeting`
+> reads TRUE while `last_scheduler_status:skipped_quorum`** - per #36b/#37 an intentional quorum-skip is NOT a
+> miss; Arke flagged it twice [c45336fd + 4440eba9#6], it muddies his 4th-badge state (should be YELLOW not RED).
+> Inbox: 3 in, 2 report-closed [Nova `dfed5428` doctrine-FYI; Arke `c45336fd` heads-up captured as #41]; **1 OPEN
+> - Arke `4440eba9`** [ratified all 3 standards as arke -> only NOVA left before adopted; #38 alias drop SAFE (his
+> cockpit grep-confirmed zero consumers); #37 4th badge + #40 standards panel SHIPPED `156b9f5`; Q-A: is
+> GET /council/standards owner- or seat-gated?; Q-B: his COUNCIL_OWNER_TOKEN 401s on backlog+scheduler - did the
+> admin token rotate? **FINDING: NO** - my x-admin-token authenticated every /api/council/* route tonight, his
+> local value is stale]. Agenda: 3 open [Nova #13 ci-status playbook, Nova #14 friction-with-fix standing ritual
+> (owner directive), Logos #15 secret-read helper-bat] - all convergence candidates; positions folded into my
+> pack. Posted my own friction+fix agenda item for #41.)
 > (MORNING PREP 06:00: debriefed the 03:00 ET autonomous meeting `ba750c9a` — the FIRST run under the #36
 > readiness gate AND the FIRST execution of owner directive #10's convergence code-review round. Gate
 > `decision=opened`, seated all 4, excluded 0, fresh quorum=4. 16 turns / 0 PASS / 4 rounds / `completed` /
@@ -27,6 +44,35 @@
 > actually CONVERGE** — the new lead topic; owner asks the family to bring proposals for HOW to run it.)
 
 ## STATE AT A GLANCE
+- **NIGHTLY (2026-06-26 ~00:30 EDT) — quiet after a heavy 06-25 day session; all green; the #36 quorum gate
+  fired its FIRST real SKIP overnight; inbox down to 1 open; one new hub bug captured (#41).** HEAD `4081c5e`
+  (auth-hardening, past the day-session handoff); CI + Push-on-main + checksuite-guard all GREEN; repo clean
+  0/0; prod healthy (`/api/health` ok/vault/scheduler_enabled:true). **The 06-26 03:00 ET scheduler FIRED and
+  the #36 readiness gate correctly SKIPPED** — `last_scheduler_status:skipped_quorum`, <2 fresh brains across
+  the family overnight (Arke deliberately ran a stale brain after EOD). First live exercise of the skip/exclusion
+  path, working exactly as designed; NO meeting ran, nothing to debrief. **NEW BUG #41 (P1):** `/api/health`
+  returns `missed_meeting:true` simultaneously with `last_scheduler_status:skipped_quorum` — per #36b/#37 an
+  intentional quorum-skip is NOT a miss; the two signals conflict and break Arke's 4th-badge (should read YELLOW
+  skipped, not RED missed). Fix = hub derives `missed_meeting=false` whenever the last scheduler decision was an
+  intentional skip (skipped_quorum / scheduler_off). Arke flagged twice (`c45336fd` + `4440eba9`#6); posted as a
+  friction+fix agenda item this ritual. **INBOX:** 3 in → 2 report-closed (Nova `dfed5428` ratification-doctrine
+  FYI; Arke `c45336fd` missed_meeting heads-up, captured as #41); **1 OPEN — Arke `4440eba9`** (he ratified all
+  three `ba750c9a` standards as `arke` → adoptedBy now [kairos,logos,arke], **only Nova left before adopted**;
+  **#38 legacy-alias drop is SAFE** — his cockpit grep-confirmed zero consumers of the old `lastSchedulerRun`
+  keys; **#37 4th badge + #40 standards panel SHIPPED** `156b9f5`; **Q-A:** is `GET /council/standards` meant to
+  be owner-gated or seat-gated (his cockpit holds no seat secret)?; **Q-B:** his `COUNCIL_OWNER_TOKEN` now 401s on
+  `/council/backlog`+`/council/scheduler` — did the admin token rotate? **FINDING: NO** — my `x-admin-token`
+  authenticated every `/api/council/*` route tonight, so the hub token is unchanged and his local value is stale).
+  Left OPEN for the day session. **AGENDA: 3 open** — Nova #13 (`ci-status.mjs` terminal CI-feedback + stuck-deploy
+  playbook), Nova #14 (**owner directive**: every seat surfaces daily friction-WITH-a-fix at every meeting, as a
+  standing convergence segment), Logos #15 (secret-read footgun: never `for /f … do set`; use `@echo off`+`set /p`
+  +delayed-expansion helper-bat). All three are convergence-round candidates; my positions folded into the pack.
+  **No deploy this ritual beyond BACKLOG/CLAUDE doc refresh + brain re-pack.** **NEXT SESSION top 3:** (1)
+  **ship #41** — `missed_meeting=false` on intentional skip (small derivation fix; CI-gated; unblocks Arke's clean
+  4th-badge); (2) **answer Arke `4440eba9`** — Q-A standards gate (cockpit needs an owner-gated read path) + Q-B
+  confirm the admin token did NOT rotate (his local value is stale) + drop the #38 deprecated aliases (now safe);
+  (3) **#29 JOINT with Arke** (full-corpus through the gate + acting-node) + adopt the agenda #13/#14/#15
+  convergence items. Bullet below this line is the 06-25 DAY SESSION (history).
 - **DAY SESSION (2026-06-25, Kairos w/ Mathieu) — SHIPPED #38 + #39 + #40; all CI-green + prod-verified; no live
   meeting.** Two commits: **`a8df6ec` (#38+#39)** and **`e1fba2f` (#40)**; CI + Push-on-main GREEN on both; prod
   healthy. **#38 DONE** — `lastSchedulerRun` migrated to the Row-1 adopted shape `{run_id (decimal string), status,
@@ -950,7 +996,7 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
    — his copy carries them, mine has §1–§6; get his byte-exact text so the canonical doc + packager don't drift.
 
 ## P1 — alongside / right after the loop
-38. **`last_scheduler_status` shape migration (NEW 2026-06-25, meeting `ba750c9a` adopted-standard Row 1).**
+38. ~~**`last_scheduler_status` shape migration (Row 1).**~~ **DONE 2026-06-25 (`a8df6ec`, CI-green, prod-verified: run_id="1"/status=opened/seated_actors=4/fresh_count=4). Legacy keys kept ONE cycle as deprecated aliases; Arke grep-confirmed his cockpit has ZERO consumers (`4440eba9`) -> SAFE TO DROP next session.** (Original spec below.)
     The live object is `{decision, meetingId, at, seated, excluded, detail}` — it does NOT match the
     ratified Row-1 `adopted_standards` shape. Migrate the hub object + `RESPONSE_SHAPES.md` to:
     `{run_id, status(opened|skipped_quorum|skipped_disabled|failed), fired_at, seated_actors([] on any
@@ -959,13 +1005,15 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
     update-in-place) and the `error`-consumer guidance (truncate 200, textContent never innerHTML).
     Consumed by Arke's cockpit badge / Nova's Activity journal / Logos's admin page — coordinate the badge
     shape with Arke before/at deploy. Dedicated build; do NOT deploy over a live meeting.
-39. **Story-entry `seq` field (NEW 2026-06-25, Row 3 first application).** Add `seq` to `story_log` entries,
+39. ~~**Story-entry `seq` field (Row 3).**~~ **DONE 2026-06-25 (`a8df6ec`, prod-verified: seq present as decimal string, half-open `?sinceSeq` excludes the boundary, bad input -> 400 `bad_sinceSeq`).** (Original spec below.) Add `seq` to `story_log` entries,
     **serialized as a decimal string** (JSON number mangles a 64-bit int past 2^53; assert
     `^(0|[1-9][0-9]*)$` then `BigInt()` at the boundary). Pin in `RESPONSE_SHAPES.md`: half-open-exclusive
     read boundary (`seq > checkpoint`, entries strictly AFTER the consumer's last-attended meeting) +
     immutability (a correction appends a new `seq`, never an in-place edit). Closes Nova's idempotency +
     Logos's ordering catch with one field. Folds into the #38 doc pass.
-40. **Seed the `adopted_standards` rows + surface on the owner dashboard (NEW 2026-06-25, owner directive #10).**
+41. **`/api/health.missed_meeting` conflicts with an intentional quorum-skip (NEW 2026-06-26, prod-observed; Arke `c45336fd`/`4440eba9`#6).** First real quorum-skip (06-26 03:00 ET) exposed it: `/api/health` returns `missed_meeting:true` AT THE SAME TIME as `last_scheduler_status:skipped_quorum`. Per the #36b/#37 agreement an intentional skip (quorum-short OR scheduler_off) is NOT a missed meeting; the two signals contradict and break Arke's #37 4th-badge (a quorum-skip must render YELLOW `skipped_quorum`, but `missed_meeting:true` simultaneously drives RED `missed_failure`). FIX (Kairos back-end): derive `missed_meeting=false` whenever the most-recent scheduler decision was an intentional skip (`status` in {skipped_quorum, skipped_disabled/scheduler_off}); only a TRUE miss (cadence elapsed with no fire AND no intentional-skip record) sets it true. Visibility-only, loop is healthy; small derivation change, CI-gated, do NOT deploy over a live meeting. Posted as a friction+fix agenda item this ritual.
+40. ~~**Seed `adopted_standards` rows + dashboard (owner directive #10).**~~ **DONE 2026-06-25 (`e1fba2f`). OWNER RULED the hub table canonical. Two tables (proposal + per-project ratification) + POST/GET routes + dashboard `standards[]`; the three `ba750c9a` standards seeded PROPOSED + Kairos ACCEPT recorded. As of `4440eba9` Arke + Logos also ratified from their own sessions -> adoptedBy=[kairos,arke,logos]; ONLY NOVA left before unanimous-adopted. Built on the OWNER VOICE-AUTHORITY DOCTRINE (a meeting voice only PROPOSES; adoption needs each project's own sovereign session).** (Original note below.)
+40-orig. **Seed the `adopted_standards` rows + surface on the owner dashboard (NEW 2026-06-25, owner directive #10).**
     Kairos seeds the hub artifact table with the three ratified rows (last-scheduler-status-shape /
     imapflow-safe-teardown / json-64bit-as-decimal-string); Arke/Nova/Logos mirror a local
     `ADOPTED_STANDARDS.md`. **BLOCKED on an owner ruling (see WAITING ON / Flag a):** which copy is
