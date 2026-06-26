@@ -420,9 +420,15 @@ councilRouter.get('/auth/me', async (req, res) => {
   try {
     const bt = bearerToken(req);
     if (!bt) return res.status(401).json({ error: 'unauthorized' });
-    const sess = await getOwnerSession(sha256hex(bt));
+    const th = sha256hex(bt);
+    const sess = await getOwnerSession(th);
     if (!sess) return res.status(401).json({ error: 'unauthorized' });
-    res.json({ ok: true, owner: { id: sess.ownerId, email: sess.email }, expiresAt: sess.expiresAt });
+    // Sliding session (#7 finalize, 2026-06-26): a launch-time /auth/me counts as activity, so extend the
+    // 30-day window here too — not only on requireOwner-gated calls (Arke calls /auth/me on launch). Best-
+    // effort; the read still succeeds if the touch fails. Return the REFRESHED expiry so the cockpit shows it.
+    const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
+    void touchOwnerSession(th, expiresAt).catch(() => {});
+    res.json({ ok: true, owner: { id: sess.ownerId, email: sess.email }, expiresAt: expiresAt.toISOString() });
   } catch (e) { internalError(res, e); }
 });
 // RETIRED 2026-06-11 (Arke 1a405574): the single-row /council/admin/backlog GET/POST pair.
@@ -1392,10 +1398,11 @@ async function getSchedTime(): Promise<string> {
 // #35 (meeting 2026-06-22, ratified family-wide): the /api/health "missed_meeting" signal. Computed
 // HUB-SIDE so the cockpit does ZERO threshold math — Arke/Nova render the boolean + timestamp tooltip,
 // Logos logs the ISO lag. The threshold is the daily cadence (24h) + a fixed grace, NOT a magic 26h.
-// `missed_meeting` is purely time-based and INDEPENDENT of `scheduler_enabled`: while the scheduler is
-// intentionally off it reads true by design (the loop IS dark) — `scheduler_enabled` is what lets the
-// badge say "disabled" (grey) vs "MISSED MEETING" (alarm). Fail-soft throughout: any read error returns
-// a safe default so /api/health never throws (Railway liveness probe must always get a 200).
+// `missed_meeting` is time-based, with one refinement (#41, 2026-06-26): a RECENT intentional scheduler
+// decision (skipped_quorum / already_live) clears it, but a scheduler that is OFF or DEAD still reads true
+// (the loop IS dark) — `scheduler_enabled` is what lets the badge say "disabled" (grey) vs "MISSED MEETING"
+// (alarm). Fail-soft throughout: any read error returns a safe default so /api/health never throws (Railway
+// liveness probe must always get a 200).
 const SCHED_INTERVAL_MS = 24 * 60 * 60 * 1000; // hub scheduler fires once per Toronto day
 const SCHED_GRACE_MS = 2 * 60 * 60 * 1000;     // grace past the daily mark before we call it missed
 export async function healthMeetingSignal(): Promise<{ last_meeting_created_at: string | null; missed_meeting: boolean; scheduler_enabled: boolean; last_scheduler_status: string | null }> {
@@ -1411,7 +1418,18 @@ export async function healthMeetingSignal(): Promise<{ last_meeting_created_at: 
   // #36: the last scheduled-fire decision (opened | skipped_quorum | no_voice_loop | already_live | error |
   // null). Lets the cockpit distinguish an intentional readiness SKIP from a real miss without exposing seats.
   let last_scheduler_status: string | null = null;
-  try { const r = await latestSchedulerRun(); last_scheduler_status = r ? String(r.status) : null; } catch { /* default null */ }
+  let last_scheduler_at: string | null = null;
+  try { const r = await latestSchedulerRun(); if (r) { last_scheduler_status = String(r.status); last_scheduler_at = r.fired_at ?? null; } } catch { /* default null */ }
+  // #41 (2026-06-26): a RECENT, INTENTIONAL scheduler decision is not a missed meeting. When the readiness
+  // gate deliberately held the meeting (`skipped_quorum`) or one was already live (`already_live`), the loop
+  // did its job — clear the alarm so the badge reads yellow, not red. Gated on RECENCY: only a run within the
+  // daily cadence + grace can suppress, so a DEAD scheduler (no run in >26h) still reads missed=true and is
+  // never masked. Scheduler-OFF states (no_voice_loop / scheduler off) keep missed=true (loop is genuinely
+  // dark); `scheduler_enabled` flips the badge to "disabled" (grey) vs "MISSED MEETING" (alarm).
+  if (missed_meeting && last_scheduler_at && (last_scheduler_status === 'skipped_quorum' || last_scheduler_status === 'already_live')) {
+    const runAgeMs = Date.now() - Date.parse(last_scheduler_at);
+    if (runAgeMs <= (SCHED_INTERVAL_MS + SCHED_GRACE_MS)) missed_meeting = false;
+  }
   return { last_meeting_created_at, missed_meeting, scheduler_enabled, last_scheduler_status };
 }
 // #36 readiness gate (owner 2026-06-24). A seat is FRESH if it has a committed pack whose sha differs from

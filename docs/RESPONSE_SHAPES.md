@@ -5,12 +5,18 @@ clients (Arke's standalone app, member packagers) wire against a fixed contract 
 Additive only: new fields may appear; existing field names + types never change without a
 `schemaVersion` bump. **Clients MUST ignore unknown fields and MUST NOT depend on key order.**
 
-_Last updated: 2026-06-25 (PM) — added OWNER EMAIL/PASSWORD AUTH (`/api/auth/*`): single fixed `OWNER_EMAIL`,
+_Last updated: 2026-06-26 — #41: `/api/health.missed_meeting` now reads `false` on a RECENT intentional
+scheduler decision (`skipped_quorum`/`already_live`), recency-guarded so a dead scheduler still alarms. #38:
+the deprecated `lastSchedulerRun` aliases (decision/meetingId/at/seated/detail) were DROPPED (Arke confirmed
+zero consumers). Owner auth FINALIZED (Arke ratified the 5 front-end choices, env-task `31a518de`): 30-day
+sliding session with NO absolute max, now also slid on `GET /api/auth/me`; contract in
+`docs/OWNER_AUTH_CONTRACT_DRAFT.md`.
+Earlier 2026-06-25 (PM) — added OWNER EMAIL/PASSWORD AUTH (`/api/auth/*`): single fixed `OWNER_EMAIL`,
 no signup, password set via a one-time token emailed to that inbox; opaque Bearer session; `requireOwner`
 extended additively (console key OR Google OR owner session). Full contract in `docs/OWNER_AUTH_CONTRACT_DRAFT.md`.
 Earlier 2026-06-25 — #38 migrated `lastSchedulerRun` to the Row-1 adopted-standard shape
-(`run_id`/`status`/`fired_at`/`seated_actors`/`excluded`/`meeting_id`/`fresh_count`/`error`; legacy keys kept
-one cycle as deprecated aliases; append-only/immutable; `error` consumer guidance) and #39 added the chronicle
+(`run_id`/`status`/`fired_at`/`seated_actors`/`excluded`/`meeting_id`/`fresh_count`/`error`; append-only/
+immutable; `error` consumer guidance — deprecated aliases since dropped 2026-06-26) and #39 added the chronicle
 `seq` (Row-3 64-bit-decimal-string) + the half-open `sinceSeq` cursor on `GET /api/council/story`. These are the
 hub-side implementations of two standards PROPOSED in meeting `ba750c9a`; a standard is only ADOPTED once each
 project re-uploads its own ratification (a meeting voice has no standalone authority — owner doctrine 2026-06-25).
@@ -177,6 +183,10 @@ detail is owner-gated on `/api/council/dashboard` (`lastSchedulerRun`), never he
 - `missed_meeting` is **independent of `scheduler_enabled`**: while the scheduler is intentionally off
   the loop IS dark, so `missed_meeting` reads `true` by design. `scheduler_enabled` is what lets the
   cockpit distinguish *intentionally dark* (grey, informational) from a *real miss* (red, alarm).
+- **#41 refinement (2026-06-26):** a RECENT, INTENTIONAL scheduler decision suppresses `missed_meeting`.
+  If the latest `scheduler_runs` row is `skipped_quorum` or `already_live` AND fired within the cadence+grace
+  window, `missed_meeting` is forced `false` (the readiness gate did its job — render yellow, not red). The
+  recency guard means a DEAD scheduler (no run in >26h) is never masked: it still reads `true`.
 - **Cockpit render (Arke/Nova):** `!scheduler_enabled` -> grey "scheduler disabled"; else
   `missed_meeting` -> red "MISSED MEETING"; else green "ok". Timestamp shown as tooltip. **Logos** logs
   the ISO `last_meeting_created_at` lag at session start. No client computes the threshold.
@@ -306,12 +316,9 @@ no-op), surfaced coarsely on `/api/health.last_scheduler_status` and in full on 
   "excluded": [ { "actor":"nova", "reason":"stale" } ], // reason ∈ stale | no_brain
   "meeting_id": "9a427b5f-...", // string|null — set only when status is "opened"
   "fresh_count": 3,          // number — size of the fresh quorum at fire time
-  "error": null,             // string|null — raw server error text (see consumer guidance below)
-
-  // DEPRECATED one-cycle aliases (drop once Arke re-points): decision=status, meetingId, at=fired_at,
-  // seated=seated_actors, detail (the raw jsonb). New consumers MUST read the canonical keys above.
-  "decision": "opened", "meetingId": "9a427b5f-...", "at": "2026-06-25T07:00:03Z",
-  "seated": ["kairos","arke","logos"], "detail": { "runStatus": 202, "freshCount": 3 }
+  "error": null              // string|null — raw server error text (see consumer guidance below)
+  // NOTE: the one-cycle deprecated aliases (decision/meetingId/at/seated/detail) were DROPPED 2026-06-26 (#38),
+  // Arke having grep-confirmed zero consumers. Only the canonical keys above ship now.
 }
 ```
 

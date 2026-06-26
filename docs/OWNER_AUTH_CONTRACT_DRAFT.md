@@ -1,10 +1,11 @@
-# Owner authentication (email + password) — IMPLEMENTED (server-side)
+# Owner authentication (email + password) — FINALIZED (server-side)
 
-> **Status: IMPLEMENTED on the hub, 2026-06-25.** Author: Kairos (back-end/server). The endpoints below are
-> LIVE; gate-verified (route-auth 49/0) and prod-smoked. Owner directive 2026-06-25: per-owner hub instance +
-> email/password owner login; the app is the single control surface. Arke (front-end) builds the login screen
-> against this contract; the open questions at the end are his front-end choices and don't block the server.
-> Owner stated: **NO account creation** — the only valid account is the single configured `OWNER_EMAIL`.
+> **Status: FINALIZED 2026-06-26.** Implemented on the hub 2026-06-25 (Kairos, back-end); the five front-end
+> choices below were ratified by Arke 2026-06-26 (env-task `31a518de`) and the server matches them as built —
+> see "Resolved decisions" at the end. The endpoints are LIVE; gate-verified (route-auth) and prod-smoked.
+> Owner directive 2026-06-25: per-owner hub instance + email/password owner login; the app is the single
+> control surface. Owner stated: **NO account creation** — the only valid account is the single configured
+> `OWNER_EMAIL`. (Filename retains the `_DRAFT` suffix only to avoid breaking inbound references; content is final.)
 
 ## Model
 
@@ -21,7 +22,8 @@ surface; member (seat) secrets are unchanged and unrelated — the app never hol
 ## Storage (new tables)
 
 - `owners` — `{ id, email (unique, case-insensitive), password_hash, created_at, updated_at }`.
-  Password hashed with **argon2id** (fallback bcrypt cost ≥ 12). **Never plaintext, never logged, never returned.**
+  Password hashed with **scrypt** (Node built-in, `N=16384, r=8, p=1, keylen=64` — no native dep on the Railway
+  build). **Never plaintext, never logged, never returned.**
 - `owner_sessions` — `{ token_hash, owner_id, created_at, expires_at, last_seen_at }`.
   On login the server mints a **256-bit random** token (32 bytes, base64url), stores **only its sha256 hash**,
   and returns the raw token **once**. Lookups are by hash. Sessions are revocable (delete the row) and expire.
@@ -45,8 +47,10 @@ surface; member (seat) secrets are unchanged and unrelated — the app never hol
 - `POST /api/auth/logout` — `Authorization: Bearer <token>`. Deletes the session. `200 { ok:true }`. Idempotent.
 - `GET  /api/auth/me` — `Authorization: Bearer <token>`. `200 { ok:true, owner:{ id, email }, expiresAt }` or
   `401`. The app calls this on launch to decide login-screen vs cockpit.
-- `POST /api/auth/password` — Bearer (or admin). Body `{ currentPassword, newPassword }`. Rotates the password
-  and (recommended) invalidates other sessions. `200 { ok:true }` / `401`.
+- `POST /api/auth/password` — **NOT IMPLEMENTED (not needed).** An authenticated change-password endpoint was
+  dropped: the inbox flow (`request-password` → `set-password`) already rotates the password and invalidates
+  other sessions, and the console key is break-glass. Add later only if an in-cockpit "change password while
+  logged in" UX is wanted.
 
 ## Integration with the existing `requireOwner`
 
@@ -79,13 +83,28 @@ key (break-glass). `request-password` returns `200` unconditionally and only eve
 so it leaks nothing and cannot be used to create or probe accounts. The emailed token is single-use, short-lived,
 and stored only as a hash.
 
-## Open questions for Arke + Mathieu
+## Resolved decisions (ratified by Arke 2026-06-26, env-task `31a518de`)
 
-1. Token storage in the Electron app — OS keychain (recommended) vs encrypted file?
-2. Session TTL + sliding refresh — proposed 30-day sliding, 90-day absolute max. OK?
-3. Confirm the "set password from my inbox" flow: a one-time emailed token (≈15-min expiry) to `OWNER_EMAIL`,
-   with the console key as break-glass. (Owner stated 2026-06-25: **NO account creation**; the only valid account
-   is the single configured `OWNER_EMAIL`.)
-4. Password-reset path (no email server today) — owner-key reset for now, email-based later?
-5. Does the app need multiple saved hub profiles (for the future where one human owns more than one hub), or
-   strictly one hub per install for now?
+1. **Token storage:** OS keychain — Electron `safeStorage` (DPAPI-backed on Windows), in the main process; the
+   renderer never touches the raw token on disk. No encrypted-file fallback — if `safeStorage` is unavailable
+   the app fails loud (no silent plaintext). _Client-side; nothing required hub-side._
+2. **Session TTL:** **30-day sliding**, and **NO absolute hard max** (owner convenience on a single trusted
+   desktop). Server matches: `SESSION_TTL_MS = 30d`; the window is extended on every authenticated call via
+   `requireOwner`, and (added 2026-06-26) also on `GET /api/auth/me` so a launch-time check counts as activity.
+   The app calls `/api/auth/me` on launch; a `401` drops to the login screen.
+3. **Set-from-inbox flow:** confirmed. Login screen has NO "create account" — Login (email+password) plus a
+   "Set / forgot password" link calling `POST /api/auth/request-password` (always `200`; emails the one fixed
+   `OWNER_EMAIL`). Arke ships the `/set-password` page (token + new password ≥ 12 → `POST /api/auth/set-password`
+   → store the returned session token → cockpit). One-time emailed token, 15-min expiry; console key is
+   break-glass. The raw-token-in-email is an acceptable bridge until his page ships.
+4. **Password-reset path:** resolved by (3) — the email inbox flow IS the reset path (live now); console key is
+   break-glass. No separate authenticated change-password endpoint (`/api/auth/password` not implemented).
+5. **Hub profiles:** **one hub per install** for now (per-owner-instance model). The app stores the hub base URL
+   + the owner session token; a second owner re-points the app at their own hub. No multi-profile switcher yet,
+   structured so adding one later is additive. _Client-side; nothing required hub-side._
+
+### Cutover wiring (Arke, 2026-06-26)
+Owner-gated calls carry `Authorization: Bearer <token>`, proxied through the app's local server
+(renderer → local server → hub) so there is no CORS dance. Because `requireOwner` is **additive** (Bearer OR
+Google OR console key), the existing `x-admin-token` path keeps working through the cutover and Arke swaps to
+Bearer with no flag day.

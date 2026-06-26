@@ -700,8 +700,9 @@ export async function latestSchedulerRun(): Promise<any | null> {
   // 64-bit bigserial. seated_actors is [] on any non-opened status — only an actually-opened meeting has real
   // seats. fresh_count is the fresh-quorum size at fire time. error is a plain string|null lifted from detail
   // (raw server text; owner-gated surface only — do not echo to a public/external consumer unredacted).
-  // Legacy keys (decision/meetingId/at/seated) are retained as DEPRECATED aliases for one transition cycle so
-  // Arke's live cockpit does not break on deploy; drop them next cycle once he re-points to the new keys.
+  // Legacy alias keys (decision/meetingId/at/seated/detail) were DROPPED 2026-06-26 (#38). Arke grep-confirmed
+  // zero consumers across his cockpit (public/index.html + src) and the hub's own public/ has none either, so
+  // the one-cycle back-compat window is closed; only the canonical Row-1 keys ship now.
   const seated_actors = status === 'opened' ? seated : [];
   const fresh_count =
     Number.isFinite(Number(detail.freshCount)) ? Number(detail.freshCount)
@@ -711,8 +712,6 @@ export async function latestSchedulerRun(): Promise<any | null> {
   return {
     run_id: String(r.id), status, fired_at: r.at, seated_actors, excluded,
     meeting_id: r.meeting_id || null, fresh_count, error,
-    // deprecated legacy aliases (one-cycle back-compat; remove once Arke re-points):
-    decision: status, meetingId: r.meeting_id || null, at: r.at, seated: seated_actors, detail,
   };
 }
 
