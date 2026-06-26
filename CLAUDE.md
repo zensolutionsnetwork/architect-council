@@ -33,9 +33,13 @@ or ask Mathieu first.
 > and was itself a cause of the sub-quorum, not just the siblings.** EVIDENCE: dashboard `lastSchedulerRun` (run_id=2
 > @ `2026-06-26T07:00:06Z`) = `skipped_quorum`, fresh_count=1, fresh=[nova], excluded=[kairos:stale, arke:stale,
 > logos:stale], quorumMin=2; readiness shows **kairos packSha == lastPackSha** (`f255f3f9…`), dashboard kairos corpus
-> `built_at 2026-06-25T04:33Z`, and `kairos_pack.md` content still dated "2026-06-25 nightly prep". So the 06-26
-> nightly did NOT change my pack content — and the #36 freshness model keys on the pack SHA, so re-uploading an
-> UNCHANGED pack yields the same sha = still stale. The nightly's "Arke deliberately ran a stale brain" framing
+> `built_at 2026-06-25T04:33Z`. CORRECTED ROOT CAUSE (verified after re-pack): the nightly DID update the LOCAL
+> `kairos_pack.md` to 06-26 content, but its brain **UPLOAD did not land on the hub** — the hub still served the
+> 06-25 pack/corpus at the 03:00 fire (built_at 06-25, packSha `f255f3f9`), so Kairos read stale. So the fix is NOT
+> "mutate content" (content was fine) but "**run the verifying refresh and confirm the upload landed** (corpus-status
+> etag/built_at advanced, pack sha changed) before claiming re-packed." This morning's real re-pack landed: pack
+> `baf55258`, corpus `6008af41`, built_at `2026-06-26T12:25:16Z`, corpus-status VERIFY OK → Kairos FRESH. The
+> nightly's "Arke deliberately ran a stale brain" framing
 > undersold that **Kairos was equally stale**; with Kairos fresh + Nova fresh = 2 = quorum, the meeting would have
 > run. **RECOVERY this ritual (noted per autonomy rules): updated `kairos_pack.md` content THEN re-packed Kairos at
 > HEAD `4081c5e`** (zero model spend, our-hub only, corpus-status verify-after-mutate PASS) → Kairos is FRESH again,
