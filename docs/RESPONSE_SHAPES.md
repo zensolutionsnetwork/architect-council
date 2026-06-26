@@ -5,7 +5,11 @@ clients (Arke's standalone app, member packagers) wire against a fixed contract 
 Additive only: new fields may appear; existing field names + types never change without a
 `schemaVersion` bump. **Clients MUST ignore unknown fields and MUST NOT depend on key order.**
 
-_Last updated: 2026-06-26 (PM) — added the PLAIN-ENGLISH MEETING TRANSLATOR `GET /api/council/meeting/:id/summary`
+_Last updated: 2026-06-26 (PM) — added HUB-MEDIATED AGENT TRANSFER (drag an agent between PCs): owner-gated
+home registry `GET /api/council/agents/home` + transfer relay (`/api/council/transfer/initiate`, `/:id/bundle`
+PUT+GET, `/transfers?to_machine=`, `/:id`, `/:id/complete`) with atomic single-home enforcement; substrate
+bundle ≤32MB base64. Hub side of Arke `8d00b58f`.
+Earlier 2026-06-26 (PM) — added the PLAIN-ENGLISH MEETING TRANSLATOR `GET /api/council/meeting/:id/summary`
 (owner-gated; live + persisted plain summary + per-actor gist + per-turn plain lines; cheap, cached per
 through_seq, charged to ledger.translator) for the cockpit live view and reading meetings back later.
 Earlier 2026-06-26 — #41: `/api/health.missed_meeting` now reads `false` on a RECENT intentional
@@ -359,6 +363,32 @@ charged to the meeting cost ledger under `perAgent.translator`.
 persisted (`meeting_translations`), so reading a finished meeting is a free cache hit. Cockpit proxy (Arke):
 `/api/rooms/summary?meetingId=...` polling every few seconds; render `summary` + `perActor`, expand `turns`
 for the full plain transcript.
+
+## Hub-mediated agent transfer (drag an agent between PCs — owner vision 2026-06-26, Arke `8d00b58f`)
+
+The hub is the single source of truth for which machine each agent lives on, so an agent only ever authors on
+one PC (single-home — central enforcement of single-source-of-arke). App side (Arke): machine display
+(shipped `285b972`) + drag-to-transfer UX + bundle package/unpack. Hub side (these endpoints): registry +
+relay. ALL owner-gated (`x-admin-token` OR Bearer). Code travels via git and the brain pack/corpus already
+live on the hub; the transfer BUNDLE is only the non-git **substrate** (project memory + `council/` folder +
+app config), base64, ≤32MB.
+
+- `GET /api/council/agents/home` → `{ ok, agents: { "<agent>": { home_machine, status } } }`. `status` ∈
+  `"home" | "in_transit"`. An `in_transit` agent must not be authored by either side until the move completes.
+- `POST /api/council/transfer/initiate` `{ agent, from_machine, to_machine }` → `{ ok, transfer_id, status:"staged" }`;
+  flips the agent to `in_transit`. `409 { error:"already_in_transit" }` if a move is already in flight (single-home).
+- `POST /api/council/transfer/:id/bundle` `{ content_b64, sha256? }` → stores the substrate; hub recomputes and
+  verifies the sha (`400 sha256_mismatch` on disagreement) → `{ ok, status:"bundled", sha256, size }`. (≤32MB.)
+- `GET /api/council/transfers?to_machine=<m>` → `{ ok, transfers:[...] }` — bundled transfers addressed to that
+  machine (destination polls this).
+- `GET /api/council/transfer/:id` → `{ ok, transfer }` — status for either side.
+- `GET /api/council/transfer/:id/bundle` → `{ ok, transfer_id, agent, content_b64, sha256, size }` (destination downloads).
+- `POST /api/council/transfer/:id/complete` `{ to_machine }` → hub **atomically** sets `home_machine=to_machine` +
+  `status="home"` and marks the transfer `completed`. After this only the destination is home; the source app
+  tears down its local copy. `404 not_found` / `409 already_completed`.
+
+**Atomicity:** the hub owning "who is home" is what guarantees an agent runs on exactly one PC — single-source
+enforced centrally, replacing the manual task-deletion timing of the first arke move.
 
 **`error` consumer guidance:** `error` is non-null only on `status:"error"` and carries **raw, unredacted
 server text** (e.g. an exception message or a failed open's HTTP status detail). It is surfaced **only** on

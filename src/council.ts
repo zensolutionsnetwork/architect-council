@@ -23,6 +23,7 @@ import {
   setMeetingAttendPackSha, lastAttendedPackSha, lastAttendedMeetingCreatedAtUtc,
   recordSchedulerRun, latestSchedulerRun, addStoryEntry, getStorySince, getStorySinceSeq,
   getMeetingTranslation, saveMeetingTranslation,
+  listAgentHomes, getAgentHome, initiateTransfer, getTransfer, listTransfersForMachine, saveTransferBundle, getTransferBundle, completeTransfer,
   upsertStandard, standardExists, ratifyStandard, listStandards,
   setMeetingLedger, setMeetingManifestPins,
   setVoiceRunning, closeStaleVoiceMeetings, usdSpentTodayUtc, vaultReady, listMeetingsForDashboard,
@@ -1435,6 +1436,87 @@ councilRouter.get('/council/meeting/:id/summary', requireOwner, async (req, res)
     if (ledgerChanged) await setMeetingLedger(m.id, led).catch(() => {});
     const outTurns = (since != null) ? allTurns.filter((t) => Number(t.seq) >= since) : allTurns;
     res.json({ ok: true, meetingId: m.id, phase: m.phase, throughSeq: cursor, complete: cursor >= nowCount, summary, perActor, turns: outTurns });
+  } catch (e) { internalError(res, e); }
+});
+
+// ---------- Hub-mediated agent transfer (owner vision 2026-06-26, Arke 8d00b58f) ----------
+// The hub is the single source of truth for which machine each agent lives on (single-home), so an agent
+// only ever authors on one PC. App side (Arke): drag-to-transfer UX + bundle package/unpack. All owner-gated.
+const clipName = (s: any, n = 120) => String(s ?? '').trim().slice(0, n);
+
+// Home registry — who lives where + whether a move is in flight.
+councilRouter.get('/council/agents/home', requireOwner, async (_req, res) => {
+  try { res.json({ ok: true, agents: await listAgentHomes() }); } catch (e) { internalError(res, e); }
+});
+
+// Stage a move: marks the agent in_transit (single-home invariant — refuses a second concurrent move).
+councilRouter.post('/council/transfer/initiate', requireOwner, async (req, res) => {
+  try {
+    const b = req.body || {};
+    const agent = clipName(b.agent, 40); const from = clipName(b.from_machine); const to = clipName(b.to_machine);
+    if (!agent || !to) return res.status(400).json({ error: 'agent_and_to_machine_required' });
+    const id = crypto.randomUUID();
+    const r = await initiateTransfer(id, agent, from, to);
+    if (!r.ok) return res.status(409).json({ error: r.reason || 'conflict' });
+    res.json({ ok: true, transfer_id: id, status: 'staged' });
+  } catch (e) { internalError(res, e); }
+});
+
+// Source uploads the SUBSTRATE bundle (base64) — memory + council/ folder + app config. Code travels via git;
+// brain pack/corpus already live on the hub. Large body: see the per-path json limit in server.ts.
+councilRouter.post('/council/transfer/:id/bundle', requireOwner, async (req, res) => {
+  try {
+    const t = await getTransfer(req.params.id);
+    if (!t) return res.status(404).json({ error: 'not_found' });
+    if (t.status === 'completed') return res.status(409).json({ error: 'already_completed' });
+    const b = req.body || {};
+    const contentB64 = String(b.content_b64 || '');
+    if (!contentB64) return res.status(400).json({ error: 'content_b64_required' });
+    let buf: Buffer;
+    try { buf = Buffer.from(contentB64, 'base64'); } catch { return res.status(400).json({ error: 'bad_base64' }); }
+    const sha = crypto.createHash('sha256').update(buf).digest('hex');
+    if (b.sha256 && String(b.sha256).toLowerCase() !== sha) return res.status(400).json({ error: 'sha256_mismatch', computed: sha });
+    await saveTransferBundle(req.params.id, contentB64, sha, buf.length);
+    res.json({ ok: true, transfer_id: req.params.id, status: 'bundled', sha256: sha, size: buf.length });
+  } catch (e) { internalError(res, e); }
+});
+
+// Destination polls for bundled transfers addressed to it.
+councilRouter.get('/council/transfers', requireOwner, async (req, res) => {
+  try {
+    const to = clipName(req.query.to_machine);
+    if (!to) return res.status(400).json({ error: 'to_machine_required' });
+    res.json({ ok: true, transfers: await listTransfersForMachine(to) });
+  } catch (e) { internalError(res, e); }
+});
+
+// Transfer status (either side may check).
+councilRouter.get('/council/transfer/:id', requireOwner, async (req, res) => {
+  try { const t = await getTransfer(req.params.id); if (!t) return res.status(404).json({ error: 'not_found' }); res.json({ ok: true, transfer: t }); }
+  catch (e) { internalError(res, e); }
+});
+
+// Destination downloads the substrate bundle.
+councilRouter.get('/council/transfer/:id/bundle', requireOwner, async (req, res) => {
+  try {
+    const t = await getTransfer(req.params.id);
+    if (!t) return res.status(404).json({ error: 'not_found' });
+    const bundle = await getTransferBundle(req.params.id);
+    if (!bundle) return res.status(404).json({ error: 'no_bundle' });
+    res.json({ ok: true, transfer_id: req.params.id, agent: t.agent, content_b64: bundle.contentB64, sha256: bundle.sha256, size: bundle.size });
+  } catch (e) { internalError(res, e); }
+});
+
+// Destination confirms unpack — hub ATOMICALLY flips home_machine to the destination + clears in_transit.
+// After this, only the destination is 'home'; the source app tears down its local copy (stops authoring).
+councilRouter.post('/council/transfer/:id/complete', requireOwner, async (req, res) => {
+  try {
+    const to = clipName((req.body || {}).to_machine);
+    if (!to) return res.status(400).json({ error: 'to_machine_required' });
+    const r = await completeTransfer(req.params.id, to);
+    if (!r.ok) return res.status(r.reason === 'not_found' ? 404 : 409).json({ error: r.reason || 'conflict' });
+    const t = await getTransfer(req.params.id);
+    res.json({ ok: true, transfer: t });
   } catch (e) { internalError(res, e); }
 });
 

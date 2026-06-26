@@ -30,6 +30,10 @@ app.use((_req, res, next) => {
     "frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'");
   next();
 });
+// Agent-transfer substrate bundles (Arke 8d00b58f) carry memory + council/ folder as base64 — larger than
+// the 1MB API cap. A transfer-scoped parser runs FIRST so these routes accept up to 32MB; the global parser
+// below then no-ops (body already read). Still owner-gated at the route.
+app.use('/api/council/transfer', express.json({ limit: '32mb' }));
 app.use(express.json({ limit: '1mb' })); // JSON cap (backlog writes can be ~200KB); brain chunks are raw octet-stream, capped separately.
 // Per-IP rate limit on the API surface (contract §7); health probe exempt so Railway never trips it.
 app.use('/api', rateLimit({ windowMs: 60_000, max: 240, skip: (req) => req.path === '/health' }));

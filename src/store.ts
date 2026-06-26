@@ -234,6 +234,21 @@ export async function initDb(): Promise<void> {
     meeting_id text PRIMARY KEY, through_seq int NOT NULL DEFAULT 0, summary text,
     per_actor jsonb NOT NULL DEFAULT '[]', turns jsonb NOT NULL DEFAULT '[]', model text, usage jsonb,
     updated_at timestamptz NOT NULL DEFAULT now())`);
+  // Hub-mediated agent transfer (owner vision 2026-06-26, Arke 8d00b58f): the hub is the single source of
+  // truth for WHICH machine each agent lives on, so an agent only ever authors on one PC (single-home — the
+  // central enforcement of the directive's single-source-of-arke). `agent_homes` = the registry;
+  // `agent_transfers` = an in-flight move; `transfer_bundles` = the non-git SUBSTRATE payload (memory +
+  // council/ folder + app config) base64, owner-gated, keyed to the transfer.
+  await q.query(`CREATE TABLE IF NOT EXISTS agent_homes (
+    agent text PRIMARY KEY, home_machine text, status text NOT NULL DEFAULT 'home',
+    updated_at timestamptz NOT NULL DEFAULT now())`);
+  await q.query(`CREATE TABLE IF NOT EXISTS agent_transfers (
+    id text PRIMARY KEY, agent text NOT NULL, from_machine text, to_machine text,
+    status text NOT NULL DEFAULT 'staged', bundle_sha256 text, bundle_size int,
+    created_at timestamptz NOT NULL DEFAULT now(), completed_at timestamptz)`);
+  await q.query(`CREATE TABLE IF NOT EXISTS transfer_bundles (
+    transfer_id text PRIMARY KEY, content_b64 text NOT NULL, sha256 text, size int,
+    created_at timestamptz NOT NULL DEFAULT now())`);
   // Seed the single owner row (no password until set via the email flow). Idempotent.
   await q.query(`INSERT INTO owners (email) VALUES ($1) ON CONFLICT (email) DO NOTHING`, [ownerEmailConfigured()]);
 }
@@ -748,6 +763,85 @@ export async function saveMeetingTranslation(meetingId: string, t: { throughSeq:
        through_seq=EXCLUDED.through_seq, summary=EXCLUDED.summary, per_actor=EXCLUDED.per_actor,
        turns=EXCLUDED.turns, model=EXCLUDED.model, usage=EXCLUDED.usage, updated_at=now()`,
     [meetingId, t.throughSeq, t.summary || '', JSON.stringify(t.perActor || []), JSON.stringify(t.turns || []), t.model || '', JSON.stringify(t.usage || {})]);
+}
+
+// ---- Hub-mediated agent transfer (owner vision 2026-06-26, Arke 8d00b58f) ---
+export async function listAgentHomes(): Promise<Record<string, { home_machine: string | null; status: string }>> {
+  const { rows } = await db().query<any>(`SELECT agent, home_machine, status FROM agent_homes ORDER BY agent`);
+  const out: Record<string, { home_machine: string | null; status: string }> = {};
+  for (const r of rows) out[r.agent] = { home_machine: r.home_machine || null, status: String(r.status) };
+  return out;
+}
+export async function getAgentHome(agent: string): Promise<{ home_machine: string | null; status: string } | null> {
+  const { rows } = await db().query<any>(`SELECT home_machine, status FROM agent_homes WHERE agent=$1`, [agent]);
+  return rows[0] ? { home_machine: rows[0].home_machine || null, status: String(rows[0].status) } : null;
+}
+/** Stage a transfer: records the row and flips the agent to in_transit. Fails (returns null) if the agent is
+ *  already in_transit — the single-home invariant: never two moves in flight, never authored on both ends. */
+export async function initiateTransfer(id: string, agent: string, fromMachine: string, toMachine: string): Promise<{ ok: boolean; reason?: string }> {
+  const client = await db().connect();
+  try {
+    await client.query('BEGIN');
+    const cur = await client.query<any>(`SELECT status FROM agent_homes WHERE agent=$1 FOR UPDATE`, [agent]);
+    if (cur.rows[0] && cur.rows[0].status === 'in_transit') { await client.query('ROLLBACK'); return { ok: false, reason: 'already_in_transit' }; }
+    await client.query(
+      `INSERT INTO agent_homes (agent, home_machine, status, updated_at) VALUES ($1,$2,'in_transit',now())
+       ON CONFLICT (agent) DO UPDATE SET status='in_transit', updated_at=now()`,
+      [agent, fromMachine]);
+    await client.query(
+      `INSERT INTO agent_transfers (id, agent, from_machine, to_machine, status) VALUES ($1,$2,$3,$4,'staged')`,
+      [id, agent, fromMachine, toMachine]);
+    await client.query('COMMIT');
+    return { ok: true };
+  } catch (e) { await client.query('ROLLBACK').catch(() => {}); throw e; }
+  finally { client.release(); }
+}
+export async function getTransfer(id: string): Promise<any | null> {
+  const { rows } = await db().query<any>(
+    `SELECT id, agent, from_machine, to_machine, status, bundle_sha256, bundle_size,
+       to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
+       to_char(completed_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS completed_at
+     FROM agent_transfers WHERE id=$1`, [id]);
+  return rows[0] || null;
+}
+export async function listTransfersForMachine(toMachine: string): Promise<any[]> {
+  const { rows } = await db().query<any>(
+    `SELECT id, agent, from_machine, to_machine, status, bundle_sha256, bundle_size,
+       to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at
+     FROM agent_transfers WHERE to_machine=$1 AND status='bundled' ORDER BY created_at`, [toMachine]);
+  return rows;
+}
+export async function saveTransferBundle(transferId: string, contentB64: string, sha256: string, size: number): Promise<void> {
+  await db().query(
+    `INSERT INTO transfer_bundles (transfer_id, content_b64, sha256, size, created_at)
+     VALUES ($1,$2,$3,$4, now())
+     ON CONFLICT (transfer_id) DO UPDATE SET content_b64=EXCLUDED.content_b64, sha256=EXCLUDED.sha256, size=EXCLUDED.size, created_at=now()`,
+    [transferId, contentB64, sha256, size]);
+  await db().query(`UPDATE agent_transfers SET status='bundled', bundle_sha256=$2, bundle_size=$3 WHERE id=$1`, [transferId, sha256, size]);
+}
+export async function getTransferBundle(transferId: string): Promise<{ contentB64: string; sha256: string; size: number } | null> {
+  const { rows } = await db().query<any>(`SELECT content_b64, sha256, size FROM transfer_bundles WHERE transfer_id=$1`, [transferId]);
+  return rows[0] ? { contentB64: rows[0].content_b64, sha256: rows[0].sha256 || '', size: Number(rows[0].size) || 0 } : null;
+}
+/** Atomically complete a transfer: agent's home becomes to_machine + status home, transfer marked completed.
+ *  This single owner-of-truth flip is what guarantees only the destination authors after the move. */
+export async function completeTransfer(id: string, toMachine: string): Promise<{ ok: boolean; reason?: string }> {
+  const client = await db().connect();
+  try {
+    await client.query('BEGIN');
+    const t = await client.query<any>(`SELECT agent, status FROM agent_transfers WHERE id=$1 FOR UPDATE`, [id]);
+    if (!t.rows[0]) { await client.query('ROLLBACK'); return { ok: false, reason: 'not_found' }; }
+    if (t.rows[0].status === 'completed') { await client.query('ROLLBACK'); return { ok: false, reason: 'already_completed' }; }
+    const agent = String(t.rows[0].agent);
+    await client.query(`UPDATE agent_transfers SET status='completed', to_machine=$2, completed_at=now() WHERE id=$1`, [id, toMachine]);
+    await client.query(
+      `INSERT INTO agent_homes (agent, home_machine, status, updated_at) VALUES ($1,$2,'home',now())
+       ON CONFLICT (agent) DO UPDATE SET home_machine=$2, status='home', updated_at=now()`,
+      [agent, toMachine]);
+    await client.query('COMMIT');
+    return { ok: true };
+  } catch (e) { await client.query('ROLLBACK').catch(() => {}); throw e; }
+  finally { client.release(); }
 }
 
 // ---- Chronicle story repository (owner 2026-06-24) --------------------------
