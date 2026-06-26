@@ -781,6 +781,17 @@ export async function getAgentHome(agent: string): Promise<{ home_machine: strin
   const { rows } = await db().query<any>(`SELECT home_machine, status FROM agent_homes WHERE agent=$1`, [agent]);
   return rows[0] ? { home_machine: rows[0].home_machine || null, status: String(rows[0].status) } : null;
 }
+/** Owner sets/seeds an agent's home machine directly (status -> home). Used to populate the registry with
+ *  current reality; ongoing moves keep it correct via completeTransfer's atomic flip. */
+export async function setAgentHome(agent: string, machine: string): Promise<void> {
+  await db().query(
+    `INSERT INTO agent_homes (agent, home_machine, status, updated_at) VALUES ($1,$2,'home',now())
+     ON CONFLICT (agent) DO UPDATE SET home_machine=$2, status='home', updated_at=now()`, [agent, machine]);
+}
+/** Remove an agent's registry row (e.g. clear a stray test entry). */
+export async function deleteAgentHome(agent: string): Promise<void> {
+  await db().query(`DELETE FROM agent_homes WHERE agent=$1`, [agent]);
+}
 /** Stage a transfer: records the row and flips the agent to in_transit. Fails (returns null) if the agent is
  *  already in_transit — the single-home invariant: never two moves in flight, never authored on both ends. */
 export async function initiateTransfer(id: string, agent: string, fromMachine: string, toMachine: string): Promise<{ ok: boolean; reason?: string }> {

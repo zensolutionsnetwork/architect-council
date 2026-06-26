@@ -24,7 +24,7 @@ import {
   recordSchedulerRun, latestSchedulerRun, addStoryEntry, getStorySince, getStorySinceSeq,
   getMeetingTranslation, saveMeetingTranslation,
   listAgentHomes, getAgentHome, initiateTransfer, getTransfer, listTransfersForMachine, saveTransferBundle, getTransferBundle, completeTransfer,
-  registerMachine, listMachines,
+  registerMachine, listMachines, setAgentHome, deleteAgentHome,
   upsertStandard, standardExists, ratifyStandard, listStandards,
   setMeetingLedger, setMeetingManifestPins,
   setVoiceRunning, closeStaleVoiceMeetings, usdSpentTodayUtc, vaultReady, listMeetingsForDashboard,
@@ -1448,6 +1448,19 @@ const clipName = (s: any, n = 120) => String(s ?? '').trim().slice(0, n);
 // Home registry — who lives where + whether a move is in flight.
 councilRouter.get('/council/agents/home', requireOwner, async (_req, res) => {
   try { res.json({ ok: true, agents: await listAgentHomes() }); } catch (e) { internalError(res, e); }
+});
+// Owner sets/seeds (or clears) an agent's home machine, to populate the registry with current reality.
+// { agent, machine } sets home; { agent, machine:"" } (or null) clears the row (e.g. a stray test entry).
+// Ongoing moves keep the registry correct via completeTransfer's atomic flip.
+councilRouter.post('/council/agents/home', requireOwner, async (req, res) => {
+  try {
+    const b = req.body || {};
+    const agent = clipName(b.agent, 40);
+    if (!agent) return res.status(400).json({ error: 'agent_required' });
+    const machine = (b.machine === null || b.machine === undefined) ? '' : clipName(b.machine);
+    if (machine) { await setAgentHome(agent, machine); } else { await deleteAgentHome(agent); }
+    res.json({ ok: true, agent, home_machine: machine || null });
+  } catch (e) { internalError(res, e); }
 });
 
 // Stage a move: marks the agent in_transit (single-home invariant — refuses a second concurrent move).

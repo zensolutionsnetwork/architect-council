@@ -375,6 +375,9 @@ app config), base64, ≤32MB.
 
 - `GET /api/council/agents/home` → `{ ok, agents: { "<agent>": { home_machine, status } } }`. `status` ∈
   `"home" | "in_transit"`. An `in_transit` agent must not be authored by either side until the move completes.
+- `POST /api/council/agents/home` `{ agent, machine }` (owner-gated) → seeds/sets that agent's home machine
+  (`status:"home"`); `machine:""`/null clears the row (e.g. a stray entry). For populating the registry with
+  current reality; ongoing moves keep it correct via `transfer/:id/complete`.
 - `POST /api/council/transfer/initiate` `{ agent, from_machine, to_machine }` → `{ ok, transfer_id, status:"staged" }`;
   flips the agent to `in_transit`. `409 { error:"already_in_transit" }` if a move is already in flight (single-home).
 - `POST /api/council/transfer/:id/bundle` `{ content_b64, sha256? }` → stores the substrate; hub recomputes and

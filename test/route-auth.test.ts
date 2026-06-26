@@ -42,6 +42,7 @@ const PROTECTED: { method: string; path: string; body?: object }[] = [
   { method: 'GET',  path: '/api/council/meetings/route-auth-probe-id/status' },
   { method: 'GET',  path: '/api/council/meeting/route-auth-probe-id/summary' },
   { method: 'GET',  path: '/api/council/agents/home' },
+  { method: 'POST', path: '/api/council/agents/home', body: { agent: 'arke', machine: 'probe' } },
   { method: 'POST', path: '/api/council/machines/register', body: { machine_name: 'probe' } },
   { method: 'GET',  path: '/api/council/machines' },
   { method: 'POST', path: '/api/council/transfer/initiate', body: { agent: 'arke', to_machine: 'probe' } },
