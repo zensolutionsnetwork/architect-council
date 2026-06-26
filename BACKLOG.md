@@ -2,7 +2,16 @@
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-26 (06:00 MORNING)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-26 (MIDDAY)
+> (MIDDAY 2026-06-26, Kairos manual session, Mathieu present — SHIPPED + prod-verified in one deploy `8ce1c4f`,
+> all 4 gates pass, CI green: **#41 CLOSED** [/api/health.missed_meeting now FALSE on a recent
+> skipped_quorum/already_live, recency-guarded so a dead scheduler still alarms; verified live missed_meeting:false
+> + last_scheduler_status:skipped_quorum]; **#38 DONE** [dropped lastSchedulerRun deprecated aliases
+> decision/meetingId/at/seated/detail — Arke-confirmed zero consumers; dashboard now canonical-keys-only];
+> **OWNER-AUTH FINALIZED** [Arke ratified the 5 front-end choices via env-task `31a518de`: OS-keychain token,
+> 30d SLIDING no-absolute-max, set-from-inbox, one-hub-per-install, Bearer cutover; hub already matched, added
+> sliding on GET /auth/me, promoted OWNER_AUTH_CONTRACT_DRAFT.md to FINALIZED]. Inbox: `31a518de` replied+closed.
+> **STILL OWED: #42** [nightly re-pack must mutate pack content + verify upload landed]. architect-council HEAD `8ce1c4f`.)
 > (MORNING PREP 06:00 2026-06-26: no meeting overnight [#36 skipped_quorum, the nightly recorded it]. KEY FINDING:
 > the nightly's claimed brain re-pack did NOT land on the hub — Kairos was STALE at the 03:00 fire
 > (packSha==lastPackSha `f255f3f9`, hub corpus built 06-25 04:33Z) and was itself a cause of the sub-quorum, not

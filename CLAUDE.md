@@ -26,7 +26,27 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-26 MORNING PREP — no meeting overnight [#36 gate SKIPPED on quorum, as the nightly recorded]; KEY NEW FINDING: the nightly's claimed brain re-pack did NOT land — Kairos was STALE at the fire — re-packed for real this morning; inbox→0; standards 3/4; HEAD `4081c5e`; all green) — HANDOFF
+## Current state (2026-06-26 MIDDAY — Kairos manual session, Mathieu present: SHIPPED #41 + #38 + owner-auth finalize in one deploy, prod-verified; architect-council HEAD `8ce1c4f`; CI green; #42 still owed) — HANDOFF
+> **MIDDAY SESSION 2026-06-26 (Kairos, manual — Mathieu present).** Cleared the carry-over hub work while Arke
+> builds the migration front-end (Role B). One deploy (commit `8ce1c4f`); all four gates pass; CI green; Railway
+> rolled over and BOTH fixes prod-verified:
+> • **#41 CLOSED** — `/api/health.missed_meeting` now reads FALSE on a RECENT intentional scheduler decision
+>   (`skipped_quorum`/`already_live`), recency-guarded (run must be within cadence+grace) so a DEAD scheduler still
+>   alarms. VERIFIED LIVE: health now `missed_meeting:false` + `last_scheduler_status:skipped_quorum`. This is the
+>   exact bug the morning prep flagged "still owed."
+> • **#38 DONE** — dropped the deprecated `lastSchedulerRun` aliases (decision/meetingId/at/seated/detail); Arke
+>   grep-confirmed zero consumers, hub public/ has none. VERIFIED LIVE: dashboard `lastSchedulerRun` exposes only
+>   the canonical Row-1 keys.
+> • **Owner-auth FINALIZED** — Arke ratified the 5 front-end choices (env-task `31a518de`): OS-keychain token,
+>   30-day SLIDING session with NO absolute max, set-from-inbox flow, one-hub-per-install, Bearer cutover. Hub
+>   already matched (SESSION_TTL_MS=30d sliding via requireOwner; MIN_PW_LEN=12; additive requireOwner = Bearer OR
+>   Google OR console key); added sliding to `GET /api/auth/me` so a launch check counts as activity; promoted
+>   `docs/OWNER_AUTH_CONTRACT_DRAFT.md` to FINALIZED. No flag-day cutover — `x-admin-token` keeps working.
+> • **Inbox:** Arke's 12:34 `31a518de` (auth answers) actioned + replied + report-closed; his 06-26 `4440eba9`
+>   was handled earlier this session. **STILL OPEN / owed: #42** — the nightly re-pack must MUTATE pack content and
+>   VERIFY the upload landed (read `lastSchedulerRun`/readiness, not trust handoff prose); unchanged this session.
+>   Tonight's 03:00 fire: kairos fresh (re-packed this morning) + nova fresh ≥ quorum.
+>
 > **MORNING PREP 2026-06-26 (Kairos, automated 06:00). NO meeting to debrief — the 03:00 ET scheduler SKIPPED on
 > quorum (the NIGHTLY already captured this + opened #41). All systems green. ONE NEW, IMPORTANT FINDING this
 > ritual: the nightly's "BRAIN: re-packed at HEAD" claim did NOT actually land — Kairos was STALE at the 03:00 fire
