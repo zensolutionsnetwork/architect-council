@@ -2,7 +2,24 @@
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-27 (NIGHTLY)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-27 (MORNING PREP)
+> (MORNING PREP 06:00 2026-06-27, Kairos automated: the 06-27 03:00 ET autonomous meeting `d5cb11ce` RAN +
+> DEBRIEFED — the #36 gate seated all 4 [run_id 3, opened, fresh_count 4; the #42 brain-freshness fix HELD, no
+> quorum-skip]. 16 turns / 0 PASS / 4 rounds / `completed` / $1.3054 / verify-transcript PASS [sha `113fa5b9…`] /
+> all 4 seats 2.1 paired — 9th consecutive autonomous self-close. The friction-with-fix convergence round
+> CONVERGED on brain-freshness (#42) + transfer robustness (#46). MY judged-ACCEPT carry-outs → three day-session
+> builds: (A) NEW `/api/council/brains` freshness endpoint [per-actor `{actor,packed_at,fresh,fresh_until}` +
+> top-level `next_fire_at`] + RESPONSE_SHAPES pin — TOP PRIORITY, the convergence answer to #42, unblocks all 4
+> seats' `assert(fresh_until > next_fire_at)` prep guard [-> #47]; (B) transfer-lifecycle robustness — named enum
+> `in_transit -> receive_stalled|receive_failed|receive_confirmed -> completed` + home-flip idempotency key
+> `WHERE status='receive_confirmed' AND transfer_id=?` + per-row `flip_deadline` [folds into #44/#46, also answers
+> Arke c07e2d65]; (C) 429 + `Retry-After` RESPONSE_SHAPES pin for Arke's auth path [-> #48]. Voice integrity clean.
+> ONE cosmetic synthesizer flag: owner-report `raw` truncates mid-sentence at "Monolith" [structured fields
+> complete]. Debrief `council/KAIROS_DEBRIEF_2026-06-27.md`. SYSTEMS all green: prod ok/vault/scheduler_enabled
+> true, missed_meeting:false, last_scheduler_status:opened; CI+Push-on-main GREEN on HEAD `a1e63b6`; repo clean
+> 0/0; all 4 seats fresh+paired. INBOX: 1 OPEN — Arke `c07e2d65` [left for day session: the move landed + the
+> three asks #44/#45/#46; the meeting already converged the #46 robustness answer]. NO deploy this ritual beyond
+> the debrief + BACKLOG/CLAUDE refresh + brain re-pack.)
 > (NIGHTLY ~00:30 EDT 2026-06-27, Kairos automated: quiet since the 06-26 afternoon. The afternoon shipped the
 > HUB-MEDIATED AGENT-TRANSFER feature [`1174d94` transfer endpoint + lifecycle, `7ae76e5` machine-presence
 > registry, `cf02224` owner set/seed home-machine endpoint; all from Arke specs]; **Arke then DOGFOODED it to move
@@ -93,6 +110,41 @@
 > actually CONVERGE** — the new lead topic; owner asks the family to bring proposals for HOW to run it.)
 
 ## STATE AT A GLANCE
+- **MORNING PREP (2026-06-27 06:00) — the 03:00 ET autonomous meeting `d5cb11ce` RAN + DEBRIEFED; all green;
+  inbox 1 open; all 4 seats fresh+paired.** HEAD `a1e63b6` (the midnight nightly's backlog/handoff commit) +
+  this ritual's debrief/BACKLOG/CLAUDE refresh. Prod healthy (`/api/health` ok:true, vault:true,
+  **scheduler_enabled:true, missed_meeting:false, last_meeting_created_at `2026-06-27T07:00:10Z`,
+  last_scheduler_status `opened`**). **CI + Push-on-main GREEN on `a1e63b6`.** Git clean, in sync origin/main
+  (0/0). **No live meeting** (d5cb11ce phase report/completed; newest). **Brain freshness: ALL FOUR seats
+  fresh + paired** (corpus+pack+manifest all true; kairos 04:33Z, nova 05:21Z, logos 05:37Z, arke 04:17Z —
+  all 06-27; the #42 fix held, quorum met). **#36 GATE — 2nd live open, clean:** run_id 3, `status=opened`,
+  seated [kairos,arke,nova,logos], excluded [], fresh_count 4. **DEBRIEFED `d5cb11ce`**
+  (`council/KAIROS_DEBRIEF_2026-06-27.md`): created 07:00:10Z → closed 07:07:00Z, 4 seats, **16 turns / 0 PASS
+  / 4 rounds**, endedReason **`completed`**, **$1.3054498** (owner-report $0.046, layer1 $0.021),
+  **verify-transcript.mjs PASS** (sha `113fa5b9…a15636`), **all 4 seats manifest-2.1 paired**. **9th consecutive
+  fully-autonomous self-close** and the FIRST meeting since the 06-26 quorum-skip. **The friction-with-fix
+  convergence round CONVERGED** on two threads: **brain-freshness (#42)** → a new `/api/council/brains`
+  freshness endpoint, and **transfer robustness (#46)** → named enum states + idempotency key + per-row flip
+  deadline (also answers Arke's c07e2d65 "real question"). **MY HOMEWORK (judged ACCEPT, debrief §3) → three
+  day-session builds:** **(A) #47** NEW `/api/council/brains` freshness endpoint [per-actor
+  `{actor,packed_at,fresh,fresh_until}` + top-level `next_fire_at`] + RESPONSE_SHAPES pin — **TOP PRIORITY**,
+  the convergence answer to #42, unblocks all 4 seats' `assert(fresh_until > next_fire_at) || exit(1)` prep
+  guard; **(B)** transfer-lifecycle robustness (#44/#46) — enum `in_transit -> receive_stalled|receive_failed|
+  receive_confirmed -> completed` + home-flip idempotency key `WHERE status='receive_confirmed' AND
+  transfer_id=?` + per-row `flip_deadline`; **(C) #48** 429 + `Retry-After` RESPONSE_SHAPES pin for Arke's auth
+  path. **VOICE INTEGRITY:** clean (all propose/accept; Kairos T1 "#41 LIVE 8ce1c4f" is a legit own-session
+  report). **ONE cosmetic synthesizer flag:** owner-report `raw` truncates mid-sentence at "Monolith"
+  (structured fields complete; glance at the `raw` length cap if it recurs). **ECONOMICS:** $1.3054 — at the
+  bottom of the SS2 $1.30-2 envelope, +$0.05 over the last two runs, all substance, under the $1.50 watch line;
+  16t steady state. **ADOPTED from siblings:** Nova `git ls-remote` over `git fetch+compare`; Nova process-level
+  uncaughtException classifier for library async-throws; Logos UTF-8 no-BOM writer pin; secret-read helper-bat
+  per-seat. **INBOX: 1 OPEN — Arke `c07e2d65`** (left for day session; the move landed + asks #44/#45/#46; the
+  meeting already converged the #46 robustness answer). **No deploy this ritual beyond the debrief +
+  BACKLOG/CLAUDE refresh + brain re-pack.** **NEXT SESSION top 3:** (1) **ship #47** — the `/api/council/brains`
+  freshness endpoint + `next_fire_at` + RESPONSE_SHAPES pin (TOP, closes #42 at the contract level for all
+  seats); (2) **answer Arke `c07e2d65`** via the transfer-robustness build (B = #44/#46) + #45 owner-session
+  eviction check; (3) **#48** 429/Retry-After pin + adopt the sibling teachings. **TO ASK MATHIEU:** nothing
+  blocking solo. Bullet below this line is the 06-27 NIGHTLY (history).
 - **NIGHTLY (2026-06-27 ~00:30 EDT) — quiet since the 06-26 afternoon; the HUB-MEDIATED AGENT-TRANSFER feature
   shipped and Arke DOGFOODED it to move his seat to PC-Leanne (#43 DONE); all green; inbox 4 in -> 3 OBE-closed,
   1 OPEN; no autonomous meeting (#36 still quorum-skipping).** HEAD `cf02224` (the agent-transfer trio +
@@ -1204,6 +1256,38 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
     full-pair = `2xx` on the manifest commit; read-time pair view = the meeting-open pin (`paired`/`stale`/`none`,
     surfaced as `manifestReady` on the owner dashboard). `lastUpdated` bumped. **Unblocks Arke/Nova/Logos
     verify-after-mutate.** Hub agenda item posted so the family re-points before the next meeting.
+47. **NEW `/api/council/brains` freshness endpoint (NEW 2026-06-27, mtg `d5cb11ce` convergence — TOP PRIORITY).**
+    The convergence answer to #42 and Nova's owner-facing "minimal reliable mechanism" question: not a smarter
+    cron, a **readable freshness predicate the prep ritual asserts against**. Ship `GET /api/council/brains` →
+    per-actor `{ actor, packed_at, fresh, fresh_until }` + top-level `next_fire_at`. `fresh:bool` is necessary-
+    but-not-sufficient (a 23:50 ET assertion can age out before the 03:00 ET gate); `fresh_until:ISO` lets the
+    assertion check survival UNTIL the next fire; `next_fire_at` so no seat hardcodes "03:00 ET". Pin the shape in
+    `RESPONSE_SHAPES.md`. Unblocks all 4 seats' prep-ritual guard `assert(row.fresh_until > response.next_fire_at)
+    || process.exit(1)` (cross-adopted by the room, gated on me shipping the shape). Day session, CI-gated, no
+    live-meeting deploy. Re-pack-then-self-verify (#42) becomes a programmatic assert once this lands.
+48. **429 + `Retry-After` pinned in `RESPONSE_SHAPES.md` (NEW 2026-06-27, mtg `d5cb11ce`; Kairos→Arke).** Arke's
+    auth retry path reads `Retry-After` as the next-retry delay and only falls back to exponential when absent;
+    "hub said wait" must NOT count against his `RETRY_WALL_MS`, "hub didn't answer" does. Pin the hub's 429 +
+    `Retry-After` contract so his cockpit auth path is built against a fixed shape. Doc + (verify hub emits it).
+44. **Pin `GET /api/council/transfers` per-item shape in `RESPONSE_SHAPES.md` (NEW 2026-06-26, Arke `c07e2d65`).**
+    List items: `{ id, status, agent, from_machine, to_machine }`. Arke normalizes defensively today; pinning
+    lets him drop the guesswork. Doc-only. Pairs with #46.
+45. **Confirm/guarantee NO cross-machine owner-session eviction (NEW 2026-06-26, Arke `c07e2d65`#48-1, P1
+    owner-facing).** Mathieu wants to stay signed in on BOTH PCs simultaneously without re-entering the password —
+    each install holds its own 30d session. Investigate the owner-session model: confirm a new login does NOT
+    evict other machines' sessions; if it does, make sessions per-machine. Back-end investigation + (if needed)
+    a small auth change. CI-gated, no live-meeting deploy.
+46. **Transfer-lifecycle robustness: failures loud + states honest end-to-end (NEW 2026-06-26 Arke `c07e2d65`
+    "real question"; the mtg `d5cb11ce` convergence CONVERGED the answer).** The silent-fail class bit the move
+    (status monitor said "finishing automatically" over a dead receive, no error). My back-end answer, ratified
+    in the room: (a) name the limbo states — enum `in_transit -> receive_stalled | receive_failed |
+    receive_confirmed -> completed` (a crash between receive-confirmed and home-flip currently has no name); the
+    hub names the state, the app never guesses; (b) home-flip UPDATE uses an idempotency key
+    `WHERE status='receive_confirmed' AND transfer_id=?` so a second reconciler pass after a crash is a safe
+    zero-row no-op (Nova→Kairos, accepted); (c) per-row `flip_deadline` over a global reconciler interval (the row
+    names its own truth); (d) never report "completing" until the destination confirms receive; explicit
+    stall/error TERMINAL state + reason. Folds #44 (pin the shape). Day session w/ Arke (app shows the named
+    states honestly). CI-gated, no live-meeting deploy.
 
 ## P2 — product arc + hygiene
 0. **Process standardization (STANDING GOAL, owner directive 2026-06-10)** — every member adopts
