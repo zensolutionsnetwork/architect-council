@@ -2,7 +2,23 @@
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-26 (MIDDAY)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-27 (NIGHTLY)
+> (NIGHTLY ~00:30 EDT 2026-06-27, Kairos automated: quiet since the 06-26 afternoon. The afternoon shipped the
+> HUB-MEDIATED AGENT-TRANSFER feature [`1174d94` transfer endpoint + lifecycle, `7ae76e5` machine-presence
+> registry, `cf02224` owner set/seed home-machine endpoint; all from Arke specs]; **Arke then DOGFOODED it to move
+> his own seat to PC-Leanne — #43 SEAT MOVE DONE** [substrate rode the bundle, hub flipped home, Arke resumed
+> there]. HEAD `cf02224`; CI+Push-on-main+checksuite-guard GREEN; repo clean 0/0; prod healthy
+> [ok/vault/scheduler_enabled:true, missed_meeting:false (#41 holding), last_scheduler_status:skipped_quorum].
+> NO autonomous meeting [06-26 03:00 ET quorum-skipped again]; nothing to debrief. INBOX: 4 in -> 3 OBE-closed
+> [d12ffd26/59365020/eeaa62da, all superseded by the successful move], **1 OPEN — Arke `c07e2d65`** [move landed +
+> app-side hardening + asks: (1) confirm NO cross-machine owner-session eviction so both PCs stay signed in -> #45;
+> (2) pin GET /api/council/transfers per-item shape in RESPONSE_SHAPES -> #44; (3) Mathieu wants my back-end read on
+> making the transfer lifecycle robust/loud/honest -> #46]. The move was rough on the APP side: the status monitor
+> LIED ["finishing automatically" over a dead receive, no error] — Arke patched two app bugs [8c550f4 poll wiped
+> per-transfer status; 20d49dd id-key mismatch -> silent auto-receive skip]; lesson = silent-fail is the worst mode.
+> AGENDA: 6 open [#13 Nova ci-status playbook, #14 Nova/high friction-with-fix standing ritual, #15 Logos secret
+> helper-bat, #16 Kairos #41 (mine, posted), #17 Nova imapflow uncaughtException classifier, #18 Nova
+> integration-removal orphan audit]; POSTED a new friction+fix item: transfer-lifecycle honest-states/loud-failures.)
 > (MIDDAY 2026-06-26, Kairos manual session, Mathieu present — SHIPPED + prod-verified in one deploy `8ce1c4f`,
 > all 4 gates pass, CI green: **#41 CLOSED** [/api/health.missed_meeting now FALSE on a recent
 > skipped_quorum/already_live, recency-guarded so a dead scheduler still alarms; verified live missed_meeting:false
@@ -77,6 +93,34 @@
 > actually CONVERGE** — the new lead topic; owner asks the family to bring proposals for HOW to run it.)
 
 ## STATE AT A GLANCE
+- **NIGHTLY (2026-06-27 ~00:30 EDT) — quiet since the 06-26 afternoon; the HUB-MEDIATED AGENT-TRANSFER feature
+  shipped and Arke DOGFOODED it to move his seat to PC-Leanne (#43 DONE); all green; inbox 4 in -> 3 OBE-closed,
+  1 OPEN; no autonomous meeting (#36 still quorum-skipping).** HEAD `cf02224` (the agent-transfer trio +
+  PM-doc-refresh landed after the PM handoff `ddd060e`): `1174d94` hub-mediated agent transfer (drag an agent
+  between PCs; transfer endpoint + `GET /api/council/transfer/:id` lifecycle pinned in RESPONSE_SHAPES),
+  `7ae76e5` machine-presence registry, `cf02224` owner set/seed home-machine endpoint — all from Arke specs,
+  06-26 afternoon. CI + Push-on-main + checksuite-guard GREEN on `cf02224`; repo clean 0/0; prod healthy
+  (`/api/health` ok/vault/scheduler_enabled:true, **missed_meeting:false** [#41 fix holding], last_meeting
+  `2026-06-25T07:00:11Z`, **last_scheduler_status:skipped_quorum**). **No live meeting** — newest is the 06-25
+  `ba750c9a` (debriefed); the 06-26 03:00 ET scheduler quorum-skipped again (<2 fresh brains), so NO autonomous
+  meeting ran, nothing to debrief. **#43 SEAT MOVE DONE** — Arke dogfooded the drag-to-transfer feature: the
+  substrate (memory + council/) rode the integrity-checked secret-scanned bundle, the hub flipped `home` to
+  PC-Leanne, Arke resumed there; the A3 teardown auto-fired on the atomic home-flip. He flagged the move was
+  rough on the APP side (status monitor LIED — "finishing automatically" over a dead receive, no error; two app
+  bugs patched `8c550f4`/`20d49dd`; lesson = silent-fail is the worst mode). **INBOX: 4 in -> 3 OBE-closed**
+  (`d12ffd26`/`59365020`/`eeaa62da`, all superseded by the successful move) **-> 1 OPEN: Arke `c07e2d65`** (left
+  for the day session — move landed + asks: confirm NO cross-machine owner-session eviction [#45], pin
+  `GET /api/council/transfers` per-item shape in RESPONSE_SHAPES [#44], and Mathieu wants my back-end read on
+  making the transfer lifecycle robust/loud/honest [#46]). **AGENDA: 6 open** (#13 Nova ci-status playbook, #14
+  Nova/high friction-with-fix standing ritual, #15 Logos secret helper-bat, #16 Kairos #41-mine-posted, #17 Nova
+  imapflow uncaughtException classifier, #18 Nova integration-removal orphan audit); **POSTED a new friction+fix
+  item** (transfer-lifecycle honest-states/loud-failures). **NEW ITEMS: #44** (pin transfers list-item shape, P2),
+  **#45** (confirm/guarantee no cross-machine owner-session eviction; both PCs stay signed in, P1 owner-facing),
+  **#46** (transfer-lifecycle robustness: failures loud + states honest end-to-end, P2/design). **No deploy this
+  ritual beyond BACKLOG/CLAUDE doc refresh + brain re-pack.** **NEXT SESSION top 3:** (1) answer Arke `c07e2d65`
+  — owner-session model (#45) + pin transfers shape (#44) + robustness read (#46); (2) **#42** keep the nightly
+  brain step honest (verify the upload LANDED via corpus-status); (3) adopt agenda #13/#14/#15/#17/#18 + **#29**
+  JOINT with Arke. Bullet below this line is the 06-26 NIGHTLY (history).
 - **NIGHTLY (2026-06-26 ~00:30 EDT) — quiet after a heavy 06-25 day session; all green; the #36 quorum gate
   fired its FIRST real SKIP overnight; inbox down to 1 open; one new hub bug captured (#41).** HEAD `4081c5e`
   (auth-hardening, past the day-session handoff); CI + Push-on-main + checksuite-guard all GREEN; repo clean
