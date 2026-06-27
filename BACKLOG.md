@@ -2,7 +2,31 @@
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-27 (MORNING PREP)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-27 (DAY SESSION)
+> (DAY SESSION 2026-06-27, Kairos, Mathieu present — SHIPPED #47 + answered/pinned every open sibling ask; inbox
+> cleared 5 -> 0; 2 deploys, CI green, no live meeting. **#47 DONE + prod-verified** (`c052dd0`): NEW
+> `GET /api/council/brains` — member-or-owner gated, `{ ok, now, next_fire_at, tz, quorum_min, fresh_count,
+> actors:[{actor,packed_at,fresh,fresh_until,status,pack_sha}] }`. `fresh` mirrors the #36 readiness gate
+> byte-for-byte (sha-based); `next_fire_at` is DST-correct (two-pass Toronto offset); `fresh_until = next_fire +
+> 24h` for a fresh seat, null otherwise; `computeReadiness` gained `packedAt` (additive). route-auth 61 gated/0
+> open; RESPONSE_SHAPES pinned. The convergence answer to #42 — unblocks Logos + all 4 seats' prep guard. Live
+> smoke confirmed (logos fresh, others stale = attended this morning, not yet re-packed — correct). **#44/#45/#48
+> + owner-auth cutover ANSWERED + pinned** (`dbdf4e8`, docs-only, no code change — the hub already behaves as
+> wanted): #44 transfer list-item shape {id,agent,from_machine,to_machine,status,bundle_sha256,bundle_size,
+> created_at}; enum staged->bundled->completed (NO cancelled/failed yet); `/transfers` is destination-scoped +
+> bundled-only so a completed transfer DROPS OFF the list — the SENDER must use `/transfer/:id`; `/complete`
+> idempotent (treat 409 already_completed as success). #45: confirmed NO cross-machine login eviction (only
+> set-password revokes all) — both PCs stay signed in. Owner-auth cutover: requireOwner is the single shared gate
+> on every owner route, Bearer additive; 30d sliding refreshed on every authed call + /auth/me; **CORRECTION: there
+> IS a 90-day ABSOLUTE cap** (the earlier "no absolute max" note was wrong — getOwnerSession enforces created_at >
+> now-90d); 401 body `{error:"unauthorized"}`; Bearer == x-admin authority. #48: `429 {error:"rate_limited"}` +
+> `Retry-After:<sec>`; auth path 20/15min, global /api 240/60s (already live in `ratelimit.ts`). **#46 robustness:
+> PROPOSED not shipped** (changes the enum Arke reads -> coordinated change): hub-named terminal states
+> receive_stalled + cancelled, bundled_at + flip_deadline, sweep auto-stamps stalls LOUD; awaiting Arke's go to
+> sequence. **NEW: Logos corpus-contract question** (a42792a1) — should git-ignored files enter the hub corpus?
+> Kairos recommendation: NO, corpus = `git ls-files` tracked set only (privacy-monotonic + secret-scan); flagged
+> for ratification. POSTED 2 hub agenda items (corpus ruling + #46). Replied Logos (b846e3d9) + Arke (0e512a80);
+> all 6 inbox msgs report-closed -> INBOX 0. NEXT: build #46 with Arke on his go; ratify the corpus ruling.)
 > (MORNING PREP 06:00 2026-06-27, Kairos automated: the 06-27 03:00 ET autonomous meeting `d5cb11ce` RAN +
 > DEBRIEFED — the #36 gate seated all 4 [run_id 3, opened, fresh_count 4; the #42 brain-freshness fix HELD, no
 > quorum-skip]. 16 turns / 0 PASS / 4 rounds / `completed` / $1.3054 / verify-transcript PASS [sha `113fa5b9…`] /
