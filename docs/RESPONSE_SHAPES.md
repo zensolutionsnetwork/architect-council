@@ -9,7 +9,11 @@ _Last updated: 2026-06-27 — #47: added `GET /api/council/brains`, the hub-comp
 endpoint (`{ next_fire_at, actors:[{actor,packed_at,fresh,fresh_until,status,pack_sha}] }`, member-or-owner
 gated) so each seat's prep ritual asserts `fresh_until > next_fire_at` off the hub instead of hardcoding
 03:00 ET. `fresh` mirrors the #36 readiness gate exactly; `next_fire_at` is DST-correct. The convergence
-answer to #42.
+answer to #42. Also pinned (no code change, confirmed against source): the TRANSFER list-item shape + status
+enum (`staged→bundled→completed`) + retention (`/transfers` is destination-scoped & bundled-only; sender uses
+`/transfer/:id`) + idempotent `/complete` (#44); the OWNER-AUTH cutover answers — Bearer additive on every
+owner-gated route, 30d sliding with a 90d absolute cap, no cross-machine login eviction (#45), 401 body
+`{error:"unauthorized"}`; and the `429 {error:"rate_limited"}` + `Retry-After` rate-limit shape (#48).
 Earlier 2026-06-26 (PM) — added HUB-MEDIATED AGENT TRANSFER (drag an agent between PCs): owner-gated
 home registry `GET /api/council/agents/home` + transfer relay (`/api/council/transfer/initiate`, `/:id/bundle`
 PUT+GET, `/transfers?to_machine=`, `/:id`, `/:id/complete`) with atomic single-home enforcement; substrate
@@ -443,6 +447,47 @@ app config), base64, ≤32MB.
   `status="home"` and marks the transfer `completed`. After this only the destination is home; the source app
   tears down its local copy. `404 not_found` / `409 already_completed`.
 
+### Transfer list-item shape + status lifecycle + retention (#44, pinned 2026-06-27)
+
+**Per-item shape of `GET /api/council/transfers?to_machine=<m>` `transfers[]`** (canonical keys — read these
+directly, drop the defensive fallback chain):
+
+```jsonc
+{
+  "id": "uuid",              // the transfer id (this key is "id", NOT "transfer_id" — initiate's RESPONSE
+                             //   returns transfer_id, but every transfer ROW/list-item uses "id")
+  "agent": "arke",
+  "from_machine": "PC-Office" | null,
+  "to_machine": "PC-Leanne",
+  "status": "bundled",       // see enum below
+  "bundle_sha256": "…" | null,
+  "bundle_size": 12345 | null,
+  "created_at": "2026-06-26T15:00:00Z"   // UTC ISO
+}
+```
+`GET /api/council/transfer/:id` (single) returns the SAME fields **plus `completed_at`** (UTC ISO | null),
+wrapped as `{ ok, transfer }`.
+
+**Status enum (the transfer row, `status` field):** `staged` (initiated, no bundle yet) → `bundled`
+(substrate uploaded, ready for the destination) → `completed` (destination confirmed receive; home flipped).
+There is currently **no `cancelled` / `failed` / `receive_stalled` state** — see the robustness proposal #46.
+NB: this is the TRANSFER's status. It is distinct from the AGENT's `agent_homes.status` (`home | in_transit`)
+returned by `GET /api/council/agents/home` — don't conflate the two enums.
+
+**Retention / list scoping (the important one):** `GET /transfers?to_machine=` returns **ONLY `status='bundled'`
+rows** addressed to that machine (destination-poll view). A transfer therefore **drops off `/transfers` the
+instant it completes** (it's no longer `bundled`) and a `staged`-but-not-yet-`bundled` transfer never appears
+there either. Completed rows are NOT deleted — they remain queryable indefinitely (no TTL sweep today) via
+`GET /transfer/:id`. **So the SENDER must NOT use `/transfers` to watch its own move** — it is destination-scoped
+and bundled-only. The sender polls `GET /transfer/:id` to see the honest `staged → bundled → completed`
+lifecycle (Arke's `8ad7c02`/`9e2901e` already do this — correct).
+
+**`/complete` is idempotent — treat `409 already_completed` as SUCCESS.** `completeTransfer` is a single
+`FOR UPDATE` transaction with an `already_completed` guard, so a retried/duplicate complete (e.g. the app's
+bounded backoff) never double-flips the home. A client retrying `/complete` MUST read `409 already_completed`
+as "the move already landed" (success), not as an error — this is exactly the silent-fail-vs-benign-retry
+seam from the first move.
+
 **Atomicity:** the hub owning "who is home" is what guarantees an agent runs on exactly one PC — single-source
 enforced centrally, replacing the manual task-deletion timing of the first arke move.
 
@@ -622,3 +667,39 @@ that Bearer **additively** alongside the console key (`x-admin-token`) and Googl
 swap: `x-admin-token` keeps working until the app flips owner-gated calls to Bearer. The hub does NOT distinguish
 *which* proof was used — only that one is valid. On a `401` from any owner-gated call mid-session, the app drops to
 the login screen (session expired or revoked).
+
+**Cutover answers — confirmed against the code (1fd305c8, 2026-06-27). Safe to flip; no hub change needed.**
+
+1. **Bearer is additive on EVERY owner-gated endpoint, not just `/api/auth/*`.** There is ONE shared middleware
+   (`requireOwner`) and it guards all of them — `/council/scheduler`, `/council/limits`, `/council/backlog`
+   (+`/backlog/agent`), `/council/standards` (+`/standards/:slug/ratify`), `/council/transfers`, `/council/transfer/*`,
+   `/council/agents/home`, `/council/notify-email`, `/council/meeting/:id/*` (run-autonomous, cost, summary),
+   `/council/dashboard`, `/council/manager/*`, the hierarchy routes, etc. `requireOwner` accepts **console key OR
+   Google OR owner Bearer**, in that order — truly additive. Flip them all; nothing regresses.
+2. **Session lifecycle:** 30-day **sliding** window, refreshed on EVERY `requireOwner`-gated call (each pass slides
+   `expires_at = now + 30d`) AND on `GET /api/auth/me`. There is **no `/api/auth/refresh`** — any authed call IS the
+   refresh. **There IS a 90-day ABSOLUTE cap** from session creation: a session stops validating once
+   `created_at < now − 90d` no matter how recently slid (anti-stolen-token hardening) → the app must handle an
+   eventual forced re-login even on an active session. `GET /api/auth/me` → `{ ok, owner:{id,email}, expiresAt }`
+   (the refreshed expiry). **Exact 401 body on expired/revoked/absent session: `{ "error": "unauthorized" }`** (same
+   from `/auth/me` and from any `requireOwner` route).
+3. **Authority scope:** a per-owner Bearer carries the **SAME authority** as `x-admin-token` on these endpoints —
+   `requireOwner` makes no per-proof distinction. (One fixed owner per hub instance today; the per-owner-instance
+   split is the future #40 / MAMS model, not a per-call scope difference now.) You can retire `COUNCIL_OWNER_TOKEN`
+   for clients and keep it only as a dev/self-host fallback.
+4. **Multi-machine sign-in — NO cross-machine eviction (#45, confirmed).** `POST /api/auth/login` mints an
+   INDEPENDENT session row and does **not** delete any other session. Signing in on PC-B does not touch PC-A's
+   session; each install holds its own 30-day sliding token. The ONLY action that revokes all sessions is
+   `POST /api/auth/set-password` (a password reset deliberately ends every session — correct security behavior).
+   So Mathieu can stay signed in on both PCs simultaneously; nothing per-machine needs adding.
+
+## Rate limiting — `429` + `Retry-After` (#48, pinned 2026-06-27)
+
+Per-IP fixed-window limiter (dependency-free, fail-open, behind `trust proxy` so the IP is the client not Railway's edge). Two layers:
+- **Global `/api`:** 240 requests / 60s per IP. `/api/health` is exempt (Railway's probe never trips it).
+- **Auth path (brute-force guard):** `/api/auth/login`, `/api/auth/request-password`, `/api/auth/set-password` —
+  20 requests / 15 min per IP.
+
+On limit: **`429 { "error": "rate_limited" }`** with a **`Retry-After: <integer seconds>`** response header (whole
+seconds until the window resets). The app should read `Retry-After`, back off that long, and surface a real
+"too many attempts, retry in Ns" message on the login screen — not a silent failure or a generic error.
