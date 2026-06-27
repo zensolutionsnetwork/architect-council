@@ -982,6 +982,32 @@ councilRouter.post('/council/scheduler', async (req, res) => {
   } catch (e) { internalError(res, e); }
 });
 
+// #47 (convergence meeting d5cb11ce, 2026-06-27 — the answer to #42 brain-freshness). Per-seat brain
+// freshness, computed HUB-SIDE, so each seat's prep ritual can verify it will be SEATED at the next fire
+// instead of hardcoding 03:00 ET or re-deriving the gate locally. `fresh` mirrors the scheduler's readiness
+// gate EXACTLY (sha-based: a pack whose sha differs from the one the seat carried at its last-attended
+// meeting; a seat with no recorded attendance reads fresh — fail-toward-inclusive). `next_fire_at` is the
+// next scheduled fire (UTC ISO), null when the scheduler is OFF. `fresh_until` is the horizon through which
+// `fresh` is guaranteed to hold: a fresh seat stays fresh until it ATTENDS a meeting, so it is guaranteed
+// fresh through the upcoming fire and first risks staleness one cadence later — hence next_fire_at + cadence;
+// stale / no_brain => null. Consumer guard: assert(fresh_until && next_fire_at && Date.parse(fresh_until) >
+// Date.parse(next_fire_at)) — loud exit on fail/missing. Member-OR-owner gated (any resolved actor, like
+// corpus-status) so each seat reads its own row with its own secret. Contract pinned in RESPONSE_SHAPES.md.
+councilRouter.get('/council/brains', async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
+    const nextFire = await nextFireAtUtc();
+    const readiness = await computeReadiness();
+    const actors = readiness.map((r) => {
+      const fresh = r.status === 'fresh';
+      const fresh_until = (fresh && nextFire) ? new Date(Date.parse(nextFire) + SCHED_INTERVAL_MS).toISOString() : null;
+      return { actor: r.actor, packed_at: r.packedAt, fresh, fresh_until, status: r.status, pack_sha: r.packSha };
+    });
+    res.json({ ok: true, now: new Date().toISOString(), next_fire_at: nextFire, tz: 'America/Toronto',
+      quorum_min: QUORUM_MIN, fresh_count: actors.filter((x) => x.fresh).length, actors });
+  } catch (e) { internalError(res, e); }
+});
+
 // Owner-tunable meeting limits (owner 2026-06-23) — DB-backed (app_settings) so Arke's app can read/set
 // them without a redeploy. turnTarget (default 50) + usdCeiling (default 4, per meeting). These are SOFT
 // targets the voices try to finish within; at the limit, an unfinished meeting closes gracefully, auto-
@@ -1568,6 +1594,33 @@ const VALID_HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 async function getSchedTime(): Promise<string> {
   try { const t = String(await getSetting('hub_meeting_time') || ''); return VALID_HHMM.test(t) ? t : '03:00'; } catch { return '03:00'; }
 }
+// #47 (convergence meeting d5cb11ce, 2026-06-27): the next scheduled fire as a UTC ISO instant, so each
+// seat's prep ritual can assert(fresh_until > next_fire_at) off the hub instead of hardcoding 03:00 ET.
+// Returns null when the scheduler is OFF (nothing scheduled to assert against). DST-correct: resolves the
+// Toronto zone offset AT the candidate instant (two-pass, handles spring-forward / fall-back edges) so a
+// 03:00 Toronto fire maps to the right UTC hour year-round without a tz library.
+function tzWallAsUtcMs(d: Date): number {
+  const p = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).formatToParts(d);
+  const g = (t: string) => Number(p.find((x) => x.type === t)?.value || '0');
+  return Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'), g('second'));
+}
+function torontoWallToUtc(y: number, mo: number, d: number, hh: number, mm: number): Date {
+  const guess = Date.UTC(y, mo - 1, d, hh, mm, 0);          // treat the wall time as if it were UTC
+  let off = tzWallAsUtcMs(new Date(guess)) - guess;         // zone offset at that guess instant
+  let real = guess - off;
+  off = tzWallAsUtcMs(new Date(real)) - real;               // re-resolve at the corrected instant (DST edge)
+  real = guess - off;
+  return new Date(real);
+}
+async function nextFireAtUtc(): Promise<string | null> {
+  if (!(await schedulerEnabled())) return null;
+  const [hh, mm] = (await getSchedTime()).split(':').map(Number);
+  const { date } = torontoParts();                          // today's Toronto calendar date
+  const [y, mo, d] = date.split('-').map(Number);
+  let fire = torontoWallToUtc(y, mo, d, hh, mm);
+  if (fire.getTime() <= Date.now()) fire = torontoWallToUtc(y, mo, d + 1, hh, mm); // past today -> tomorrow (Date.UTC normalizes day overflow)
+  return fire.toISOString();
+}
 
 // #35 (meeting 2026-06-22, ratified family-wide): the /api/health "missed_meeting" signal. Computed
 // HUB-SIDE so the cockpit does ZERO threshold math — Arke/Nova render the boolean + timestamp tooltip,
@@ -1611,7 +1664,7 @@ export async function healthMeetingSignal(): Promise<{ last_meeting_created_at: 
 // fix); a seat with no committed pack is NO_BRAIN; a seat whose pack is unchanged since last attendance is
 // STALE. A seat with no recorded attendance yet reads FRESH (fail-toward-inclusive: never exclude on missing
 // history). The scheduler fires only with the FRESH quorum and keeps stale/no-brain seats OUT.
-type SeatReadiness = { actor: string; status: 'fresh' | 'stale' | 'no_brain'; packSha: string | null; lastPackSha: string | null };
+type SeatReadiness = { actor: string; status: 'fresh' | 'stale' | 'no_brain'; packSha: string | null; lastPackSha: string | null; packedAt: string | null };
 const QUORUM_MIN = 2; // a scheduled meeting needs at least this many freshly-prepped seats to fire
 async function computeReadiness(): Promise<SeatReadiness[]> {
   const out: SeatReadiness[] = [];
@@ -1619,11 +1672,12 @@ async function computeReadiness(): Promise<SeatReadiness[]> {
     let packMeta: any = null;
     try { packMeta = await getBrainV2Meta(actor, 'pack'); } catch { /* treat as no_brain below */ }
     const packSha = packMeta ? String(packMeta.sha256) : null;
-    if (!packSha) { out.push({ actor, status: 'no_brain', packSha: null, lastPackSha: null }); continue; }
+    const packedAt = packMeta ? (packMeta.committed_at || null) : null; // #47: server-stamped pack commit time (UTC ISO)
+    if (!packSha) { out.push({ actor, status: 'no_brain', packSha: null, lastPackSha: null, packedAt: null }); continue; }
     let lastPackSha: string | null = null;
     try { lastPackSha = await lastAttendedPackSha(actor); } catch { lastPackSha = null; }
     const status: SeatReadiness['status'] = (lastPackSha === null || packSha !== lastPackSha) ? 'fresh' : 'stale';
-    out.push({ actor, status, packSha, lastPackSha });
+    out.push({ actor, status, packSha, lastPackSha, packedAt });
   }
   return out;
 }

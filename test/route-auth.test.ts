@@ -38,6 +38,7 @@ const PROTECTED: { method: string; path: string; body?: object }[] = [
   { method: 'POST', path: '/api/council/notify-email/test', body: {} },
   { method: 'DELETE', path: '/api/meeting/route-auth-probe-id' },
   { method: 'GET',  path: '/api/bridge/corpus-status?actor=logos' },
+  { method: 'GET',  path: '/api/council/brains' },
   { method: 'GET',  path: '/api/council/boots' },
   { method: 'GET',  path: '/api/council/meetings/route-auth-probe-id/status' },
   { method: 'GET',  path: '/api/council/meeting/route-auth-probe-id/summary' },
