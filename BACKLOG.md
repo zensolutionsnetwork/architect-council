@@ -2,7 +2,22 @@
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-27 (DAY SESSION)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-28 (NIGHTLY)
+> (NIGHTLY ~00:30 EDT 2026-06-28, Kairos automated — quiet evening after the 06-27 day session; no new code/meeting;
+> all green. HEAD `2b97e91`; CI+Push-on-main+checksuite-guard GREEN; repo clean 0/0; prod healthy
+> [ok/vault/scheduler_enabled:true, missed_meeting:false, last_scheduler_status:opened, last_mtg 2026-06-27T07:00:10Z].
+> No live meeting [5 meetings all phase=report; newest `d5cb11ce` 06-27, already debriefed]; the 06-28 03:00 ET fire
+> is AFTER this ritual, nothing to debrief. **BRAIN-FRESHNESS (the #47 endpoint, now usable): fresh_count=1,
+> quorum_min=2** — ONLY logos fresh (06-27 12:57Z); kairos/arke/nova stale (attended the 06-27 meeting, not
+> re-packed). This is the #42 fragility — my nightly re-pack brings kairos fresh -> fresh_count=2 -> the 06-28 03:00
+> meeting can run. **INBOX: 2 in -> 1 closed [Arke `7c4509b2` ack — cutover unblocked + #46 +1], 1 OPEN [Arke
+> `17306e5b` = GO ON #46]**. **#46 NOW UNBLOCKED — Mathieu greenlit** the transfer-robustness change (1)+(2):
+> hub-named terminal states receive_stalled + cancelled + bundled_at + per-row flip_deadline + a sweep that
+> auto-stamps receive_stalled on age-out. Pin-shape-first protocol: (1) I pin the FINAL enum/fields shape in
+> RESPONSE_SHAPES + send Arke; (2) ship hub side, tell him 'live' w/ commit; (3) he lands app side + replies MATCH;
+> no app change reads new states until my shape is pinned. **=> #46 is the TOP day-session build (P2/blocked ->
+> UNBLOCKED).** AGENDA: 2 open, both mine, already posted [id=22 corpus-contract ruling, id=23 #46-loud-failures] —
+> do NOT re-post. No deploy this ritual beyond BACKLOG/CLAUDE refresh + brain re-pack.)
 > (DAY SESSION 2026-06-27, Kairos, Mathieu present — SHIPPED #47 + answered/pinned every open sibling ask; inbox
 > cleared 5 -> 0; 2 deploys, CI green, no live meeting. **#47 DONE + prod-verified** (`c052dd0`): NEW
 > `GET /api/council/brains` — member-or-owner gated, `{ ok, now, next_fire_at, tz, quorum_min, fresh_count,
@@ -134,6 +149,39 @@
 > actually CONVERGE** — the new lead topic; owner asks the family to bring proposals for HOW to run it.)
 
 ## STATE AT A GLANCE
+- **NIGHTLY (2026-06-28 ~00:30 EDT) — quiet evening after the 06-27 day session; no new code/meeting; all green;
+  inbox 2 in -> 1 closed + 1 OPEN; #46 NOW UNBLOCKED (Mathieu greenlit); only 1 fresh brain (my re-pack fixes it).**
+  HEAD `2b97e91` (the 06-27 day-session backlog commit; nothing landed since). **CI + Push-on-main +
+  checksuite-guard all GREEN on `2b97e91`.** Repo clean, in sync origin/main (0/0). Prod healthy (`/api/health`
+  ok/vault/scheduler_enabled:true, **missed_meeting:false, last_scheduler_status:opened, last_meeting_created_at
+  `2026-06-27T07:00:10Z`**). **No live meeting** (5 meetings all phase=report; newest `d5cb11ce` 06-27, already
+  debriefed) — the 06-28 03:00 ET fire is AFTER this ritual, nothing to debrief. **BRAIN-FRESHNESS (the new #47
+  `GET /api/council/brains` endpoint, first nightly use): fresh_count=1, quorum_min=2, next_fire
+  2026-06-28T07:00:00Z** — ONLY **logos** fresh (packed 06-27 12:57Z, fresh_until 06-29T07:00Z); **kairos/arke/nova
+  all stale** (each attended the 06-27 morning meeting, pack sha == attend sha, not re-packed since). At 1 fresh
+  seat the 06-28 03:00 fire would QUORUM-SKIP — **this is exactly the #42 fragility.** My nightly re-pack tonight
+  mutates kairos's pack sha -> kairos FRESH -> fresh_count=2 (kairos+logos) >= quorum 2 -> the 06-28 03:00 meeting
+  can run. (Arke+Nova stay stale unless they re-pack — siblings don't auto-re-pack nightly.) **INBOX: 2 in -> 1
+  report-closed, 1 OPEN.** Closed: **Arke `7c4509b2`** (ack — cutover unblocked confirmed [additive Bearer auth,
+  canonical transfer keys, no cross-machine evict]; +1 on #46, said he'd confirm with Mathieu first). **OPEN —
+  Arke `17306e5b` (left for day session): GO ON #46.** Mathieu greenlit the transfer-robustness change (1)+(2):
+  hub-named terminal states **receive_stalled + cancelled** + **bundled_at** + per-row **flip_deadline** + a
+  **sweep** that auto-stamps receive_stalled on age-out. **Pin-shape-first protocol:** (1) BEFORE shipping I send
+  Arke the FINAL pinned shape in `RESPONSE_SHAPES.md` (full enum `staged|bundled|completed|receive_stalled|
+  cancelled`, new fields `bundled_at`+`flip_deadline`+types, stall-deadline value, cancel trigger endpoint); (2) I
+  ship hub side (enum + fields + sweep) behind that shape + tell him 'live' w/ commit; (3) he lands app side
+  (SENDER renders receive_stalled loud/honest + cancelled terminal; cancel action if I expose one; 409
+  already_completed = success) + replies MATCH. No app change reads new states until my shape is pinned. **=> #46
+  is the TOP day-session build now (was P2/blocked-on-Arke, now UNBLOCKED/greenlit).** **AGENDA: 2 open, both
+  MINE, already posted — do NOT re-post:** id=22 (corpus contract: git-ignored private files stay OUT, corpus =
+  `git ls-files` tracked set only; awaiting ratification), id=23 (transfer lifecycle make failures LOUD #46 — the
+  mirror of the greenlit build). **No deploy this ritual beyond the BACKLOG/CLAUDE doc refresh + brain re-pack.**
+  **NEXT SESSION top 3:** (1) **ship #46** (UNBLOCKED) — pin the final transfer enum/fields shape in
+  `RESPONSE_SHAPES.md`, send Arke for confirm, THEN ship hub side (receive_stalled + cancelled + bundled_at +
+  flip_deadline + sweep) and tell him 'live'; (2) **ratify the corpus-contract ruling** (agenda id=22) at/with the
+  next meeting; (3) **#42 cadence/freshness** — only kairos auto-re-packs nightly, so quorum is one stale-sibling
+  from a skip; raise automating sibling nightly re-packs (or a freshness floor) at the next convergence round.
+  **TO ASK MATHIEU:** nothing blocking solo. Bullet below this line is the 06-27 MORNING PREP (history).
 - **MORNING PREP (2026-06-27 06:00) — the 03:00 ET autonomous meeting `d5cb11ce` RAN + DEBRIEFED; all green;
   inbox 1 open; all 4 seats fresh+paired.** HEAD `a1e63b6` (the midnight nightly's backlog/handoff commit) +
   this ritual's debrief/BACKLOG/CLAUDE refresh. Prod healthy (`/api/health` ok:true, vault:true,
@@ -1401,6 +1449,21 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
     `meeting-codereview-purpose-converge`.)
 
 ## WAITING ON
+- **#46 transfer-robustness — NOW UNBLOCKED (Mathieu greenlit 2026-06-28, Arke `17306e5b`). TOP day-session
+  build.** Change set: hub-named terminal states `receive_stalled` + `cancelled`, new fields `bundled_at` +
+  per-row `flip_deadline`, and a sweep that auto-stamps `receive_stalled` when a bundled transfer ages out.
+  **Pin-shape-first protocol (agreed, prevents torn-state):** (1) BEFORE shipping, Kairos pins the FINAL shape in
+  `RESPONSE_SHAPES.md` — full enum `staged|bundled|completed|receive_stalled|cancelled`, `bundled_at` +
+  `flip_deadline` types, stall-deadline value, cancel-trigger endpoint — and sends it to Arke; (2) Kairos ships
+  hub side (enum + fields + sweep) behind the pinned shape, tells Arke 'live' with the commit; (3) Arke lands the
+  app side (SENDER renders `receive_stalled` loud/honest + `cancelled` terminal; cancel action if exposed; 409
+  already_completed = success) and replies MATCH. Do NOT ship the enum until the shape is pinned + Arke confirms;
+  do NOT deploy over a live meeting. (Was P2 #46 / blocked-on-Arke; the meeting `d5cb11ce` converged the answer.)
+- **#42 brain-freshness cadence (standing fragility, re-observed 2026-06-28 nightly via the new #47 endpoint).**
+  Only kairos auto-re-packs nightly. Tonight `GET /api/council/brains` read fresh_count=1 (only logos) before my
+  re-pack — one stale sibling away from a quorum-skip. The nightly re-pack reliably restores kairos→fresh, but
+  the family is structurally fragile. Raise at the next convergence round: automate sibling nightly re-packs (or
+  define a freshness floor / lower the 24h staleness window). No solo fix — design decision for the room.
 - **Mathieu (NEW 2026-06-25, ONE owner ruling owed):** the `adopted_standards` **source-of-truth** (blocks
   BACKLOG #40). The first convergence round (meeting `ba750c9a`) ratified three standards but split the
   seeding — Kairos seeds the hub artifact table; Arke/Nova/Logos each mirror a local `ADOPTED_STANDARDS.md`.

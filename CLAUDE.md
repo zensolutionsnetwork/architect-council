@@ -26,7 +26,52 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-27 MORNING PREP — the 03:00 ET autonomous meeting `d5cb11ce` RAN + DEBRIEFED [the #42 brain-freshness fix HELD, no quorum-skip]; 16t/$1.3054/`completed`/hash-PASS/all 4 paired = 9th consecutive autonomous self-close; convergence round converged on brain-freshness #42 + transfer-robustness #46; all green; inbox 1 OPEN [Arke c07e2d65]) — HANDOFF
+## Current state (2026-06-28 NIGHTLY — quiet evening after the 06-27 DAY SESSION [#47 shipped+verified; #44/#45/#48 + auth cutover pinned; #46 PROPOSED]; all green; no new meeting; inbox 2 in -> 1 closed, 1 OPEN [Arke `17306e5b` = GO on #46 w/ pin-shape-first protocol]; **#46 NOW UNBLOCKED — Mathieu greenlit**; brains fresh_count=1 [only logos] -> my re-pack tonight brings kairos fresh -> quorum=2 for the 06-28 03:00 fire) — HANDOFF
+> **NIGHTLY 2026-06-28 (Kairos, automated midnight ritual, ~00:30 EDT). Quiet evening after the 06-27 DAY
+> SESSION; no new code/meeting; all green; one important freshness note + one newly-UNBLOCKED build (#46).**
+> HEAD `2b97e91` (the 06-27 day session's backlog commit). The 06-27 DAY SESSION shipped (recap):
+> **`c052dd0` #47 — NEW `GET /api/council/brains`** per-seat freshness endpoint (member-or-owner gated;
+> `{ok,now,next_fire_at,tz,quorum_min,fresh_count,actors:[{actor,packed_at,fresh,fresh_until,status,pack_sha}]}`;
+> `fresh` mirrors the #36 readiness gate byte-for-byte; `next_fire_at` DST-correct; the convergence answer to
+> #42, unblocks all 4 seats' `assert(fresh_until > next_fire_at)` prep guard); **`dbdf4e8`** (docs-only — pinned
+> the transfer list-item shape/#44, owner-auth cutover/#45 incl. the CORRECTION that there IS a 90-day absolute
+> session cap, and 429+`Retry-After`/#48 in RESPONSE_SHAPES); **`2b97e91`** (backlog). Working tree clean, in
+> sync origin/main (0/0). Prod healthy (`/api/health` ok:true, vault:true, **scheduler_enabled:true,
+> missed_meeting:false, last_scheduler_status `opened`, last_meeting_created_at `2026-06-27T07:00:10Z`**). **CI +
+> Push-on-main + checksuite-guard all GREEN on `2b97e91`.** **No live meeting** (5 meetings all phase=report;
+> newest `d5cb11ce` from the 06-27 03:00 ET run, already debriefed at the 06-27 morning prep — safe to push).
+> **No new autonomous meeting since `d5cb11ce`** — the 03:00 ET scheduler fires LATER tonight (06-28 03:00
+> Toronto, AFTER this midnight ritual), so nothing new to debrief; it appears for the 06-28 morning prep.
+> **BRAIN-FRESHNESS WATCH (the #47 endpoint, now usable):** `GET /api/council/brains` reads **fresh_count=1,
+> quorum_min=2, next_fire 2026-06-28T07:00:00Z** — ONLY **logos** is fresh (packed 06-27 12:57Z, fresh_until
+> 06-29T07:00Z); kairos/arke/nova all read **stale** (each attended the 06-27 morning meeting and has not
+> re-packed since — pack sha == attend sha). **This is exactly the #42 fragility:** at 1 fresh seat the 06-28
+> 03:00 fire would QUORUM-SKIP. **My nightly re-pack tonight (step 8) mutates kairos's pack sha -> kairos
+> FRESH -> fresh_count=2 (kairos+logos) >= quorum_min=2 -> the 06-28 03:00 meeting can run.** (Arke+Nova stay
+> stale unless they re-pack — siblings don't auto-re-pack nightly; standing fragility, see #42/the cadence
+> design thread.) **INBOX: 2 in -> 1 report-closed, 1 OPEN.** Closed: **Arke `7c4509b2`** (ack — cutover
+> unblocked confirmed [additive Bearer auth, canonical transfer keys, no cross-machine evict]; +1 on #46
+> robustness, said he'd confirm with Mathieu before I ship). **OPEN — Arke `17306e5b` (left for the day
+> session): GO ON #46.** Mathieu greenlit the transfer-robustness change (1)+(2): hub-named terminal states
+> **receive_stalled + cancelled** + **bundled_at** + per-row **flip_deadline** + a **sweep** that auto-stamps
+> receive_stalled when a bundled transfer ages out. **Sequencing protocol (pin-shape-first, to avoid torn-state):**
+> (1) BEFORE shipping, I send Arke the FINAL pinned shape in `RESPONSE_SHAPES.md` — full status enum
+> (`staged|bundled|completed|receive_stalled|cancelled`), new fields (`bundled_at`, `flip_deadline`) + types, the
+> stall-deadline value, and how a cancel is triggered (owner action -> which endpoint); (2) I ship the hub side
+> (enum + fields + sweep) behind that pinned shape and tell him 'live' with the commit; (3) THEN he lands the app
+> side (SENDER renders receive_stalled loud/honest + cancelled as terminal; adds a cancel action if I expose one;
+> keeps 409 already_completed = success) and replies MATCH. No app change reads the new states until my shape is
+> pinned. **=> #46 is the TOP day-session build now (was P2/blocked-on-Arke, now UNBLOCKED/greenlit).** **AGENDA:
+> 2 open, both MINE, already posted — do NOT re-post:** id=22 (kairos/normal — corpus contract: git-ignored
+> private files stay OUT, corpus = `git ls-files` tracked set only; awaiting ratification), id=23 (kairos/normal —
+> transfer lifecycle make failures LOUD #46; this is the agenda mirror of the now-greenlit build). **No deploy
+> this ritual beyond the BACKLOG/CLAUDE doc refresh + brain re-pack.** **NEXT SESSION top 3:** (1) **ship #46**
+> (now UNBLOCKED) — pin the final transfer enum/fields shape in `RESPONSE_SHAPES.md`, send Arke for confirm, THEN
+> ship hub side (receive_stalled + cancelled + bundled_at + flip_deadline + sweep) and tell him 'live' with the
+> commit; (2) **ratify the corpus-contract ruling** (agenda id=22 — git-ignored files stay out) at/with the next
+> meeting; (3) **#42 cadence/freshness** — only kairos auto-re-packs nightly, so quorum is one stale-sibling away
+> from a skip; raise automating sibling nightly re-packs (or a freshness-floor) at the next convergence round.
+> **TO ASK MATHIEU:** nothing blocking solo. Bullets below this line are the 06-27 MORNING PREP snapshot (history).
 > **MORNING PREP 2026-06-27 (Kairos, automated 06:00). DEBRIEFED the 03:00 ET autonomous meeting `d5cb11ce` —
 > the FIRST meeting since the 06-26 quorum-skip, and the #42 brain-freshness fix HELD: all four seats packed
 > fresh overnight so the #36 gate SEATED ALL 4 (run_id 3, `opened`, fresh_count 4, excluded []) instead of
