@@ -2,7 +2,7 @@
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-28 (NIGHTLY)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-28 (MORNING PREP)
 > [DAY-SESSION UPDATE 06-27 after this nightly: #46 transfer-robustness SHIPPED + prod-verified (`62ccda7`) — the
 > nightly below framed it as the pending top build; it is now DONE hub-side, awaiting Arke's app-side MATCH. See
 > the DAY SESSION block further down.]
@@ -160,6 +160,41 @@
 > actually CONVERGE** — the new lead topic; owner asks the family to bring proposals for HOW to run it.)
 
 ## STATE AT A GLANCE
+- **MORNING PREP (2026-06-28 06:00) — the 03:00 ET autonomous meeting `8abb37a3` RAN + DEBRIEFED; all green;
+  inbox 0; CI green; the #36 gate did its FIRST clean PARTIAL exclusion (seated 3 fresh, excluded arke-stale).**
+  HEAD `07c9a2f` (the 06-27 day session's #46 ships landed past the nightly's `2b97e91`: `9ed9142` shape-pin →
+  `62ccda7` #46 hub impl → `07c9a2f` backlog). **CI + Push-on-main GREEN on `07c9a2f`.** Repo clean, in sync
+  origin/main (0/0). Prod healthy (`/api/health` ok/vault/scheduler_enabled:true, **missed_meeting:false,
+  last_scheduler_status `opened`, last_meeting_created_at `2026-06-28T07:00:00Z`**). **No live meeting** (meeting
+  `8abb37a3` phase report/completed; newest). **#36 GATE — first PARTIAL exclusion, clean:** seated
+  [kairos,nova,logos] (3 fresh), **excluded arke (stale — mid-migration to PC-Leanne, read stale at the 07:00
+  fire)**. The exclusion is why the run cost $0.83 not ~$1.30. **DEBRIEFED `8abb37a3`**
+  (`council/KAIROS_DEBRIEF_2026-06-28.md`): created 07:00:00Z → closed 07:04:23Z, 3 seats, **12 turns / 0 PASS
+  / 4 rounds**, endedReason **`completed`**, **$0.8293870** (owner-report $0.0372, layer1 $0.0179),
+  **verify-transcript.mjs PASS** (sha `83ffa321…b380541`), **all 3 seated 2.1 paired**. **10th consecutive
+  fully-autonomous self-close.** **The friction-with-fix convergence round was strong** (Nova wrong-module
+  swap; Logos "phantom footgun" premise-failure; kairos↔Nova #46 sweep/complete race; Logos NOOP-probe timeout
+  gap) — real cross-improvement, 0 waste. **MY HOMEWORK (judged, verified line-by-line vs the shipped `62ccda7`,
+  debrief §2):** items 1-4 (receive_stalled recoverable / `/complete` accepts receive_stalled / 30s sweep [tighter
+  than the room's proposed ~15min] / READ COMMITTED isolation) **ALREADY SHIPPED or SATISFIED** — the room
+  re-litigated shipped work because the brains were pack-stale (HEAD `2b97e91`, pre-#46). The ONE genuinely new
+  carry-out: **(5) `stalled_recovered_at` column (Nova)** so Arke's UI distinguishes normal-complete from
+  late-recovery-complete → **BACKLOG #49** (small additive, coordinated w/ Arke). Plus standing: ratify the
+  corpus-contract ruling (id=22) + co-author the background-async loud-failure `ADOPTED_STANDARDS` row. **ROOT-CAUSE
+  FLAG (#42 brain-step):** my 04:32 re-pack carried the nightly's pre-#46 pack content (HEAD `2b97e91`), so my
+  voice debated #46 as unshipped — the nightly re-pack must reflect the true post-day-session HEAD/backlog state.
+  **VOICE INTEGRITY:** clean (all propose; no false-execution claim; the only blemish is my voice UNDER-claiming
+  shipped #46 = pack staleness). **ECONOMICS:** $0.83, below SS2 — the gate paying for itself (a stale seat doesn't
+  burn budget). **ADOPTED from siblings:** Nova recoverable-intermediate-state + record-the-recovery; Nova
+  staged-not-live module env-throw + `// LIVE` breadcrumb; Logos verify-the-premise-before-carrying-homework;
+  Logos name-the-isolation-level; the Nova/Logos background-loop loud-failure shape (applies to my 30s sweep).
+  **INBOX: 0 open.** **NO deploy this ritual beyond the debrief + BACKLOG/CLAUDE refresh + brain re-pack.** **NEXT
+  SESSION top 3:** (1) **ship #49** — `stalled_recovered_at` (pin shape in RESPONSE_SHAPES, tell Arke, ship the
+  column + set-on-recovery); (2) **#42 brain-step fix** — make the nightly re-pack carry true post-day HEAD/backlog
+  so the room stops re-litigating shipped work; raise sibling-auto-re-pack at convergence; (3) **ratify
+  corpus-contract (id=22)** + co-author the background-async loud-failure standard. **TO ASK MATHIEU:** nothing
+  blocking solo. **WAITING ON:** arke's re-pack cadence on PC-Leanne (excluded stale this fire — his own session).
+  Bullet below this line is the 06-28 NIGHTLY (history).
 - **NIGHTLY (2026-06-28 ~00:30 EDT) — quiet evening after the 06-27 day session; no new code/meeting; all green;
   inbox 2 in -> 1 closed + 1 OPEN; #46 NOW UNBLOCKED (Mathieu greenlit); only 1 fresh brain (my re-pack fixes it).**
   HEAD `2b97e91` (the 06-27 day-session backlog commit; nothing landed since). **CI + Push-on-main +
@@ -1460,21 +1495,29 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
     `meeting-codereview-purpose-converge`.)
 
 ## WAITING ON
-- **#46 transfer-robustness — NOW UNBLOCKED (Mathieu greenlit 2026-06-28, Arke `17306e5b`). TOP day-session
-  build.** Change set: hub-named terminal states `receive_stalled` + `cancelled`, new fields `bundled_at` +
-  per-row `flip_deadline`, and a sweep that auto-stamps `receive_stalled` when a bundled transfer ages out.
-  **Pin-shape-first protocol (agreed, prevents torn-state):** (1) BEFORE shipping, Kairos pins the FINAL shape in
-  `RESPONSE_SHAPES.md` — full enum `staged|bundled|completed|receive_stalled|cancelled`, `bundled_at` +
-  `flip_deadline` types, stall-deadline value, cancel-trigger endpoint — and sends it to Arke; (2) Kairos ships
-  hub side (enum + fields + sweep) behind the pinned shape, tells Arke 'live' with the commit; (3) Arke lands the
-  app side (SENDER renders `receive_stalled` loud/honest + `cancelled` terminal; cancel action if exposed; 409
-  already_completed = success) and replies MATCH. Do NOT ship the enum until the shape is pinned + Arke confirms;
-  do NOT deploy over a live meeting. (Was P2 #46 / blocked-on-Arke; the meeting `d5cb11ce` converged the answer.)
-- **#42 brain-freshness cadence (standing fragility, re-observed 2026-06-28 nightly via the new #47 endpoint).**
-  Only kairos auto-re-packs nightly. Tonight `GET /api/council/brains` read fresh_count=1 (only logos) before my
-  re-pack — one stale sibling away from a quorum-skip. The nightly re-pack reliably restores kairos→fresh, but
-  the family is structurally fragile. Raise at the next convergence round: automate sibling nightly re-packs (or
-  define a freshness floor / lower the 24h staleness window). No solo fix — design decision for the room.
+- **#46 transfer-robustness — SHIPPED + prod-verified 2026-06-27 (`9ed9142` shape-pin → `62ccda7` hub impl →
+  `07c9a2f`).** LIVE: hub-named states `receive_stalled` (30s-sweep-stamped when a bundled transfer passes
+  `flip_deadline` = bundled_at+10min; RECOVERABLE — `/complete` works from it, re-bundle recovers) + `cancelled`
+  (owner abort via `POST /transfer/:id/cancel`); new `bundled_at` + `flip_deadline` on every transfer object;
+  `/complete` rejects `cancelled`, treats 409 `already_completed` as success. Shape pinned in `RESPONSE_SHAPES`;
+  told Arke live (`563c5469`). **WAITING ON Arke:** land the app side (SENDER renders `receive_stalled`
+  loud/honest + `cancelled` terminal; cancel action) and reply MATCH — his app reads no new states until then.
+- **#49 (NEW, from meeting `8abb37a3` 2026-06-28) — `stalled_recovered_at` column on transfers (Nova's #46
+  refinement).** Add an additive `stalled_recovered_at timestamptz`, set when a row leaves `receive_stalled` (via
+  `/complete` or a recovering re-bundle), so Arke's UI distinguishes "completed normally" from "completed after a
+  stall" and stale "stalled" toasts don't persist. Small: column + set-in-SET-clause + add to the shared
+  `TRANSFER_COLS` + pin in `RESPONSE_SHAPES` + tell Arke (coordinated, his app reads it). Also: pin the actual 30s
+  sweep cadence + the READ-COMMITTED isolation intent comment in RESPONSE_SHAPES so the room stops re-debating
+  them (both verified ALREADY LIVE in `62ccda7`, debrief §2). P2, day-session, no live-meeting deploy.
+- **#42 brain-freshness cadence + brain-CONTENT freshness (standing fragility; re-observed 2026-06-28 morning).**
+  TWO faces. (a) Cadence: only kairos auto-re-packs nightly; the 06-28 nightly read fresh_count=1 (only logos)
+  before my re-pack — one stale sibling from a quorum-skip. The re-pack restored kairos→fresh and the 03:00 fire
+  ran (seated 3, excluded arke). (b) **NEW — content staleness:** at meeting `8abb37a3` my voice reported HEAD
+  `2b97e91` and debated #46 as UNSHIPPED, because my 04:32 re-pack carried the nightly's pre-#46 `kairos_pack.md`
+  content even though #46 had shipped (`62ccda7`) in the 06-27 day session. The nightly re-pack must rebuild pack
+  CONTENT from true post-day-session HEAD + backlog state, not the pre-day snapshot — otherwise the room
+  re-litigates shipped work. Raise at the next convergence round: automate sibling nightly re-packs (or a freshness
+  floor) AND make the re-pack content-fresh. No solo fix for the cadence half — design decision for the room.
 - **Mathieu (NEW 2026-06-25, ONE owner ruling owed):** the `adopted_standards` **source-of-truth** (blocks
   BACKLOG #40). The first convergence round (meeting `ba750c9a`) ratified three standards but split the
   seeding — Kairos seeds the hub artifact table; Arke/Nova/Logos each mirror a local `ADOPTED_STANDARDS.md`.

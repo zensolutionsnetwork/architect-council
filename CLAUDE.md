@@ -26,7 +26,45 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-28 NIGHTLY — quiet evening after the 06-27 DAY SESSION [#47 shipped+verified; #44/#45/#48 + auth cutover pinned; #46 PROPOSED]; all green; no new meeting; inbox 2 in -> 1 closed, 1 OPEN [Arke `17306e5b` = GO on #46 w/ pin-shape-first protocol]; **#46 NOW UNBLOCKED — Mathieu greenlit**; brains fresh_count=1 [only logos] -> my re-pack tonight brings kairos fresh -> quorum=2 for the 06-28 03:00 fire) — HANDOFF
+## Current state (2026-06-28 MORNING PREP — the 03:00 ET autonomous meeting `8abb37a3` RAN + DEBRIEFED; all green; inbox 0; CI green on HEAD `07c9a2f`; the #36 gate did its FIRST clean PARTIAL exclusion [seated kairos/nova/logos, excluded arke-stale]; 12t/0PASS/4rounds/`completed`/$0.83/hash PASS = 10th consecutive autonomous self-close) — HANDOFF
+> **MORNING PREP 2026-06-28 (Kairos, automated 06:00). DEBRIEFED the 03:00 ET autonomous meeting `8abb37a3` —
+> the FIRST clean PARTIAL exclusion of the #36 gate (seated the 3 fresh seats kairos/nova/logos, EXCLUDED arke
+> as stale — arke is mid-migration to PC-Leanne and read stale at the 07:00 fire). All systems green; inbox 0;
+> CI green; HEAD now `07c9a2f` (the 06-27 day session's #46 ships landed past the nightly's `2b97e91`).** Prod
+> healthy (`/api/health` ok:true, vault:true, **scheduler_enabled:true, missed_meeting:false,
+> last_scheduler_status `opened`, last_meeting_created_at `2026-06-28T07:00:00Z`**). **CI + Push-on-main GREEN
+> on `07c9a2f`.** Git clean, in sync origin/main (0/0). **No live meeting** (`8abb37a3` phase report/completed;
+> newest). **DEBRIEFED `8abb37a3`** (`council/KAIROS_DEBRIEF_2026-06-28.md`): created 07:00:00Z → closed
+> 07:04:23Z, 3 seats, **12 turns / 0 PASS / 4 rounds**, endedReason **`completed`**, **$0.8293870** (owner-report
+> $0.0372, layer1 $0.0179), **verify-transcript.mjs PASS** (sha `83ffa321…b380541`), **all 3 seated 2.1 paired**.
+> **10th consecutive fully-autonomous self-close.** **ECONOMICS:** $0.83, well below the SS2 $1.30-2 envelope —
+> the gate paying for itself (a stale seat doesn't burn model budget; 3 seats × ~$0.26 vs the 4-seat ~$1.30 norm).
+> **THE CONVERGENCE ROUND WAS STRONG** (Nova wrong-module swap `d7dc3bb`; Logos "phantom footgun" premise-failure
+> — his DEPLOY scripts are clean, the `for /f` secret-echo only bites ad-hoc interactive typing; kairos↔Nova #46
+> sweep/`complete` race; Logos NOOP-probe timeout gap) — real cross-improvement, 0 PASS, 0 waste. **MY HOMEWORK
+> (judged, verified line-by-line vs the shipped `62ccda7`, debrief §2 — applying Logos's verify-the-premise
+> lesson):** items 1-4 [`receive_stalled` recoverable / `/complete` accepts receive_stalled / 30s sweep (TIGHTER
+> than the room's proposed ~15min) / READ-COMMITTED isolation] are **ALREADY SHIPPED or SATISFIED** — the room
+> re-litigated shipped work because the brains were pack-stale (my turn-1 said HEAD `2b97e91`, pre-#46). The ONE
+> genuinely new carry-out: **(5) `stalled_recovered_at` column (Nova)** so Arke's UI distinguishes normal-complete
+> from late-recovery-complete → **BACKLOG #49** (small additive, coordinated w/ Arke). Plus standing: ratify the
+> corpus-contract ruling (agenda id=22) + co-author the background-async loud-failure `ADOPTED_STANDARDS` row.
+> **ROOT-CAUSE FLAG (#42 brain-step / content face):** my 04:32 re-pack carried the nightly's pre-#46 pack
+> content — the nightly re-pack must rebuild from the true post-day-session HEAD/backlog or the room re-debates
+> shipped work. **VOICE INTEGRITY:** clean (all propose; no false-execution claim; the only blemish is my voice
+> UNDER-claiming shipped #46 = pack staleness, corrected). **ADOPTED from siblings → pack:** Nova
+> recoverable-intermediate-state + record-the-recovery (`stalled_recovered_at`); Nova staged-not-live module
+> env-throw + `// LIVE` breadcrumb; Logos verify-the-premise-before-carrying-homework; Logos name-the-isolation-
+> level on any sweep-vs-mutator race; the Nova/Logos background-loop loud-failure shape (in-flight guard +
+> `Promise.race` rejecting timer + `TIMEOUT<INTERVAL` startup assert + edge-triggered STALLED/RECOVERED +
+> cold-start disarm) — applies to my 30s hub sweep. **INBOX: 0 open.** **No deploy this ritual beyond the
+> debrief + BACKLOG/CLAUDE refresh + brain re-pack.** **NEXT SESSION top 3:** (1) **ship #49** — `stalled_recovered_at`
+> (pin shape in RESPONSE_SHAPES + the actual 30s-sweep/READ-COMMITTED notes, tell Arke, ship the column +
+> set-on-recovery); (2) **#42 brain-step fix** — make the nightly re-pack carry true post-day HEAD/backlog so the
+> room stops re-litigating shipped work; raise sibling-auto-re-pack at convergence; (3) **ratify corpus-contract
+> (id=22)** + co-author the background-async loud-failure standard. **TO ASK MATHIEU:** nothing blocking solo.
+> **WAITING ON:** arke lands the #46 app side + replies MATCH; arke's re-pack cadence on PC-Leanne (excluded
+> stale this fire — his own session). Bullets below this line are the 06-28 NIGHTLY snapshot (history).
 > **NIGHTLY 2026-06-28 (Kairos, automated midnight ritual, ~00:30 EDT). Quiet evening after the 06-27 DAY
 > SESSION; no new code/meeting; all green; one important freshness note + one newly-UNBLOCKED build (#46).**
 > HEAD `2b97e91` (the 06-27 day session's backlog commit). The 06-27 DAY SESSION shipped (recap):
