@@ -24,6 +24,7 @@ import {
   recordSchedulerRun, latestSchedulerRun, addStoryEntry, getStorySince, getStorySinceSeq,
   getMeetingTranslation, saveMeetingTranslation,
   listAgentHomes, getAgentHome, initiateTransfer, getTransfer, listTransfersForMachine, saveTransferBundle, getTransferBundle, completeTransfer,
+  cancelTransfer, stampStalledTransfers,
   registerMachine, listMachines, setAgentHome, deleteAgentHome,
   upsertStandard, standardExists, ratifyStandard, listStandards,
   setMeetingLedger, setMeetingManifestPins,
@@ -1560,6 +1561,19 @@ councilRouter.post('/council/transfer/:id/complete', requireOwner, async (req, r
   } catch (e) { internalError(res, e); }
 });
 
+// #46: owner aborts an in-flight move. Sets the transfer `cancelled` (terminal) from any non-completed state
+// and releases the single-home lock (the agent returns home on its SOURCE). Idempotent: a re-cancel is 200;
+// a completed transfer can't be cancelled (409 already_completed). Makes the abort an explicit, named state
+// instead of a transfer silently abandoned at `bundled`/`staged`.
+councilRouter.post('/council/transfer/:id/cancel', requireOwner, async (req, res) => {
+  try {
+    const r = await cancelTransfer(req.params.id);
+    if (!r.ok) return res.status(r.reason === 'not_found' ? 404 : 409).json({ error: r.reason || 'conflict' });
+    const t = await getTransfer(req.params.id);
+    res.json({ ok: true, transfer: t });
+  } catch (e) { internalError(res, e); }
+});
+
 // Machine PRESENCE registry (Arke cef127e6, 2026-06-26). Each app instance registers its hostname on launch
 // + ~60s heartbeat so the transfer destination can be a dropdown. Presence only; agent_homes stays the
 // source of truth for where each agent lives. Owner-gated. A machine is marked stale if unseen > 5 min.
@@ -1723,6 +1737,9 @@ export function startScheduler(): void {
       }
       // Daily outbox retention sweep (council 2026-06-07) — quiet hour, after the meeting window. Runs even while paused.
       if (hhmm === '04:30' && lastSweepDate !== date) { lastSweepDate = date; await sweepOutbox(); await sweepEnvTasks(); }
+      // #46: every tick, mark any bundled transfer past its flip_deadline `receive_stalled` so a dead/offline
+      // destination surfaces LOUD within ~30s instead of hanging on the app's "finishing" guess. Cheap UPDATE.
+      try { const n = await stampStalledTransfers(); if (n) console.log(`[hub:transfer] stamped ${n} stalled transfer(s) receive_stalled`); } catch { /* best-effort */ }
     } catch { /* keep ticking */ }
   }, 30000);
 }

@@ -246,6 +246,11 @@ export async function initDb(): Promise<void> {
     id text PRIMARY KEY, agent text NOT NULL, from_machine text, to_machine text,
     status text NOT NULL DEFAULT 'staged', bundle_sha256 text, bundle_size int,
     created_at timestamptz NOT NULL DEFAULT now(), completed_at timestamptz)`);
+  // #46 (2026-06-27): transfer-robustness fields — bundled_at stamps when the substrate lands; flip_deadline
+  // (= bundled_at + stall window) is the instant after which the sweep marks an un-completed bundled transfer
+  // `receive_stalled` (loud, not inferred-from-silence). Additive; existing rows get NULLs.
+  await q.query(`ALTER TABLE agent_transfers ADD COLUMN IF NOT EXISTS bundled_at timestamptz`);
+  await q.query(`ALTER TABLE agent_transfers ADD COLUMN IF NOT EXISTS flip_deadline timestamptz`);
   await q.query(`CREATE TABLE IF NOT EXISTS transfer_bundles (
     transfer_id text PRIMARY KEY, content_b64 text NOT NULL, sha256 text, size int,
     created_at timestamptz NOT NULL DEFAULT now())`);
@@ -812,19 +817,23 @@ export async function initiateTransfer(id: string, agent: string, fromMachine: s
   } catch (e) { await client.query('ROLLBACK').catch(() => {}); throw e; }
   finally { client.release(); }
 }
+// #46: bundled_at + flip_deadline are returned as UTC ISO (additive). The shared column list keeps
+// /transfer/:id and /transfers byte-identical so the app reads one shape from either.
+const TRANSFER_COLS = `id, agent, from_machine, to_machine, status, bundle_sha256, bundle_size,
+  to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
+  to_char(completed_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS completed_at,
+  to_char(bundled_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS bundled_at,
+  to_char(flip_deadline at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS flip_deadline`;
 export async function getTransfer(id: string): Promise<any | null> {
-  const { rows } = await db().query<any>(
-    `SELECT id, agent, from_machine, to_machine, status, bundle_sha256, bundle_size,
-       to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
-       to_char(completed_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS completed_at
-     FROM agent_transfers WHERE id=$1`, [id]);
+  const { rows } = await db().query<any>(`SELECT ${TRANSFER_COLS} FROM agent_transfers WHERE id=$1`, [id]);
   return rows[0] || null;
 }
 export async function listTransfersForMachine(toMachine: string): Promise<any[]> {
+  // #46: include receive_stalled — a stalled transfer is still receivable (bundle intact), so the destination
+  // can pick it up when it comes back online. The sender watches /transfer/:id; this is the destination poll.
   const { rows } = await db().query<any>(
-    `SELECT id, agent, from_machine, to_machine, status, bundle_sha256, bundle_size,
-       to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at
-     FROM agent_transfers WHERE to_machine=$1 AND status='bundled' ORDER BY created_at`, [toMachine]);
+    `SELECT ${TRANSFER_COLS} FROM agent_transfers
+     WHERE to_machine=$1 AND status IN ('bundled','receive_stalled') ORDER BY created_at`, [toMachine]);
   return rows;
 }
 export async function saveTransferBundle(transferId: string, contentB64: string, sha256: string, size: number): Promise<void> {
@@ -833,7 +842,45 @@ export async function saveTransferBundle(transferId: string, contentB64: string,
      VALUES ($1,$2,$3,$4, now())
      ON CONFLICT (transfer_id) DO UPDATE SET content_b64=EXCLUDED.content_b64, sha256=EXCLUDED.sha256, size=EXCLUDED.size, created_at=now()`,
     [transferId, contentB64, sha256, size]);
-  await db().query(`UPDATE agent_transfers SET status='bundled', bundle_sha256=$2, bundle_size=$3 WHERE id=$1`, [transferId, sha256, size]);
+  // #46: stamp bundled_at + flip_deadline (= now + 10-min stall window). A re-bundle resets both, so a
+  // re-upload of a receive_stalled transfer recovers it back to 'bundled' with a fresh deadline.
+  await db().query(
+    `UPDATE agent_transfers SET status='bundled', bundle_sha256=$2, bundle_size=$3,
+       bundled_at=now(), flip_deadline=now() + interval '10 minutes' WHERE id=$1`,
+    [transferId, sha256, size]);
+}
+// #46: the sweep — mark any bundled transfer past its flip_deadline `receive_stalled` so a dead/offline
+// destination surfaces LOUD (within ~30s of the deadline, run from the scheduler tick) instead of hanging on
+// the app's optimistic "finishing". Recoverable: /complete still works from receive_stalled, and a re-bundle
+// resets it. Returns how many rows were stamped (for the boot/tick log). Idempotent.
+export async function stampStalledTransfers(): Promise<number> {
+  const r = await db().query(
+    `UPDATE agent_transfers SET status='receive_stalled'
+     WHERE status='bundled' AND flip_deadline IS NOT NULL AND flip_deadline < now()`);
+  return r.rowCount || 0;
+}
+// #46: owner-triggered abort. Sets the transfer `cancelled` from any non-completed state and RELEASES the
+// single-home lock (the agent returns home on its SOURCE machine). Atomic + idempotent: already-cancelled is
+// a no-op success; a completed transfer cannot be cancelled (the move already landed).
+export async function cancelTransfer(id: string): Promise<{ ok: boolean; reason?: string }> {
+  const client = await db().connect();
+  try {
+    await client.query('BEGIN');
+    const t = await client.query<any>(`SELECT agent, from_machine, status FROM agent_transfers WHERE id=$1 FOR UPDATE`, [id]);
+    if (!t.rows[0]) { await client.query('ROLLBACK'); return { ok: false, reason: 'not_found' }; }
+    const { agent, from_machine, status } = t.rows[0];
+    if (status === 'completed') { await client.query('ROLLBACK'); return { ok: false, reason: 'already_completed' }; }
+    if (status === 'cancelled') { await client.query('ROLLBACK'); return { ok: true }; } // idempotent no-op
+    await client.query(`UPDATE agent_transfers SET status='cancelled' WHERE id=$1`, [id]);
+    // Release the in_transit lock: the agent stays home on the source it was moving FROM.
+    await client.query(
+      `INSERT INTO agent_homes (agent, home_machine, status, updated_at) VALUES ($1,$2,'home',now())
+       ON CONFLICT (agent) DO UPDATE SET status='home', updated_at=now()`,
+      [agent, from_machine || null]);
+    await client.query('COMMIT');
+    return { ok: true };
+  } catch (e) { await client.query('ROLLBACK').catch(() => {}); throw e; }
+  finally { client.release(); }
 }
 export async function getTransferBundle(transferId: string): Promise<{ contentB64: string; sha256: string; size: number } | null> {
   const { rows } = await db().query<any>(`SELECT content_b64, sha256, size FROM transfer_bundles WHERE transfer_id=$1`, [transferId]);
@@ -848,6 +895,9 @@ export async function completeTransfer(id: string, toMachine: string): Promise<{
     const t = await client.query<any>(`SELECT agent, status FROM agent_transfers WHERE id=$1 FOR UPDATE`, [id]);
     if (!t.rows[0]) { await client.query('ROLLBACK'); return { ok: false, reason: 'not_found' }; }
     if (t.rows[0].status === 'completed') { await client.query('ROLLBACK'); return { ok: false, reason: 'already_completed' }; }
+    // #46: a cancelled transfer is terminal — it cannot be completed (the owner aborted the move). bundled and
+    // receive_stalled both proceed (a stalled transfer's bundle is intact and still completable).
+    if (t.rows[0].status === 'cancelled') { await client.query('ROLLBACK'); return { ok: false, reason: 'cancelled' }; }
     const agent = String(t.rows[0].agent);
     await client.query(`UPDATE agent_transfers SET status='completed', to_machine=$2, completed_at=now() WHERE id=$1`, [id, toMachine]);
     await client.query(

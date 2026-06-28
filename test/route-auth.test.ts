@@ -52,6 +52,7 @@ const PROTECTED: { method: string; path: string; body?: object }[] = [
   { method: 'POST', path: '/api/council/transfer/route-auth-probe-id/bundle', body: { content_b64: 'eA==' } },
   { method: 'GET',  path: '/api/council/transfer/route-auth-probe-id/bundle' },
   { method: 'POST', path: '/api/council/transfer/route-auth-probe-id/complete', body: { to_machine: 'probe' } },
+  { method: 'POST', path: '/api/council/transfer/route-auth-probe-id/cancel', body: {} },
   { method: 'GET',  path: '/api/council/hierarchy' },
   { method: 'GET',  path: '/api/council/hierarchy/probe-tenant' },
   { method: 'PUT',  path: '/api/council/hierarchy/probe-tenant', body: { tree: { tenantId: 'x', nodes: [] } } },
