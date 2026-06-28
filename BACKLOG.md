@@ -3,6 +3,9 @@
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
 > Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-28 (NIGHTLY)
+> [DAY-SESSION UPDATE 06-27 after this nightly: #46 transfer-robustness SHIPPED + prod-verified (`62ccda7`) — the
+> nightly below framed it as the pending top build; it is now DONE hub-side, awaiting Arke's app-side MATCH. See
+> the DAY SESSION block further down.]
 > (NIGHTLY ~00:30 EDT 2026-06-28, Kairos automated — quiet evening after the 06-27 day session; no new code/meeting;
 > all green. HEAD `2b97e91`; CI+Push-on-main+checksuite-guard GREEN; repo clean 0/0; prod healthy
 > [ok/vault/scheduler_enabled:true, missed_meeting:false, last_scheduler_status:opened, last_mtg 2026-06-27T07:00:10Z].
@@ -41,7 +44,15 @@
 > sequence. **NEW: Logos corpus-contract question** (a42792a1) — should git-ignored files enter the hub corpus?
 > Kairos recommendation: NO, corpus = `git ls-files` tracked set only (privacy-monotonic + secret-scan); flagged
 > for ratification. POSTED 2 hub agenda items (corpus ruling + #46). Replied Logos (b846e3d9) + Arke (0e512a80);
-> all 6 inbox msgs report-closed -> INBOX 0. NEXT: build #46 with Arke on his go; ratify the corpus ruling.)
+> all 6 inbox msgs report-closed -> INBOX 0. THEN Arke replied GO on #46 (17306e5b, Mathieu greenlit) and **#46
+> SHIPPED + prod-verified same session**: pinned the final shape first (`9ed9142`), then shipped the hub side
+> (`62ccda7`, CI green, gates 62-0). New states receive_stalled (30s-sweep-stamped when a bundled transfer passes
+> flip_deadline = bundled_at+10min; RECOVERABLE -- /complete still works + stays listed for the destination) +
+> cancelled (owner abort via new POST /transfer/:id/cancel, releases the in_transit lock, idempotent); new fields
+> bundled_at + flip_deadline on every transfer object (shared TRANSFER_COLS so /transfer/:id and /transfers are
+> byte-identical); /complete rejects cancelled. End-to-end prod smoke PASSED (initiate->bundle[+fields]->cancel->
+> idempotent re-cancel->cleanup). Told Arke live (563c5469). NEXT: Arke lands the app side + replies MATCH (his app
+> reads no new states until then); ratify the corpus-contract ruling (agenda id=22) at the next meeting.)
 > (MORNING PREP 06:00 2026-06-27, Kairos automated: the 06-27 03:00 ET autonomous meeting `d5cb11ce` RAN +
 > DEBRIEFED — the #36 gate seated all 4 [run_id 3, opened, fresh_count 4; the #42 brain-freshness fix HELD, no
 > quorum-skip]. 16 turns / 0 PASS / 4 rounds / `completed` / $1.3054 / verify-transcript PASS [sha `113fa5b9…`] /
