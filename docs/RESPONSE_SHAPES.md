@@ -5,7 +5,12 @@ clients (Arke's standalone app, member packagers) wire against a fixed contract 
 Additive only: new fields may appear; existing field names + types never change without a
 `schemaVersion` bump. **Clients MUST ignore unknown fields and MUST NOT depend on key order.**
 
-_Last updated: 2026-06-27 — #47: added `GET /api/council/brains`, the hub-computed per-seat brain-freshness
+_Last updated: 2026-06-28 — #49: added the additive `stalled_recovered_at` field to every transfer object
+(stamped once when a transfer leaves `receive_stalled` via `/complete` or a recovering re-bundle) so the app
+distinguishes a normal completion from one that recovered from a stall; also pinned the stall sweep's **30s**
+cadence and the READ-COMMITTED isolation intent for the stall/complete/cancel race (both already live in
+`62ccda7`). See "Transfer robustness". Prior:_
+_2026-06-27 — #47: added `GET /api/council/brains`, the hub-computed per-seat brain-freshness
 endpoint (`{ next_fire_at, actors:[{actor,packed_at,fresh,fresh_until,status,pack_sha}] }`, member-or-owner
 gated) so each seat's prep ritual asserts `fresh_until > next_fire_at` off the hub instead of hardcoding
 03:00 ET. `fresh` mirrors the #36 readiness gate exactly; `next_fire_at` is DST-correct. The convergence
@@ -515,8 +520,28 @@ happy path `staged → bundled → completed` is unchanged; two new states + two
 - `bundled_at`: UTC ISO | null — when the substrate was uploaded (status → `bundled`); null before that.
 - `flip_deadline`: UTC ISO | null — `bundled_at + 10 minutes`; the instant after which an un-completed `bundled`
   transfer is stamped `receive_stalled`. null before bundling.
+- `stalled_recovered_at` (#49, 2026-06-28, Nova's refinement): UTC ISO | null — stamped **once**, the instant a
+  transfer LEAVES `receive_stalled` (either a `POST /complete` from the stalled state, or a recovering re-bundle
+  back to `bundled`). null on every transfer that never stalled. **Set-once:** the hub only writes it when the
+  pre-update row was `receive_stalled` and the column was still null, so a later complete keeps the original
+  recovery instant. Consumer use: a transfer with `status:"completed"` **and** non-null `stalled_recovered_at`
+  completed *after* a stall — render it "recovered/completed" and clear any stale "stalled" toast; a normal
+  completion has `stalled_recovered_at:null`.
 
 **Stall window:** **10 minutes** (hub constant). A same-owner receive is near-immediate; 10 min is generous slack.
+
+**Sweep cadence:** the stall sweep (`stampStalledTransfers`) runs on the hub's **30-second** scheduler tick
+(`council.ts` `setInterval(…, 30000)`), so a passed `flip_deadline` surfaces as `receive_stalled` within ~30s —
+tighter than the ~15-min cadence floated in the room. Idempotent: it only flips `bundled` rows whose
+`flip_deadline < now()`, so repeated ticks are no-ops once stamped.
+
+**Isolation intent:** the stall sweep is an unsynchronized `UPDATE … WHERE status='bundled' AND flip_deadline <
+now()`, while `/complete` and `/cancel` mutate a single row under `SELECT … FOR UPDATE` inside a transaction.
+Under Postgres default **READ COMMITTED**, a concurrent `/complete` and a sweep cannot both win the same row: the
+`FOR UPDATE` lock serializes them, and each statement re-reads the latest committed `status`, so a row that just
+became `completed`/`cancelled` no longer matches the sweep's `status='bundled'` predicate (and vice-versa). No
+higher isolation level is needed for the stall/complete/cancel race — the predicates are mutually exclusive on the
+committed `status`.
 
 **Cancel:** `POST /api/council/transfer/:id/cancel` (owner-gated), body `{ reason? }` → `{ ok, transfer }`. Sets
 `status:"cancelled"` from any non-completed state and releases the in_transit lock. **Idempotent:** cancelling an

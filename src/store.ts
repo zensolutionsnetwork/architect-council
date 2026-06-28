@@ -251,6 +251,11 @@ export async function initDb(): Promise<void> {
   // `receive_stalled` (loud, not inferred-from-silence). Additive; existing rows get NULLs.
   await q.query(`ALTER TABLE agent_transfers ADD COLUMN IF NOT EXISTS bundled_at timestamptz`);
   await q.query(`ALTER TABLE agent_transfers ADD COLUMN IF NOT EXISTS flip_deadline timestamptz`);
+  // #49 (2026-06-28, Nova's #46 refinement): stalled_recovered_at stamps the instant a transfer LEAVES
+  // receive_stalled — via /complete or a recovering re-bundle. It lets the app distinguish "completed
+  // normally" from "completed after a stall" (so a stale "stalled" toast clears honestly). Set-once: the
+  // SET-clause CASE only writes it when the pre-update row was receive_stalled AND it is still NULL.
+  await q.query(`ALTER TABLE agent_transfers ADD COLUMN IF NOT EXISTS stalled_recovered_at timestamptz`);
   await q.query(`CREATE TABLE IF NOT EXISTS transfer_bundles (
     transfer_id text PRIMARY KEY, content_b64 text NOT NULL, sha256 text, size int,
     created_at timestamptz NOT NULL DEFAULT now())`);
@@ -823,7 +828,8 @@ const TRANSFER_COLS = `id, agent, from_machine, to_machine, status, bundle_sha25
   to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
   to_char(completed_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS completed_at,
   to_char(bundled_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS bundled_at,
-  to_char(flip_deadline at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS flip_deadline`;
+  to_char(flip_deadline at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS flip_deadline,
+  to_char(stalled_recovered_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS stalled_recovered_at`;
 export async function getTransfer(id: string): Promise<any | null> {
   const { rows } = await db().query<any>(`SELECT ${TRANSFER_COLS} FROM agent_transfers WHERE id=$1`, [id]);
   return rows[0] || null;
@@ -844,9 +850,15 @@ export async function saveTransferBundle(transferId: string, contentB64: string,
     [transferId, contentB64, sha256, size]);
   // #46: stamp bundled_at + flip_deadline (= now + 10-min stall window). A re-bundle resets both, so a
   // re-upload of a receive_stalled transfer recovers it back to 'bundled' with a fresh deadline.
+  // #49: if this re-bundle is recovering a receive_stalled transfer, stamp stalled_recovered_at once. The
+  // SET-clause CASE reads the OLD row value of `status` (pre-update), so it fires only on the stalled→bundled
+  // recovery and never overwrites a prior recovery stamp.
   await db().query(
     `UPDATE agent_transfers SET status='bundled', bundle_sha256=$2, bundle_size=$3,
-       bundled_at=now(), flip_deadline=now() + interval '10 minutes' WHERE id=$1`,
+       bundled_at=now(), flip_deadline=now() + interval '10 minutes',
+       stalled_recovered_at = CASE WHEN status='receive_stalled' AND stalled_recovered_at IS NULL
+         THEN now() ELSE stalled_recovered_at END
+     WHERE id=$1`,
     [transferId, sha256, size]);
 }
 // #46: the sweep — mark any bundled transfer past its flip_deadline `receive_stalled` so a dead/offline
@@ -899,7 +911,13 @@ export async function completeTransfer(id: string, toMachine: string): Promise<{
     // receive_stalled both proceed (a stalled transfer's bundle is intact and still completable).
     if (t.rows[0].status === 'cancelled') { await client.query('ROLLBACK'); return { ok: false, reason: 'cancelled' }; }
     const agent = String(t.rows[0].agent);
-    await client.query(`UPDATE agent_transfers SET status='completed', to_machine=$2, completed_at=now() WHERE id=$1`, [id, toMachine]);
+    // #49: if completing directly out of receive_stalled, stamp the recovery once (set-once CASE on the old
+    // row value) so the app can tell a normal completion from one that recovered from a stall.
+    await client.query(
+      `UPDATE agent_transfers SET status='completed', to_machine=$2, completed_at=now(),
+         stalled_recovered_at = CASE WHEN status='receive_stalled' AND stalled_recovered_at IS NULL
+           THEN now() ELSE stalled_recovered_at END
+       WHERE id=$1`, [id, toMachine]);
     await client.query(
       `INSERT INTO agent_homes (agent, home_machine, status, updated_at) VALUES ($1,$2,'home',now())
        ON CONFLICT (agent) DO UPDATE SET home_machine=$2, status='home', updated_at=now()`,
