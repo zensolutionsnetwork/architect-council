@@ -13,7 +13,10 @@ answer to #42. Also pinned (no code change, confirmed against source): the TRANS
 enum (`staged→bundled→completed`) + retention (`/transfers` is destination-scoped & bundled-only; sender uses
 `/transfer/:id`) + idempotent `/complete` (#44); the OWNER-AUTH cutover answers — Bearer additive on every
 owner-gated route, 30d sliding with a 90d absolute cap, no cross-machine login eviction (#45), 401 body
-`{error:"unauthorized"}`; and the `429 {error:"rate_limited"}` + `Retry-After` rate-limit shape (#48).
+`{error:"unauthorized"}`; and the `429 {error:"rate_limited"}` + `Retry-After` rate-limit shape (#48). Also
+pinned the #46 TRANSFER-ROBUSTNESS extension — new states `receive_stalled` (sweep-stamped, recoverable) +
+`cancelled` (owner abort), new fields `bundled_at`/`flip_deadline` (10-min stall deadline), and owner
+`POST /transfer/:id/cancel` — pinned ahead of the hub implementation per Arke's GO (`17306e5b`).
 Earlier 2026-06-26 (PM) — added HUB-MEDIATED AGENT TRANSFER (drag an agent between PCs): owner-gated
 home registry `GET /api/council/agents/home` + transfer relay (`/api/council/transfer/initiate`, `/:id/bundle`
 PUT+GET, `/transfers?to_machine=`, `/:id`, `/:id/complete`) with atomic single-home enforcement; substrate
@@ -470,7 +473,8 @@ wrapped as `{ ok, transfer }`.
 
 **Status enum (the transfer row, `status` field):** `staged` (initiated, no bundle yet) → `bundled`
 (substrate uploaded, ready for the destination) → `completed` (destination confirmed receive; home flipped).
-There is currently **no `cancelled` / `failed` / `receive_stalled` state** — see the robustness proposal #46.
+**Extended by #46** with two more states — `receive_stalled` and `cancelled` — plus two new fields
+(`bundled_at`, `flip_deadline`); see "Transfer robustness" below.
 NB: this is the TRANSFER's status. It is distinct from the AGENT's `agent_homes.status` (`home | in_transit`)
 returned by `GET /api/council/agents/home` — don't conflate the two enums.
 
@@ -490,6 +494,37 @@ seam from the first move.
 
 **Atomicity:** the hub owning "who is home" is what guarantees an agent runs on exactly one PC — single-source
 enforced centrally, replacing the manual task-deletion timing of the first arke move.
+
+### Transfer robustness — terminal states, stall deadline, cancel (#46, pinned 2026-06-27)
+
+The first dogfooded move failed SILENTLY (the app showed "finishing automatically" over a dead receive). Hub-side
+fix: NAME every terminal state and make a stalled receive LOUD instead of inferred-from-silence. **Additive** — the
+happy path `staged → bundled → completed` is unchanged; two new states + two new fields appear.
+
+**Full status enum:** `staged | bundled | completed | receive_stalled | cancelled`.
+- **`receive_stalled`** — a `bundled` transfer that passed its `flip_deadline` without completing. The hub's 30s
+  sweep stamps it automatically, so a dead/offline destination surfaces within ~30s rather than hanging on
+  "finishing". **Recoverable, NOT a dead end:** `POST /transfer/:id/complete` still succeeds from `receive_stalled`
+  (the bundle is intact), and the transfer still appears in `GET /transfers?to_machine=` so the destination can
+  pick it up when it comes back online. The SENDER should render it loud + honest: "stalled — check the
+  destination PC."
+- **`cancelled`** — owner aborted the move (terminal). Releases the single-home lock: the agent's `agent_homes`
+  row returns to `status:"home"` on the SOURCE machine. A cancelled transfer cannot be completed.
+
+**New row / list-item fields (additive — present on every transfer object from `/transfer/:id` and `/transfers`):**
+- `bundled_at`: UTC ISO | null — when the substrate was uploaded (status → `bundled`); null before that.
+- `flip_deadline`: UTC ISO | null — `bundled_at + 10 minutes`; the instant after which an un-completed `bundled`
+  transfer is stamped `receive_stalled`. null before bundling.
+
+**Stall window:** **10 minutes** (hub constant). A same-owner receive is near-immediate; 10 min is generous slack.
+
+**Cancel:** `POST /api/council/transfer/:id/cancel` (owner-gated), body `{ reason? }` → `{ ok, transfer }`. Sets
+`status:"cancelled"` from any non-completed state and releases the in_transit lock. **Idempotent:** cancelling an
+already-`cancelled` transfer is `200 { ok, transfer }`; cancelling a `completed` one is
+`409 { error:"already_completed" }` (can't undo a landed move).
+
+**`/complete` accepts `bundled` OR `receive_stalled`**; rejects `cancelled` (`409 { error:"cancelled" }`) and a
+second complete (`409 { error:"already_completed" }` — treat as success). Still a single atomic `FOR UPDATE` flip.
 
 ### Machine presence registry (Arke `cef127e6`) — destination dropdown
 Presence only; `agent_homes` stays the source of truth for where each agent lives. Each app instance registers
