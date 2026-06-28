@@ -26,7 +26,40 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-28 MORNING PREP — the 03:00 ET autonomous meeting `8abb37a3` RAN + DEBRIEFED; all green; inbox 0; CI green on HEAD `07c9a2f`; the #36 gate did its FIRST clean PARTIAL exclusion [seated kairos/nova/logos, excluded arke-stale]; 12t/0PASS/4rounds/`completed`/$0.83/hash PASS = 10th consecutive autonomous self-close) — HANDOFF
+## Current state (2026-06-28 DAY SESSION — SHIPPED #49 `stalled_recovered_at` + the #42 content-staleness guard; deploy `04d4bc9` CI green + prod-verified; kairos FRESH; agenda 25/26 posted for 06-29. Earlier: the 03:00 ET autonomous meeting `8abb37a3` RAN + DEBRIEFED, 10th consecutive autonomous self-close) — HANDOFF
+> **DAY SESSION 2026-06-28 (Kairos, Mathieu present, "do any task you can autonomously, then report"). SHIPPED #49
+> + the #42 content-staleness guard; one deploy (`04d4bc9`, CI green, prod-verified); inbox 0; brains kairos FRESH;
+> 2 agenda items posted for the 06-29 convergence round.** Started clean from morning-prep HEAD `0f1c6d1` (repo
+> clean 0/0, prod healthy, no live meeting). **(1) #49 SHIPPED + prod-verified (`04d4bc9`, CI + Push-on-main GREEN):**
+> additive `stalled_recovered_at timestamptz` on `agent_transfers`, stamped ONCE when a transfer leaves
+> `receive_stalled` (via `/complete` from stalled OR a recovering re-bundle) — set-once via a SET-clause CASE on
+> the pre-update `status`, added to the shared `TRANSFER_COLS` so `/transfer/:id` and `/transfers` stay
+> byte-identical. Lets Arke's app distinguish a normal completion from a stall-recovery (and clear stale "stalled"
+> toasts). `RESPONSE_SHAPES` pinned the new field + the stall sweep's **30s** cadence + the **READ-COMMITTED**
+> isolation intent for the stall/complete/cancel race (both already live in `62ccda7`; the room had re-debated
+> them). Four gates green pre-push (canon 6 / cost / route-auth 62-0 / secret-scan clean). Told Arke live
+> (`48663bff`); WAITING ON Arke to land the app side + reply MATCH (his app reads no new states/fields until then).
+> **(2) #42 content-staleness guard SHIPPED (scheduled scripts, outside the repo — zero model spend):** root cause
+> nailed — the corpus is always rebuilt live (`git ls-files`) but the PACK was uploaded as-is, so at `8abb37a3` my
+> voice re-litigated already-shipped #46 from a pre-day-session pack. FIX: `kairos_pack.md` now carries a
+> `pack-head:` HEAD stamp + `_kairos_brain_refresh.ps1` FAILS LOUD (throws "PACK STALE vs HEAD") before upload
+> unless the stamp == current repo HEAD; the midnight `SKILL.md` 8(a) now mandates rebuilding the
+> "CHANGES SINCE LAST MEETING" changelog from the real git log (day-session ships included) + updating the stamp.
+> Validated end-to-end: re-ran the refresh ("PACK FRESHNESS OK: pack-head matches HEAD 04d4bc9"), brain re-packed +
+> verified (corpus etag match, manifest paired) → **kairos now FRESH** (fresh_until 2026-06-30). The CADENCE half of
+> #42 (only Kairos auto-re-packs nightly → quorum one stale sibling from a skip; nova re-packed 23:40 but still
+> reads stale = same content-mutation gap on her side) stays a ROOM decision — posted to the agenda. **(3) #5 /
+> agenda:** the agenda was empty (id=22 corpus-contract + id=23 were consumed by `8abb37a3` without ratifying), so
+> I POSTED two items for the 06-29 convergence round — **id=25** ratify the corpus-contract (corpus = `git ls-files`
+> tracked set only; git-ignored/private stay OUT) and **id=26** adopt the background-async loud-failure standard
+> (in-flight guard + Promise.race reject + TIMEOUT<INTERVAL assert + edge-triggered STALLED/RECOVERED + cold-start
+> disarm). Ratification + co-authoring are meeting-gated (and the adopted_standards seed is still blocked on
+> Mathieu's #40 source-of-truth ruling), so getting them on the agenda is the most I can do solo. **BLOCKERS:** none
+> for solo work; (a) #49/#46 app side WAITING ON Arke's MATCH; (b) #42 cadence half + #5 ratification are
+> next-meeting/room-gated; (c) #40 adopted_standards source-of-truth still owed by Mathieu. **NEXT:** the 06-29 03:00
+> fire needs ≥2 fresh seats (only kairos fresh now — siblings must re-pack content-fresh before then). The history
+> bullet below is the automated 06:00 MORNING PREP for the same day.**
+>
 > **MORNING PREP 2026-06-28 (Kairos, automated 06:00). DEBRIEFED the 03:00 ET autonomous meeting `8abb37a3` —
 > the FIRST clean PARTIAL exclusion of the #36 gate (seated the 3 fresh seats kairos/nova/logos, EXCLUDED arke
 > as stale — arke is mid-migration to PC-Leanne and read stale at the 07:00 fire). All systems green; inbox 0;

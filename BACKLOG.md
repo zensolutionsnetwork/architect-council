@@ -1502,13 +1502,13 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
   `/complete` rejects `cancelled`, treats 409 `already_completed` as success. Shape pinned in `RESPONSE_SHAPES`;
   told Arke live (`563c5469`). **WAITING ON Arke:** land the app side (SENDER renders `receive_stalled`
   loud/honest + `cancelled` terminal; cancel action) and reply MATCH — his app reads no new states until then.
-- **#49 (NEW, from meeting `8abb37a3` 2026-06-28) — `stalled_recovered_at` column on transfers (Nova's #46
-  refinement).** Add an additive `stalled_recovered_at timestamptz`, set when a row leaves `receive_stalled` (via
-  `/complete` or a recovering re-bundle), so Arke's UI distinguishes "completed normally" from "completed after a
-  stall" and stale "stalled" toasts don't persist. Small: column + set-in-SET-clause + add to the shared
-  `TRANSFER_COLS` + pin in `RESPONSE_SHAPES` + tell Arke (coordinated, his app reads it). Also: pin the actual 30s
-  sweep cadence + the READ-COMMITTED isolation intent comment in RESPONSE_SHAPES so the room stops re-debating
-  them (both verified ALREADY LIVE in `62ccda7`, debrief §2). P2, day-session, no live-meeting deploy.
+- **#49 — SHIPPED + prod-verified 2026-06-28 (`04d4bc9`, CI + Push-on-main GREEN).** Additive
+  `stalled_recovered_at timestamptz` on `agent_transfers`, stamped ONCE when a row leaves `receive_stalled` (via
+  `/complete` from stalled OR a recovering re-bundle) — set-once via a SET-clause CASE on the pre-update `status`,
+  added to the shared `TRANSFER_COLS` so `/transfer/:id` and `/transfers` stay byte-identical. `RESPONSE_SHAPES`
+  pinned the field + the 30s sweep cadence + the READ-COMMITTED isolation intent for the stall/complete/cancel
+  race. Gates 62-0/canon/cost/secret-scan clean. Told Arke live (`48663bff`). **WAITING ON Arke:** land the app
+  side (render recovered-vs-normal completion) + reply MATCH — his app reads the new field only once wired.
 - **#42 brain-freshness cadence + brain-CONTENT freshness (standing fragility; re-observed 2026-06-28 morning).**
   TWO faces. (a) Cadence: only kairos auto-re-packs nightly; the 06-28 nightly read fresh_count=1 (only logos)
   before my re-pack — one stale sibling from a quorum-skip. The re-pack restored kairos→fresh and the 03:00 fire
@@ -1518,6 +1518,13 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
   CONTENT from true post-day-session HEAD + backlog state, not the pre-day snapshot — otherwise the room
   re-litigates shipped work. Raise at the next convergence round: automate sibling nightly re-packs (or a freshness
   floor) AND make the re-pack content-fresh. No solo fix for the cadence half — design decision for the room.
+  **CONTENT HALF GUARD SHIPPED 2026-06-28 (scheduled scripts, zero model spend):** `kairos_pack.md` now carries a
+  `pack-head:` HEAD stamp and `_kairos_brain_refresh.ps1` THROWS "PACK STALE vs HEAD" before upload unless the
+  stamp == current repo HEAD; midnight `SKILL.md` 8(a) now mandates rebuilding the "CHANGES SINCE LAST MEETING"
+  changelog from the real git log (day-session ships included) + updating the stamp. So a content-stale pack can no
+  longer seat a stale voice silently — validated end-to-end (kairos re-packed FRESH). CADENCE half still room-gated;
+  posted as agenda id=26-adjacent context. (Observed same day: nova re-packed 23:40 but read stale = the identical
+  content-mutation gap on her side — the guard is per-seat; siblings need the same.)
 - **Mathieu (NEW 2026-06-25, ONE owner ruling owed):** the `adopted_standards` **source-of-truth** (blocks
   BACKLOG #40). The first convergence round (meeting `ba750c9a`) ratified three standards but split the
   seeding — Kairos seeds the hub artifact table; Arke/Nova/Logos each mirror a local `ADOPTED_STANDARDS.md`.
