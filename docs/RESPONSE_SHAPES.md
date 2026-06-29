@@ -5,7 +5,11 @@ clients (Arke's standalone app, member packagers) wire against a fixed contract 
 Additive only: new fields may appear; existing field names + types never change without a
 `schemaVersion` bump. **Clients MUST ignore unknown fields and MUST NOT depend on key order.**
 
-_Last updated: 2026-06-28 — #49: added the additive `stalled_recovered_at` field to every transfer object
+_Last updated: 2026-06-28 — owner-auth FULL Bearer cutover (owner-greenlit): `/council/scheduler` moved to
+`requireOwner` and `resolveActor` now also accepts an owner Bearer session, so the ENTIRE owner surface (both gate
+families) is Bearer-capable; member-secret/agent channel untouched. See the "Bearer forwarding cutover" section.
+Prior same day:_
+_2026-06-28 — #49: added the additive `stalled_recovered_at` field to every transfer object
 (stamped once when a transfer leaves `receive_stalled` via `/complete` or a recovering re-bundle) so the app
 distinguishes a normal completion from one that recovered from a stall; also pinned the stall sweep's **30s**
 cadence and the READ-COMMITTED isolation intent for the stall/complete/cancel race (both already live in
@@ -736,6 +740,16 @@ the login screen (session expired or revoked).
    `/council/agents/home`, `/council/notify-email`, `/council/meeting/:id/*` (run-autonomous, cost, summary),
    `/council/dashboard`, `/council/manager/*`, the hierarchy routes, etc. `requireOwner` accepts **console key OR
    Google OR owner Bearer**, in that order — truly additive. Flip them all; nothing regresses.
+   **UPDATE 2026-06-28 — FULL one-shot (owner-greenlit):** two changes closed the last Bearer gaps. (a) `/council/scheduler`
+   GET+POST were on the `resolveActor`+admin gate (x-admin only) → moved onto `requireOwner` (`31deb0f`). (b) The OTHER
+   owner gate, `resolveActor` (the agent/admin channel), now ALSO accepts an owner Bearer session — returning
+   `owner`/`admin` — so the ENTIRE owner surface is Bearer-capable, including the previously-`resolveActor`-gated owner
+   reads the cockpit uses: `GET /council/standards`, `GET /council/meetings?actor=`,
+   `GET /council/meeting/:id/owner-report`, `GET /api/meeting/:id/state`, plus `/env/*` owner operations. **The
+   member-secret path is untouched** — the AGENT channel (brain upload + env messaging via `x-bridge-secret`) is
+   unchanged, and an owner Bearer NEVER impersonates a seat (it always resolves to `owner`/`admin`). Net: the cockpit can
+   drop `x-admin-token` entirely once `COUNCIL_BEARER_DATA=1` and the owner password is set. 401 body unchanged:
+   `{ "error": "unauthorized" }`.
 2. **Session lifecycle:** 30-day **sliding** window, refreshed on EVERY `requireOwner`-gated call (each pass slides
    `expires_at = now + 30d`) AND on `GET /api/auth/me`. There is **no `/api/auth/refresh`** — any authed call IS the
    refresh. **There IS a 90-day ABSOLUTE cap** from session creation: a session stops validating once

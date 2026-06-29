@@ -224,6 +224,16 @@ councilRouter.post('/council/outbox/:member/ack', async (req, res) => {
 // else — the credential resolves the actor; no body field names the sender.
 async function resolveActor(req: Request): Promise<{ actor: string; admin: boolean } | null> {
   if (!!process.env.COUNCIL_ADMIN_TOKEN && safeEqual(req.headers['x-admin-token'], process.env.COUNCIL_ADMIN_TOKEN)) return { actor: 'owner', admin: true };
+  // Owner email/password session (Bearer) — ADDITIVE owner-auth path (owner-greenlit cutover 2026-06-28). A valid
+  // owner Bearer authenticates as the OWNER across the whole owner surface (same authority as x-admin), so the
+  // cockpit can drop x-admin entirely once COUNCIL_BEARER_DATA flips. Never impersonates a seat; the member-secret
+  // path below is untouched, so the AGENT channel (brain upload, env messaging via x-bridge-secret) is unchanged.
+  const bt = bearerToken(req);
+  if (bt) {
+    const th = sha256hex(bt);
+    const sess = await getOwnerSession(th).catch(() => null);
+    if (sess) { void touchOwnerSession(th, new Date(Date.now() + SESSION_TTL_MS)).catch(() => {}); return { actor: 'owner', admin: true }; }
+  }
   const sec = req.headers['x-bridge-secret'] as string;
   if (!sec) return null;
   for (const mm of await listMembers()) {
