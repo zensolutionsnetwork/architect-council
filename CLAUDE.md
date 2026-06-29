@@ -26,7 +26,36 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-29 NIGHTLY — quiet evening after the 06-28 day session; no new code/meeting; all green; HEAD `6987114`; CI+Push-on-main GREEN; repo clean 0/0; prod healthy [missed_meeting:false, last_scheduler_status:opened]; inbox 0; brains fresh_count=2 [kairos+arke] ≥ quorum — the 06-29 03:00 ET fire will run; agenda 25/26 open; #46 app-side now MATCHED by Arke. Earlier: 06-28 day session SHIPPED #49 + #42 content-staleness guard + OWNER-BEARER CUTOVER, 5 deploys CI-green) — HANDOFF
+## Current state (2026-06-29 MORNING PREP — the 03:00 ET autonomous meeting `f7f36a14` RAN + DEBRIEFED [3 seats kairos/arke/nova, logos EXCLUDED stale; 12 turns / 0 PASS / 4 rounds / `completed` / $0.9357 / verify PASS / 3 seats 2.1 paired — 11th consecutive self-close, LEAN run below the SS2 envelope]; all green; HEAD `fd034ca`; CI+Push-on-main GREEN; repo clean 0/0; prod healthy [missed_meeting:false, last_scheduler_status:opened]; inbox 0; brains fresh_count=0 = EXPECTED post-meeting [3 seats attended → pack==attend sha; tonight's re-pack refreshes kairos]; agenda 25/26 RATIFIED/ADOPTED in-room, PROPOSED to Mathieu pending #40; debrief `council/KAIROS_DEBRIEF_2026-06-29.md`) — HANDOFF
+> **MORNING PREP 2026-06-29 (Kairos, automated 06:00). DEBRIEFED the 03:00 ET autonomous meeting `f7f36a14` — the
+> #36 gate seated 3 [kairos/arke/nova] + EXCLUDED logos stale [06-27], run_id 5, fresh_count 3, exactly as the
+> nightly predicted. 12 turns / 0 PASS / 4 rounds / `completed` / $0.9357 [owner-report $0.038, layer1 $0.0185] /
+> verify-transcript PASS [sha `20b83514…`] / all 3 seated seats 2.1 paired — 11th consecutive autonomous self-close;
+> LEAN run BELOW the SS2 $1.30-2 envelope (the exclusion gate paying for itself).** The convergence round produced
+> FOUR hardening shapes: (1) scheduler idempotency-txn — `pg_try_advisory_xact_lock` + idempotent INSERT…ON CONFLICT
+> RETURNING fire_key + boot_id, ALL one txn (Arke's refinement: RETURNING-not-rowcount distinguishes benign-conflict
+> from loud-failure; Nova: lock + decision-write same txn or the lock releases early); (2) Nova write-consistency —
+> monotonic `version` int reread over `updated_at` (collides at ms across replicas); (3) Nova split-brain (#3) —
+> `PROCESS_BOOT_ID` on `_dbcheck`/`agent-eval` makes replica divergence observable [she shipped it her side];
+> (4) Arke Windows-ops standard (#4) — ASCII `.ps1` via `-File` + call op, no `cmd /c` nested-quotes / no `-Command
+> $var`, `.ps1` owns compare-and-fail + exit-code-only-to-Node, `.Trim()`/no-CRLF [I hit this footgun TWICE this
+> prep session]. **id=25 corpus-contract RATIFIED + id=26 loud-failure standard ADOPTED (now 7 clauses) in-room** —
+> both PROPOSED to Mathieu pending the #40 source-of-truth ruling. **Voice integrity CLEAN** (all propose/record;
+> Nova/Arke own-session ships legit). **MY judged carry-outs:** (1) ACCEPT — pin the scheduler idempotency-txn shape
+> [FORWARD-LOOKING: hub is single-Railway-instance so split-brain double-fire is NOT live; not urgent]; (2) ACCEPT —
+> carry the #42 freshness-floor rec (option 1 = automate nova/logos nightly re-packs) to Mathieu; (3) ACCEPT — carry
+> id=25/id=26 to Mathieu pending #40; (4) ACCEPT — apply the `.ps1`-owns-compare + exit-code-only refinement to my
+> scheduled scripts (outside repo). **SYSTEMS all green:** prod ok/vault/scheduler_enabled true, missed_meeting:false,
+> last_scheduler_status `opened`, last_mtg `2026-06-29T07:00:19Z`; CI+Push-on-main GREEN on HEAD `fd034ca`; repo
+> clean 0/0; no live meeting. **BRAINS fresh_count=0 — EXPECTED post-meeting** (3 seats attended at 07:00 → stale;
+> logos already stale); tonight's midnight re-pack restores kairos for the 06-30 fire — standing #42 cadence
+> fragility. **INBOX: 0 open.** No deploy this ritual beyond the debrief + BACKLOG/CLAUDE refresh + brain re-pack.
+> **NEXT SESSION top 3:** (1) when Mathieu rules #40 — pin id=26 sixth clause (scheduler idempotency-txn shape) in
+> RESPONSE_SHAPES + carry id=25/id=26 into adopted standards; (2) raise #42 freshness automation (option 1) for his
+> call so quorum stops riding on the two auto-re-packing seats; (3) the scheduler idempotency-txn hub build when I
+> next touch the scheduler [forward-looking, single-instance = not urgent]. **TO ASK MATHIEU:** #40 source-of-truth
+> (blocks id=25/id=26); #42 freshness automation (option 1). No solo code blockers. Bullets below this line are the
+> 06-29 NIGHTLY snapshot (history).
 > **NIGHTLY 2026-06-29 (Kairos, automated midnight ritual, ~00:30 EDT). Quiet evening after the heavy 06-28 day
 > session — no new hub code, no new meeting; all green; quorum already met.** HEAD `6987114` (docs commit recording
 > the 06-28 evening inbox rounds; nothing code-bearing since). The 06-28 day session's full ship-set all landed

@@ -2,7 +2,26 @@
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-29 (NIGHTLY)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-29 (MORNING PREP)
+> (MORNING PREP 06:00 2026-06-29, Kairos automated: the 06-29 03:00 ET autonomous meeting `f7f36a14` RAN +
+> DEBRIEFED. #36 gate seated 3 [kairos/arke/nova], EXCLUDED logos stale [06-27] — run_id 5, opened, fresh_count 3,
+> exactly as the nightly predicted. **12 turns / 0 PASS / 4 rounds / `completed` / $0.9357 / verify-transcript PASS
+> [sha `20b83514…`] / all 3 seated seats 2.1 paired** — 11th consecutive autonomous self-close; LEAN run BELOW the
+> SS2 $1.30-2 envelope (3 seats × ~$0.29; the exclusion gate paying for itself). Debrief
+> `council/KAIROS_DEBRIEF_2026-06-29.md`. The convergence round produced FOUR hardening shapes: scheduler
+> idempotency-txn (advisory-xact-lock + idempotent INSERT…RETURNING + boot_id, one txn; Arke: RETURNING-not-rowcount),
+> Nova write-consistency `version` int reread, Nova split-brain `PROCESS_BOOT_ID` diagnostics (#3), Arke Windows-ops
+> standard (#4). id=25 corpus-contract RATIFIED + id=26 loud-failure standard ADOPTED (now 7 clauses) in-room —
+> both PROPOSED to Mathieu pending #40. Voice integrity CLEAN. MY judged carry-outs: (1) ACCEPT pin the scheduler
+> idempotency-txn shape [forward-looking — hub is single-Railway-instance, NOT urgent]; (2) ACCEPT carry #42 cadence
+> freshness-floor rec (option 1 = automate nova/logos nightly re-packs) to Mathieu; (3) ACCEPT carry id=25/id=26 to
+> Mathieu pending #40; (4) ACCEPT apply `.ps1`-owns-compare + exit-code-only refinement to my scheduled scripts.
+> SYSTEMS all green: prod ok/vault/scheduler_enabled true, missed_meeting:false, last_scheduler_status:opened,
+> last_mtg 2026-06-29T07:00:19Z; CI+Push-on-main GREEN on HEAD `fd034ca`; repo clean 0/0; no live meeting [f7f36a14
+> phase=report]. **BRAINS: fresh_count=0 — ALL FOUR stale, which is EXPECTED post-meeting** [the 3 seats attended
+> at 07:00 so pack_sha==attend_sha; logos was already stale]; tonight's midnight re-pack refreshes kairos for the
+> 06-30 fire. INBOX: 0 open. No deploy this ritual beyond the debrief + BACKLOG/CLAUDE refresh + brain re-pack.
+> TO ASK MATHIEU: #40 adopted-standards source-of-truth [blocks id=25/id=26]; #42 freshness automation [option 1].)
 > [DAY-SESSION UPDATE 06-27 after this nightly: #46 transfer-robustness SHIPPED + prod-verified (`62ccda7`) — the
 > nightly below framed it as the pending top build; it is now DONE hub-side, awaiting Arke's app-side MATCH. See
 > the DAY SESSION block further down.]
