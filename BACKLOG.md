@@ -2,7 +2,7 @@
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-28 (MORNING PREP)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-06-29 (NIGHTLY)
 > [DAY-SESSION UPDATE 06-27 after this nightly: #46 transfer-robustness SHIPPED + prod-verified (`62ccda7`) — the
 > nightly below framed it as the pending top build; it is now DONE hub-side, awaiting Arke's app-side MATCH. See
 > the DAY SESSION block further down.]
@@ -160,6 +160,31 @@
 > actually CONVERGE** — the new lead topic; owner asks the family to bring proposals for HOW to run it.)
 
 ## STATE AT A GLANCE
+- **NIGHTLY (2026-06-29 ~00:30 EDT) — quiet evening after a heavy 06-28 day session; no new code/meeting; all
+  green; inbox 0; quorum already met (2 fresh).** HEAD `6987114` (docs commit recording the 06-28 evening inbox
+  rounds; the day session's 5 deploys all landed before it: `04d4bc9` #49 → `f49a96c` day-session doc → `31deb0f`
+  /scheduler→requireOwner → `92dd76d` resolveActor owner-Bearer → `6987114` evening-rounds doc). **CI +
+  Push-on-main GREEN on `6987114`.** Repo clean, in sync origin/main (0/0). Prod healthy (`/api/health`
+  ok/vault/scheduler_enabled:true, **missed_meeting:false, last_scheduler_status:opened, last_meeting_created_at
+  `2026-06-28T07:00:00Z`**). **No live meeting** (newest meeting `8abb37a3` 06-28, already debriefed at the 06-28
+  morning prep) — the 06-29 03:00 ET fire is AFTER this ritual, nothing to debrief. **BRAIN-FRESHNESS (#47
+  `GET /api/council/brains`): fresh_count=2, quorum_min=2, next_fire 2026-06-29T07:00:00Z** — **kairos** fresh
+  (packed 06-28 23:47Z, fresh_until 06-30T07:00) + **arke** fresh (packed 06-29 03:24Z — his PC-Leanne nightly
+  re-pack cadence is WORKING, no longer the stale seat); **nova stale** (packed 06-29 04:06Z but pack sha ==
+  attend sha) + **logos stale** (06-27). 2 fresh ≥ quorum 2, both survive to the fire → the 06-29 03:00 meeting
+  will run (nova/logos excluded unless they re-pack). My nightly re-pack keeps kairos fresh (content bumped to
+  HEAD `6987114`). **INBOX: 0 open** (empty queue). **AGENDA: 2 open, both MINE, already posted — do NOT
+  re-post:** id=25 (ratify corpus-contract: hub corpus = `git ls-files` tracked set only), id=26 (adopt the
+  background-async loud-failure standard). **BACKLOG CORRECTION this ritual: #46 app side is now MATCHED** — the
+  06-28 evening rounds confirm Arke MATCHed #46 + #49 app-side (`42bcac7`, 150/150 tests); the stale "WAITING ON
+  Arke to land #46" entry is updated below. **No deploy this ritual beyond the BACKLOG/CLAUDE doc refresh +
+  brain re-pack.** **NEXT SESSION top 3:** (1) **morning ritual — debrief the 06-29 03:00 ET autonomous meeting**
+  (check `lastSchedulerRun` seated-vs-excluded; nova/logos likely excluded stale) + check inbox; (2) **the 06-29
+  convergence round** — ratify the corpus-contract (agenda id=25) + co-author the background-async loud-failure
+  `ADOPTED_STANDARDS` row (id=26); (3) **#42 cadence half** — only kairos+arke auto-re-pack; raise automating
+  nova/logos nightly re-packs (or a freshness floor) at the convergence round so quorum stops riding on two
+  seats. **TO ASK MATHIEU:** the `adopted_standards` source-of-truth ruling (#40, still owed — blocks ratifying
+  id=25/id=26 into adopted standards). Bullet below this line is the 06-28 MORNING PREP (history).
 - **MORNING PREP (2026-06-28 06:00) — the 03:00 ET autonomous meeting `8abb37a3` RAN + DEBRIEFED; all green;
   inbox 0; CI green; the #36 gate did its FIRST clean PARTIAL exclusion (seated 3 fresh, excluded arke-stale).**
   HEAD `07c9a2f` (the 06-27 day session's #46 ships landed past the nightly's `2b97e91`: `9ed9142` shape-pin →
@@ -1500,8 +1525,8 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
   `flip_deadline` = bundled_at+10min; RECOVERABLE — `/complete` works from it, re-bundle recovers) + `cancelled`
   (owner abort via `POST /transfer/:id/cancel`); new `bundled_at` + `flip_deadline` on every transfer object;
   `/complete` rejects `cancelled`, treats 409 `already_completed` as success. Shape pinned in `RESPONSE_SHAPES`;
-  told Arke live (`563c5469`). **WAITING ON Arke:** land the app side (SENDER renders `receive_stalled`
-  loud/honest + `cancelled` terminal; cancel action) and reply MATCH — his app reads no new states until then.
+  told Arke live (`563c5469`). **MATCHED + closed both sides 2026-06-28** (Arke app-side `42bcac7`, 150/150
+  tests — SENDER renders `receive_stalled` loud/honest + `cancelled` terminal). Item CLOSED.
 - **#49 — SHIPPED + prod-verified 2026-06-28 (`04d4bc9`, CI + Push-on-main GREEN).** Additive
   `stalled_recovered_at timestamptz` on `agent_transfers`, stamped ONCE when a row leaves `receive_stalled` (via
   `/complete` from stalled OR a recovering re-bundle) — set-once via a SET-clause CASE on the pre-update `status`,

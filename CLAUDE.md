@@ -26,7 +26,38 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-28 DAY SESSION — SHIPPED #49 `stalled_recovered_at` + #42 content-staleness guard + the OWNER-BEARER CUTOVER (now DONE end-to-end: `/scheduler`→requireOwner `31deb0f`, resolveActor accepts owner Bearer `92dd76d`, Arke flipped `COUNCIL_BEARER_DATA=1` + smoked green); 5 deploys all CI-green; HEAD `92dd76d`; kairos+arke FRESH for 06-29; agenda 25/26 posted. Earlier: meeting `8abb37a3` debriefed, 10th autonomous self-close) — HANDOFF
+## Current state (2026-06-29 NIGHTLY — quiet evening after the 06-28 day session; no new code/meeting; all green; HEAD `6987114`; CI+Push-on-main GREEN; repo clean 0/0; prod healthy [missed_meeting:false, last_scheduler_status:opened]; inbox 0; brains fresh_count=2 [kairos+arke] ≥ quorum — the 06-29 03:00 ET fire will run; agenda 25/26 open; #46 app-side now MATCHED by Arke. Earlier: 06-28 day session SHIPPED #49 + #42 content-staleness guard + OWNER-BEARER CUTOVER, 5 deploys CI-green) — HANDOFF
+> **NIGHTLY 2026-06-29 (Kairos, automated midnight ritual, ~00:30 EDT). Quiet evening after the heavy 06-28 day
+> session — no new hub code, no new meeting; all green; quorum already met.** HEAD `6987114` (docs commit recording
+> the 06-28 evening inbox rounds; nothing code-bearing since). The 06-28 day session's full ship-set all landed
+> (recap): `04d4bc9` **#49** stalled_recovered_at column -> `f49a96c` day-session doc -> `31deb0f` /scheduler->
+> requireOwner -> `92dd76d` **resolveActor owner-Bearer** (full owner-surface Bearer cutover) -> `6987114`
+> evening-rounds doc. Working tree clean, in sync origin/main (0/0). Prod healthy (`/api/health` ok:true, vault:true,
+> **scheduler_enabled:true, missed_meeting:false, last_scheduler_status `opened`, last_meeting_created_at
+> `2026-06-28T07:00:00Z`**). **CI + Push-on-main GREEN on `6987114`** (both success, 2026-06-29T03:53Z). **No live
+> meeting** (newest meeting `8abb37a3` from the 06-28 03:00 ET run, already debriefed at the 06-28 morning prep —
+> safe to push). **No new autonomous meeting since `8abb37a3`** — the 03:00 ET scheduler fires LATER tonight (06-29
+> 03:00 Toronto, AFTER this midnight ritual), so nothing new to debrief; it appears for the 06-29 morning prep.
+> **BRAIN-FRESHNESS (`GET /api/council/brains`): fresh_count=2, quorum_min=2, next_fire 2026-06-29T07:00:00Z** --
+> **kairos** fresh (packed 06-28 23:47Z, fresh_until 06-30T07:00) + **arke** fresh (packed 06-29 03:24Z — his
+> PC-Leanne nightly re-pack cadence is now WORKING; he was the stale-excluded seat at the 06-28 fire, fresh again
+> tonight); **nova stale** (packed 06-29 04:06Z but pack sha == attend sha) + **logos stale** (06-27 12:57Z). 2
+> fresh >= quorum 2 and both survive to the fire -> the 06-29 03:00 meeting will run (nova/logos excluded unless they
+> re-pack first). My nightly re-pack (step 8) bumps kairos content to HEAD `6987114` and keeps kairos fresh.
+> **INBOX: 0 open** (empty queue — nothing arrived since the 06-28 evening). **AGENDA: 2 open, both MINE, already
+> posted — do NOT re-post:** id=25 (ratify the corpus-contract: hub corpus = `git ls-files` tracked set only,
+> git-ignored/private stay OUT), id=26 (adopt the background-async loud-failure standard: in-flight guard +
+> Promise.race reject + TIMEOUT<INTERVAL assert + edge-triggered STALLED/RECOVERED + cold-start disarm). **BACKLOG
+> CORRECTION this ritual: #46 app side is now MATCHED + CLOSED both sides** — the 06-28 evening rounds confirm Arke
+> MATCHed #46 + #49 app-side (`42bcac7`, 150/150 tests); the stale "WAITING ON Arke to land #46" entry is updated.
+> **No deploy this ritual beyond the BACKLOG/CLAUDE doc refresh + brain re-pack.** **NEXT SESSION top 3:** (1)
+> **morning ritual — debrief the 06-29 03:00 ET autonomous meeting** (check `lastSchedulerRun` seated-vs-excluded;
+> nova/logos likely excluded stale) + check inbox; (2) **the 06-29 convergence round** — ratify the corpus-contract
+> (agenda id=25) + co-author the background-async loud-failure `ADOPTED_STANDARDS` row (id=26); (3) **#42 cadence
+> half** — only kairos+arke auto-re-pack nightly; raise automating nova/logos nightly re-packs (or a freshness
+> floor) at the convergence round so quorum stops riding on two seats. **TO ASK MATHIEU:** the `adopted_standards`
+> source-of-truth ruling (#40, still owed — blocks ratifying id=25/id=26 into adopted standards). No solo code
+> blockers remain. Bullets below this line are the 06-28 DAY SESSION + evening snapshot (history).
 > **DAY SESSION 2026-06-28 (Kairos, Mathieu present, "do any task you can autonomously, then report"). SHIPPED #49
 > + the #42 content-staleness guard; one deploy (`04d4bc9`, CI green, prod-verified); inbox 0; brains kairos FRESH;
 > 2 agenda items posted for the 06-29 convergence round.** Started clean from morning-prep HEAD `0f1c6d1` (repo
