@@ -26,7 +26,7 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-28 DAY SESSION — SHIPPED #49 `stalled_recovered_at` + the #42 content-staleness guard; deploy `04d4bc9` CI green + prod-verified; kairos FRESH; agenda 25/26 posted for 06-29. Earlier: the 03:00 ET autonomous meeting `8abb37a3` RAN + DEBRIEFED, 10th consecutive autonomous self-close) — HANDOFF
+## Current state (2026-06-28 DAY SESSION — SHIPPED #49 `stalled_recovered_at` + #42 content-staleness guard + the OWNER-BEARER CUTOVER (now DONE end-to-end: `/scheduler`→requireOwner `31deb0f`, resolveActor accepts owner Bearer `92dd76d`, Arke flipped `COUNCIL_BEARER_DATA=1` + smoked green); 5 deploys all CI-green; HEAD `92dd76d`; kairos+arke FRESH for 06-29; agenda 25/26 posted. Earlier: meeting `8abb37a3` debriefed, 10th autonomous self-close) — HANDOFF
 > **DAY SESSION 2026-06-28 (Kairos, Mathieu present, "do any task you can autonomously, then report"). SHIPPED #49
 > + the #42 content-staleness guard; one deploy (`04d4bc9`, CI green, prod-verified); inbox 0; brains kairos FRESH;
 > 2 agenda items posted for the 06-29 convergence round.** Started clean from morning-prep HEAD `0f1c6d1` (repo
@@ -59,6 +59,26 @@ or ask Mathieu first.
 > next-meeting/room-gated; (c) #40 adopted_standards source-of-truth still owed by Mathieu. **NEXT:** the 06-29 03:00
 > fire needs ≥2 fresh seats (only kairos fresh now — siblings must re-pack content-fresh before then). The history
 > bullet below is the automated 06:00 MORNING PREP for the same day.**
+>
+> **EVENING ADDENDUM (same 06-28 day session — inbox rounds with Arke; owner-Bearer cutover COMPLETED end-to-end).**
+> After the morning ships, four inbox rounds with Arke: **(1)** Arke MATCHed #46+#49 (app side `42bcac7`, 150/150
+> tests); I confirmed (against source) NO cross-machine session eviction (#45) — login is INSERT-only, only
+> set-password revokes all. **(2) Owner-auth FULL Bearer cutover — SHIPPED + DONE.** Verifying his Bearer-cutover
+> ask I found `/council/scheduler` was on the `resolveActor`+admin gate (x-admin only) → moved it to `requireOwner`
+> (`31deb0f`). Then Mathieu GREEN-LIT the full one-shot: I taught **`resolveActor` to also accept an owner Bearer
+> session** (returns owner/admin) — additive, member-secret/agent channel byte-for-byte unchanged, never
+> impersonates a seat — so the ENTIRE owner surface is Bearer-capable, incl. the 4 cockpit reads Arke flagged
+> (`/council/standards`, `/council/meetings?actor=`, `/meeting/:id/owner-report`, `/api/meeting/:id/state`) +
+> `/env/*` (`92dd76d`, CI green, prod-verified, RESPONSE_SHAPES pinned). **Arke then completed the cutover:** owner
+> password already set + signed in, he flipped `COUNCIL_BEARER_DATA=1`, smoked the full owner surface over Bearer —
+> ALL GREEN; the cockpit now needs NO x-admin token (he keeps `COUNCIL_OWNER_TOKEN` dormant for bedding-in, deletes
+> it later). **(3) #36 gate (my call as owner): pack-sha stays** (corpus-only freshness would reintroduce the #42
+> stale-voice case); Arke ADOPTED my pack-head stamp his side (`f3f3194`) → the guard is cross-seat. **Net day
+> total: 5 deploys, all CI-green/prod-verified — `04d4bc9` (#49), `f49a96c` (docs), `31deb0f` (/scheduler→requireOwner),
+> `92dd76d` (resolveActor owner-Bearer); HEAD `92dd76d`.** Inbox 0 throughout. fresh_count=2 (kairos+arke) for the
+> 06-29 fire. The pack uploaded earlier stamps `pack-head: 04d4bc9` (now behind HEAD) — the nightly re-pack
+> restamps to current HEAD (the #42 guard would correctly block a re-pack until then). NEW owner item: nothing —
+> Mathieu already set the password; #40 source-of-truth still the one open owner ruling.**
 >
 > **MORNING PREP 2026-06-28 (Kairos, automated 06:00). DEBRIEFED the 03:00 ET autonomous meeting `8abb37a3` —
 > the FIRST clean PARTIAL exclusion of the #36 gate (seated the 3 fresh seats kairos/nova/logos, EXCLUDED arke

@@ -1508,7 +1508,8 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
   added to the shared `TRANSFER_COLS` so `/transfer/:id` and `/transfers` stay byte-identical. `RESPONSE_SHAPES`
   pinned the field + the 30s sweep cadence + the READ-COMMITTED isolation intent for the stall/complete/cancel
   race. Gates 62-0/canon/cost/secret-scan clean. Told Arke live (`48663bff`). **WAITING ON Arke:** land the app
-  side (render recovered-vs-normal completion) + reply MATCH — his app reads the new field only once wired.
+  side (render recovered-vs-normal completion) + reply MATCH — his app reads the new field only once wired. **MATCHED + closed both sides 2026-06-28** (`42bcac7`, 150/150; `recoveredAfterStall()` reads the field as designed).
+- **OWNER-AUTH FULL BEARER CUTOVER — DONE end-to-end 2026-06-28 (owner-greenlit).** `/council/scheduler` was on the `resolveActor`+admin gate (x-admin only) -> moved to `requireOwner` (`31deb0f`); then taught `resolveActor` to also accept an owner Bearer session (returns owner/admin, additive, member/agent channel untouched, never impersonates a seat) so the WHOLE owner surface is Bearer-capable incl. the 4 cockpit reads Arke flagged (`92dd76d`, RESPONSE_SHAPES pinned). Arke flipped `COUNCIL_BEARER_DATA=1`, smoked the full owner surface over Bearer — ALL GREEN; cockpit no longer needs x-admin (`COUNCIL_OWNER_TOKEN` dormant for bedding-in). #36 gate: ruled pack-sha stays; Arke adopted the pack-head stamp his side (`f3f3194`) -> guard cross-seat.
 - **#42 brain-freshness cadence + brain-CONTENT freshness (standing fragility; re-observed 2026-06-28 morning).**
   TWO faces. (a) Cadence: only kairos auto-re-packs nightly; the 06-28 nightly read fresh_count=1 (only logos)
   before my re-pack — one stale sibling from a quorum-skip. The re-pack restored kairos→fresh and the 03:00 fire
