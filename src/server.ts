@@ -47,7 +47,12 @@ app.use(express.static(publicDir, { index: false }));
 // degrades to safe defaults and the probe still returns 200.
 app.get('/api/health', async (_req, res) => {
   const signal = await healthMeetingSignal().catch(() => ({ last_meeting_created_at: null, missed_meeting: false, scheduler_enabled: false, last_scheduler_status: null }));
-  res.json({ ok: true, service: 'architect-council', vault: vaultReady(), ts: Date.now(), ...signal });
+  // deploy_sha (Nova's rule 3, behavioural deploy-verify, 2026-06-29): the git sha this running container was
+  // BUILT from, so a ritual can confirm the latest code actually SERVES (live deploy_sha == repo HEAD) before it
+  // ever writes "deployed/live" - committed HEAD != live. Railway injects RAILWAY_GIT_COMMIT_SHA at build time;
+  // read here at request time (never at module top-level). 'unknown' = env not populated (compare is then a no-op).
+  const deploy_sha = String(process.env.RAILWAY_GIT_COMMIT_SHA || process.env.DEPLOY_SHA || 'unknown').slice(0, 40);
+  res.json({ ok: true, service: 'architect-council', vault: vaultReady(), ts: Date.now(), deploy_sha, ...signal });
 });
 
 // Hardening (2026-06-25): a STRICTER per-IP limiter on the sensitive UNAUTHENTICATED owner-auth entry points

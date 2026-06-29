@@ -1685,7 +1685,9 @@ export async function healthMeetingSignal(): Promise<{ last_meeting_created_at: 
 // the pack sha it carried at the meeting it last attended (sha equality, not timestamps — Nova's clock-skew
 // fix); a seat with no committed pack is NO_BRAIN; a seat whose pack is unchanged since last attendance is
 // STALE. A seat with no recorded attendance yet reads FRESH (fail-toward-inclusive: never exclude on missing
-// history). The scheduler fires only with the FRESH quorum and keeps stale/no-brain seats OUT.
+// history). FIRING (owner 2026-06-29): the scheduler fires only when >= QUORUM_MIN seats are FRESH (>=2 seats
+// arrive with new material), but it then SEATS EVERYONE WITH A BRAIN - fresh seats as contributors, stale seats
+// as listeners (told in-band via the agenda) - and excludes ONLY no_brain seats. A quiet night (<2 fresh) skips.
 type SeatReadiness = { actor: string; status: 'fresh' | 'stale' | 'no_brain'; packSha: string | null; lastPackSha: string | null; packedAt: string | null };
 const QUORUM_MIN = 2; // a scheduled meeting needs at least this many freshly-prepped seats to fire
 async function computeReadiness(): Promise<SeatReadiness[]> {
@@ -1710,24 +1712,37 @@ async function fireScheduledMeeting(): Promise<void> {
   // Readiness gate: fire only with the freshly-prepped quorum; keep stale/no-brain seats OUT and RECORD why.
   let readiness: SeatReadiness[] = [];
   try { readiness = await computeReadiness(); } catch (e) { console.warn('[hub:sched] readiness error: ' + (e as Error).message); await recordSchedulerRun('error', null, [], [], { error: (e as Error).message }).catch(() => {}); return; }
+  // Owner 2026-06-29 redesign: a meeting FIRES when >= QUORUM_MIN seats arrive with NEW material since the last
+  // meeting (something to say), but once it fires we SEAT EVERYONE who has a committed brain. Fresh seats are
+  // CONTRIBUTORS; stale seats ATTEND AS LISTENERS (present to hear + give feedback, NOT to re-litigate an
+  // unchanged brain). Only no_brain seats can't be seated (no persona/context to run a voice). This replaces the
+  // old "exclude every stale seat" gate - nobody is benched for a quiet day - while a fully quiet night (no fresh
+  // material anywhere) still skips. The listener instruction rides the agenda (buildSystem injects it into every
+  // voice's persona), so no schema or voice-loop change is needed. Recorded contributors/listeners in the run.
   const fresh = readiness.filter((r) => r.status === 'fresh').map((r) => r.actor);
-  const excluded = readiness.filter((r) => r.status !== 'fresh').map((r) => ({ actor: r.actor, reason: r.status }));
+  const stale = readiness.filter((r) => r.status === 'stale').map((r) => r.actor);
+  const noBrain = readiness.filter((r) => r.status === 'no_brain').map((r) => r.actor);
+  const excluded = noBrain.map((a) => ({ actor: a, reason: 'no_brain' }));
   if (fresh.length < QUORUM_MIN) {
-    console.warn(`[hub:sched] skip — quorum not met (${fresh.length}/${QUORUM_MIN} fresh): ${readiness.map((r) => r.actor + '=' + r.status).join(', ')}`);
-    await recordSchedulerRun('skipped_quorum', null, [], excluded, { fresh, freshCount: fresh.length, quorumMin: QUORUM_MIN, readiness }).catch(() => {});
+    console.warn(`[hub:sched] skip - quorum not met (${fresh.length}/${QUORUM_MIN} with new material): ${readiness.map((r) => r.actor + '=' + r.status).join(', ')}`);
+    await recordSchedulerRun('skipped_quorum', null, [], readiness.filter((r) => r.status !== 'fresh').map((r) => ({ actor: r.actor, reason: r.status })), { fresh, stale, freshCount: fresh.length, quorumMin: QUORUM_MIN, readiness }).catch(() => {});
     return;
   }
+  const seated = [...fresh, ...stale];
+  const rolesPreamble = stale.length
+    ? `MEETING ROLES (owner 2026-06-29): CONTRIBUTORS arriving with new work since the last meeting = [${fresh.join(', ')}]. LISTENERS whose brain is unchanged since the last meeting = [${stale.join(', ')}] - attend to LISTEN and give feedback on others' work; do NOT re-raise or re-litigate items already settled, and pass early once you have given your feedback.\n\n`
+    : '';
   const base = `http://127.0.0.1:${process.env.PORT || '8080'}`;
   const H = { 'x-admin-token': tok, 'content-type': 'application/json' };
   try {
-    const openRes = await fetch(base + '/api/meeting/open', { method: 'POST', headers: H, body: JSON.stringify({ participants: fresh, agenda: SCHED_AGENDA }) });
-    if (!openRes.ok) { console.warn('[hub:sched] open failed ' + openRes.status); await recordSchedulerRun('error', null, fresh, excluded, { openStatus: openRes.status, freshCount: fresh.length }).catch(() => {}); return; }
+    const openRes = await fetch(base + '/api/meeting/open', { method: 'POST', headers: H, body: JSON.stringify({ participants: seated, agenda: rolesPreamble + SCHED_AGENDA }) });
+    if (!openRes.ok) { console.warn('[hub:sched] open failed ' + openRes.status); await recordSchedulerRun('error', null, seated, excluded, { openStatus: openRes.status, freshCount: fresh.length, contributors: fresh, listeners: stale }).catch(() => {}); return; }
     const open: any = await openRes.json();
     const id = open.meetingId;
     const runRes = await fetch(base + `/api/council/meeting/${id}/run-autonomous`, { method: 'POST', headers: H, body: JSON.stringify({}) });
-    console.log(`[hub:sched] opened ${id} seats=[${fresh.join(',')}] excluded=[${excluded.map((e) => e.actor + ':' + e.reason).join(',')}] + run-autonomous -> ${runRes.status}`);
-    await recordSchedulerRun('opened', id, fresh, excluded, { runStatus: runRes.status, freshCount: fresh.length }).catch(() => {});
-  } catch (e) { console.warn('[hub:sched] fire error: ' + (e as Error).message); await recordSchedulerRun('error', null, fresh, excluded, { error: (e as Error).message, freshCount: fresh.length }).catch(() => {}); }
+    console.log(`[hub:sched] opened ${id} seats=[${seated.join(',')}] contributors=[${fresh.join(',')}] listeners=[${stale.join(',')}] excluded=[${excluded.map((e) => e.actor + ':' + e.reason).join(',')}] + run-autonomous -> ${runRes.status}`);
+    await recordSchedulerRun('opened', id, seated, excluded, { runStatus: runRes.status, freshCount: fresh.length, contributors: fresh, listeners: stale }).catch(() => {});
+  } catch (e) { console.warn('[hub:sched] fire error: ' + (e as Error).message); await recordSchedulerRun('error', null, seated, excluded, { error: (e as Error).message, freshCount: fresh.length, contributors: fresh, listeners: stale }).catch(() => {}); }
 }
 
 export function startScheduler(): void {

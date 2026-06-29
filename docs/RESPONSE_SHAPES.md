@@ -194,9 +194,15 @@ computed **fail-soft** (a DB hiccup degrades to safe defaults and the probe stil
   "last_meeting_created_at": "2026-06-22T23:30:00Z", // string|null — newest NON-dry-run meeting
   "missed_meeting": false,        // boolean — derived hub-side; true if no real meeting within cadence+grace
   "scheduler_enabled": false,     // boolean — the hub auto-scheduler on/off state
-  "last_scheduler_status": "opened" // string|null (#36) — last scheduled-fire decision; see enum below
+  "last_scheduler_status": "opened", // string|null (#36) — last scheduled-fire decision; see enum below
+  "deploy_sha": "a1b2c3d4..."       // string (2026-06-29, Nova rule 3) — git sha this container was BUILT from
 }
 ```
+
+**`deploy_sha` (2026-06-29, Nova's behavioural-deploy-verify rule):** the full git sha (<=40 chars) the running
+container was built from (`RAILWAY_GIT_COMMIT_SHA`), or `"unknown"` if the build env is not populated. A ritual
+confirms the latest code actually SERVES by comparing `deploy_sha` against repo `HEAD` (prefix-match) BEFORE it
+writes "deployed/live" — committed HEAD != live until Railway rolls over. When `"unknown"`, the compare is a no-op.
 
 **`last_scheduler_status` (#36, added 2026-06-24):** the decision of the most recent scheduled fire —
 `"opened"` | `"skipped_quorum"` | `"no_voice_loop"` | `"already_live"` | `"error"` | `null` (never fired).
@@ -340,8 +346,8 @@ no-op), surfaced coarsely on `/api/health.last_scheduler_status` and in full on 
   "run_id": "42",             // decimal STRING (Row-3) — the scheduler_runs bigserial id; immutable handle
   "status": "opened",        // opened | skipped_quorum | no_voice_loop | already_live | error
   "fired_at": "2026-06-25T07:00:03Z",
-  "seated_actors": ["kairos","arke","logos"], // actors actually seated; [] on ANY non-opened status
-  "excluded": [ { "actor":"nova", "reason":"stale" } ], // reason ∈ stale | no_brain
+  "seated_actors": ["kairos","arke","logos"], // ALL seated = contributors + listeners (2026-06-29); [] on non-opened
+  "excluded": [ { "actor":"nova", "reason":"no_brain" } ], // reason now ONLY no_brain (stale seats are SEATED as listeners, 2026-06-29)
   "meeting_id": "9a427b5f-...", // string|null — set only when status is "opened"
   "fresh_count": 3,          // number — size of the fresh quorum at fire time
   "error": null              // string|null — raw server error text (see consumer guidance below)
@@ -349,6 +355,13 @@ no-op), surfaced coarsely on `/api/health.last_scheduler_status` and in full on 
   // Arke having grep-confirmed zero consumers. Only the canonical keys above ship now.
 }
 ```
+
+**Seating redesign (owner 2026-06-29):** the gate no longer benches stale seats. A meeting still FIRES only
+when `fresh_count >= 2` (>=2 seats arrive with new material since the last meeting), but once it fires the hub
+SEATS EVERYONE WITH A BRAIN — fresh seats as **contributors**, stale seats as **listeners** (told in-band via
+the meeting agenda to listen + give feedback, not re-litigate an unchanged brain). Only `no_brain` seats are
+excluded. The split is in `scheduler_runs.detail`: `{ "contributors": [...], "listeners": [...], "freshCount": n }`
+(also on `skipped_quorum` runs, where `seated_actors` stays `[]`). `seated_actors` = `contributors ∪ listeners`.
 
 **Immutability:** `scheduler_runs` is append-only — a fire writes exactly one row and never updates it, so
 `run_id` is a stable handle and the object for a given `run_id` never changes. The dashboard shows the
