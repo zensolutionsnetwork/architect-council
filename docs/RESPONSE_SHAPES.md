@@ -203,6 +203,11 @@ computed **fail-soft** (a DB hiccup degrades to safe defaults and the probe stil
 container was built from (`RAILWAY_GIT_COMMIT_SHA`), or `"unknown"` if the build env is not populated. A ritual
 confirms the latest code actually SERVES by comparing `deploy_sha` against repo `HEAD` (prefix-match) BEFORE it
 writes "deployed/live" — committed HEAD != live until Railway rolls over. When `"unknown"`, the compare is a no-op.
+PRECISE SEMANTICS (Arke 2026-06-29, so cross-side rituals compare like-for-like): the hub `deploy_sha` is the git
+commit Railway BUILT the running image from (`RAILWAY_GIT_COMMIT_SHA` = the deploy's source commit) — NOT a sha
+re-read from disk at boot. Arke's desktop app exposes the analogous `app_sha` on its `/api/status`, which IS
+boot-time `.git/HEAD`. Each ritual compares ITS OWN service's sha against ITS OWN repo HEAD; never compare the
+hub's `deploy_sha` directly against the app's `app_sha`.
 
 **`last_scheduler_status` (#36, added 2026-06-24):** the decision of the most recent scheduled fire —
 `"opened"` | `"skipped_quorum"` | `"no_voice_loop"` | `"already_live"` | `"error"` | `null` (never fired).
