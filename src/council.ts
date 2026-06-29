@@ -962,16 +962,14 @@ councilRouter.get('/council/hierarchy/:tenantId/cross-read', async (req, res) =>
 
 // Hub-side auto-scheduler on/off (owner 2026-06-18) — DB-backed (app_settings) so it survives restarts and
 // is owner-toggleable without a redeploy. When 'on', the hub fires the daily meeting itself (see startScheduler).
-councilRouter.get('/council/scheduler', async (req, res) => {
+councilRouter.get('/council/scheduler', requireOwner, async (_req, res) => {
   try {
-    const a = await resolveActor(req); if (!a || !a.admin) return res.status(401).json({ error: 'unauthorized' });
     const v = await getSetting('hub_meeting_scheduler');
     res.json({ ok: true, enabled: v === 'on', time: await getSchedTime(), tz: 'America/Toronto', voiceLoopEnabled: process.env.VOICE_LOOP_ENABLED === 'true' });
   } catch (e) { internalError(res, e); }
 });
-councilRouter.post('/council/scheduler', async (req, res) => {
+councilRouter.post('/council/scheduler', requireOwner, async (req, res) => {
   try {
-    const a = await resolveActor(req); if (!a || !a.admin) return res.status(401).json({ error: 'unauthorized' });
     const b = req.body || {};
     if (typeof b.enabled === 'boolean') await setSetting('hub_meeting_scheduler', b.enabled ? 'on' : 'off');
     if (b.time !== undefined) {
