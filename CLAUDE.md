@@ -27,6 +27,30 @@ step could read as offensive security to a zero-context reviewer, narrow it to o
 or ask Mathieu first.
 
 ## Current state (2026-06-30 NIGHTLY — the 06-29 DAY SESSION shipped REAL hub code: seat-everyone meeting gate [stale seats = LISTENERS, never benched] + `deploy_sha` on `/api/health` [`50ff67c`] + a deploy_sha-semantics doc [`09d7483`, Arke review] + a security review [no code; Cloudflare edge protection = the one real gap, HELD for Mathieu]; HEAD `09d7483` = live deploy_sha [behavioural deploy-verify PASS]; CI+checksuite-guard+Scheduled GREEN; repo clean 0/0; prod healthy [missed_meeting:false, last_scheduler_status:opened]; OWNER RULED #40 = HUB TABLE [unblocks id=25/id=26 ratification at the 06-30 meeting]; inbox 1->0 [Nova adopted all 5 ritual deltas + 1 reciprocal note]; agenda 2 open [#29 nova accuracy-std, #30 arke client-enum + Windows-ops merge]; POSTED 1 agenda item [ratify id=25/id=26 into hub table]; brains fresh_count=0 -> re-pack refreshes kairos for the 06-30 fire) — HANDOFF
+> **MORNING PREP 2026-06-30 (Kairos, automated 06:00). DEBRIEFED the 03:00 ET autonomous meeting `cf845456` —
+> the FIRST live PARTIAL run of the seat-everyone gate (`50ff67c`): scheduler seated ALL 4, fresh_count 3,
+> CONTRIBUTORS [kairos/arke/nova], LISTENER [logos] (brain unchanged since 06-27 -> stale, attended advisory-only
+> NOT benched). 15 turns / 0 PASS / `completed` / $1.2037 / verify-transcript PASS [sha `40954eb0…`] / all 4 seats
+> 2.1 paired — 12th consecutive autonomous self-close, JUST BELOW the SS2 $1.30-2 envelope. Debrief
+> `council/KAIROS_DEBRIEF_2026-06-30.md`. LISTENER GUARD held (logos raised no new P-issue, re-litigated nothing).
+> STRONG convergence: #29 (nova accuracy std) + #30 (arke enum-binding std) + split-brain withdrawal ALL ACCEPTED
+> without dissent; id=25/id=26 proposed for hub-table seeding pending my day-session (unblocked by #40). Voice
+> integrity CLEAN. **MY judged carry-outs (5 ACCEPT, 0 REJECT):** (1) TOP seed+ratify id=25/id=26 into the hub
+> standards table (#40=hub-table; my agenda #31, longest-pending); (2) TOP ship `contract/responseShapes.json` +
+> `response_shapes_sha` on `/api/health` over canonical-JSON — CRITICAL PATH, Arke drift-alarm + Logos freshness
+> consumer both gate on it; (3) joint w/ Arke single shared `canonicalJson` helper + composite freshness stamp
+> `sha256(canonicalJson({head,corpusSha,packedAt}))`; (4) freshness-gate 26h recency floor + fold Nova's
+> empty-deploy_sha=can-not-verify branch; (5) hub-side `unhandledRejection` storm-counter -> `process.exit(1)` for
+> my 30s sweep. **SYSTEMS green:** prod ok/vault/scheduler_enabled true, missed_meeting:false,
+> last_scheduler_status:opened, last_mtg 2026-06-30T07:00:00Z; **deploy_sha live = `592c9b8` = repo HEAD
+> (behavioural deploy-verify PASS)**; CI/Scheduled green; repo clean 0/0; no live meeting. **BRAINS fresh_count=0
+> — EXPECTED post-meeting** (all 4 attended 07:00 -> pack_sha==attend_sha; logos 06-27); midnight re-pack restores
+> kairos for the 07-01 fire (standing #42). **INBOX 0; AGENDA 0** (cf845456 consumed #29/#30/#31). No deploy this
+> ritual beyond debrief + BACKLOG/CLAUDE refresh + brain re-pack. **NEXT SESSION top 3:** (1) seed+ratify
+> id=25/id=26; (2) ship `contract/responseShapes.json` + `response_shapes_sha`; (3) co-design the shared
+> `canonicalJson` helper with Arke (then freshness-26h-floor + storm-counter). **TO ASK MATHIEU:** Cloudflare
+> edge-protection go-ahead [held]; #42 freshness automation [option 1 = auto re-pack nova/logos nightly]. Bullets
+> below this line are the 06-30 NIGHTLY snapshot (history).
 > **NIGHTLY 2026-06-30 (Kairos, automated midnight ritual, ~00:30 EDT). The 06-29 DAY SESSION shipped real hub
 > code after the morning prep; quiet since; all green; OWNER ruled #40; inbox cleared 1->0.** HEAD `09d7483`.
 > The 06-29 day session (Mathieu present) shipped, in order past the morning-prep debrief commit `db07af4`:
