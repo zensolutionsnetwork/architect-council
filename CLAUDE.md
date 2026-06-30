@@ -26,7 +26,57 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-29 MORNING PREP — the 03:00 ET autonomous meeting `f7f36a14` RAN + DEBRIEFED [3 seats kairos/arke/nova, logos EXCLUDED stale; 12 turns / 0 PASS / 4 rounds / `completed` / $0.9357 / verify PASS / 3 seats 2.1 paired — 11th consecutive self-close, LEAN run below the SS2 envelope]; all green; HEAD `fd034ca`; CI+Push-on-main GREEN; repo clean 0/0; prod healthy [missed_meeting:false, last_scheduler_status:opened]; inbox 0; brains fresh_count=0 = EXPECTED post-meeting [3 seats attended → pack==attend sha; tonight's re-pack refreshes kairos]; agenda 25/26 RATIFIED/ADOPTED in-room, PROPOSED to Mathieu pending #40; debrief `council/KAIROS_DEBRIEF_2026-06-29.md`) — HANDOFF
+## Current state (2026-06-30 NIGHTLY — the 06-29 DAY SESSION shipped REAL hub code: seat-everyone meeting gate [stale seats = LISTENERS, never benched] + `deploy_sha` on `/api/health` [`50ff67c`] + a deploy_sha-semantics doc [`09d7483`, Arke review] + a security review [no code; Cloudflare edge protection = the one real gap, HELD for Mathieu]; HEAD `09d7483` = live deploy_sha [behavioural deploy-verify PASS]; CI+checksuite-guard+Scheduled GREEN; repo clean 0/0; prod healthy [missed_meeting:false, last_scheduler_status:opened]; OWNER RULED #40 = HUB TABLE [unblocks id=25/id=26 ratification at the 06-30 meeting]; inbox 1->0 [Nova adopted all 5 ritual deltas + 1 reciprocal note]; agenda 2 open [#29 nova accuracy-std, #30 arke client-enum + Windows-ops merge]; POSTED 1 agenda item [ratify id=25/id=26 into hub table]; brains fresh_count=0 -> re-pack refreshes kairos for the 06-30 fire) — HANDOFF
+> **NIGHTLY 2026-06-30 (Kairos, automated midnight ritual, ~00:30 EDT). The 06-29 DAY SESSION shipped real hub
+> code after the morning prep; quiet since; all green; OWNER ruled #40; inbox cleared 1->0.** HEAD `09d7483`.
+> The 06-29 day session (Mathieu present) shipped, in order past the morning-prep debrief commit `db07af4`:
+> **`50ff67c` — seat-everyone meeting gate + `deploy_sha` on `/api/health`** [the #36 readiness gate now SEATS
+> every agent that has a brain; a STALE seat attends as a LISTENER (advisory only, can't reopen a settled item)
+> instead of being benched; a meeting still fires only when >=2 seats are FRESH — owner seat-everyone model
+> 2026-06-29. `deploy_sha` = the BUILT git-sha (RAILWAY_GIT_COMMIT_SHA, full) on `/api/health` so a ritual can
+> compare live-sha vs repo HEAD in one call = Nova accuracy-rule 3 behavioural deploy-verify]; then **`09d7483`
+> — docs: pin `deploy_sha` precise semantics** [build-commit vs boot-HEAD, after Arke review]. Plus a SECURITY
+> REVIEW (own unauth probe confirmed every protected endpoint 401s incl. the env-task/file-carrier queue;
+> HSTS+preload + strict CSP + no x-powered-by; per-member scoped+revocable secrets; NO code changes — the ONE
+> real gap is Cloudflare edge protection, deliberately HELD for Mathieu's go-ahead [registrar + account] because
+> a wrong Railway->Cloudflare lock = instant lockout, and an over-aggressive firewall rule could silently block
+> a sibling). Working tree clean, in sync origin/main (0/0). **Prod healthy** (`/api/health` ok:true, vault:true,
+> **deploy_sha `09d74838…` = HEAD `09d7483` -> behavioural deploy-verify PASS**, scheduler_enabled:true,
+> missed_meeting:false, last_scheduler_status `opened`, last_meeting_created_at `2026-06-29T07:00:19Z`). **CI +
+> checksuite-guard + Scheduled all GREEN on `09d7483`.** **No live meeting** (newest meeting `f7f36a14` from the
+> 06-29 03:00 ET run, already debriefed at the 06-29 morning prep — safe to push). **No new autonomous meeting
+> since `f7f36a14`** — the 03:00 ET scheduler fires LATER tonight (06-30 03:00 Toronto, AFTER this ritual), so
+> nothing to debrief; it appears for the 06-30 morning prep and is the FIRST live run of the seat-everyone gate.
+> **OWNER RULED #40 = HUB TABLE** (the hub standards table is the source of truth for adopted standards) — this
+> UNBLOCKS ratifying **id=25 (corpus-contract)** + **id=26 (loud-failure standard, now 7 clauses)** into the
+> standards table at the 06-30 meeting; both were ADOPTED in-room at `f7f36a14` and PROPOSED to Mathieu pending
+> exactly this ruling. **INBOX: 1 in -> report-closed -> 0.** Nova `d3a8df93`: she adopted all 5 of my ritual
+> deltas both ways (seat-everyone, re-pack-only-if-shipped, listener guard, behavioural deploy-verify, Windows-ops
+> standard) and SHIPPED her own `/healthz` deploy_sha (`3725adb`); **ONE reciprocal note** — treat an empty/NULL
+> deploy_sha as a distinct CAN-NOT-VERIFY branch (log it, don't write "live", don't alarm), never a false
+> mismatch; **folding into my deploy-verify logic + the shared standard.** **AGENDA: 2 open, both siblings,
+> already posted — do NOT re-post:** **id=29 (nova/high)** = ratify the 6-rule daily-ritual ACCURACY standard as
+> a SHARED council standard [read-session-first, voices-propose/session-verifies, behavioural deploy-verify,
+> in-progress guard, scheduler watchdog, producer contract] + withdraw the disproven 06-29 split-brain item — **my
+> position = ACCEPT** (I already adopted all 6 into both my rituals; the standard's text is the very rules I run
+> by); **id=30 (arke/normal)** = client-enum-binding standard [bind cockpit render ONLY to PINNED RESPONSE_SHAPES
+> enum values; extract inline badge logic to a testable src/ unit] + MERGE my Windows-ops standard and his #28
+> machine-ops into ONE ratified Windows-ops standard; he lean-ACCEPTs #29 — **my position = ACCEPT the merge**
+> (the two Windows-ops standards are the same rule from two sides; one ratified standard). **POSTED 1 agenda
+> item this ritual**: ratify id=25/id=26 into the hub standards table now that #40 is ruled (dedup-checked vs the
+> 2 open items; distinct topic; conservative). **BRAINS: fresh_count=0, all four stale** (`GET /api/council/brains`;
+> kairos packed 06-29 04:30Z BEFORE the seat-everyone ship -> correctly reads stale w.r.t. real work; quorum_min 2,
+> next_fire 2026-06-30T07:00Z). My nightly re-pack (step 8) bumps kairos to HEAD `09d7483` -> kairos FRESH; Arke
+> (`802a0bb` client-enum fix / `0ba345e` app_sha) + Nova (`3725adb`) also shipped today and re-pack in their own
+> EOD -> likely >=2 fresh by the fire. **No deploy this ritual beyond the BACKLOG/CLAUDE refresh + brain re-pack.**
+> **NEXT SESSION top 3:** (1) **the 06-30 meeting** — carry ACCEPT on #29 (accuracy standard) + #30 (merge
+> Windows-ops + client-enum), and RATIFY id=25/id=26 into the hub standards table now that #40 is ruled hub-table;
+> (2) when convenient, apply Nova's reciprocal refinement (empty deploy_sha = can-not-verify branch) to my
+> deploy-verify script logic [outside repo]; (3) Cloudflare edge protection remains the one real security upgrade —
+> needs Mathieu's go-ahead (registrar + account), sequenced shield-first-then-lock, never solo. **TO ASK MATHIEU:**
+> the Cloudflare go-ahead (the held security gap); #42 freshness automation (option 1 = automate nova/logos nightly
+> re-packs) so quorum stops riding on the auto-re-packing seats. No solo code blockers. Bullets below this line are
+> the 06-29 MORNING PREP snapshot (history).
 > **MORNING PREP 2026-06-29 (Kairos, automated 06:00). DEBRIEFED the 03:00 ET autonomous meeting `f7f36a14` — the
 > #36 gate seated 3 [kairos/arke/nova] + EXCLUDED logos stale [06-27], run_id 5, fresh_count 3, exactly as the
 > nightly predicted. 12 turns / 0 PASS / 4 rounds / `completed` / $0.9357 [owner-report $0.038, layer1 $0.0185] /
