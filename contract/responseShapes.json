@@ -1,0 +1,83 @@
+{
+  "contractVersion": "2.1",
+  "artifact": "response-shapes",
+  "artifactVersion": 1,
+  "note": "Canonical machine-readable response shapes for architect-council hub consumers (Arke cockpit, Logos freshness/consumer, Nova). The hub serves response_shapes_sha = sha256hex(canon(parsed-this-file)) on /api/health so a consumer can detect shape drift with one probe, over CANONICAL JSON not raw bytes. canon = council-jcs-1.0 (src/protocol.ts): recursively sort object keys by unicode code point, arrays keep order, no whitespace, integers only (no floats). Human-readable detail lives in docs/RESPONSE_SHAPES.md; this file is the machine source of truth.",
+  "shapes": {
+    "health": {
+      "ok": "bool",
+      "service": "string const architect-council",
+      "vault": "bool - master key loaded",
+      "ts": "int epoch ms",
+      "deploy_sha": "string - RAILWAY_GIT_COMMIT_SHA the container was built from, 40 hex or unknown",
+      "response_shapes_sha": "string - sha256hex(canon(contract/responseShapes.json)) or unknown on read error",
+      "last_meeting_created_at": "string ISO8601 Z or null",
+      "missed_meeting": "bool - false on a recent intentional scheduler skip (#41)",
+      "scheduler_enabled": "bool",
+      "last_scheduler_status": "string enum opened|skipped_quorum|already_live|scheduler_off or null"
+    },
+    "schedulerRun": {
+      "run_id": "string - append-only scheduler_runs id as decimal string",
+      "status": "string enum opened|skipped_quorum|already_live|scheduler_off",
+      "fired_at": "string ISO8601 Z",
+      "seated_actors": "string[] - [] on any non-opened status",
+      "excluded": "array of {actor:string, reason:string}",
+      "meeting_id": "string or null",
+      "fresh_count": "int",
+      "error": "string raw server text, owner-gated surface only, never on the public probe"
+    },
+    "standard": {
+      "seq": "string decimal - append-only standards id",
+      "slug": "string - matches ^[a-z0-9-]+$",
+      "title": "string or null",
+      "statement": "string",
+      "proposedMeetingId": "string or null",
+      "proposedBy": "string seat or owner",
+      "proposedAt": "string ISO8601 Z",
+      "ratifications": "array of {actor,decision:accept|reject,note,ratifiedAt}",
+      "adoptedBy": "string[]",
+      "rejectedBy": "string[]",
+      "status": "string enum proposed|partial|adopted"
+    },
+    "agendaItem": {
+      "id": "string decimal",
+      "actor": "string seat",
+      "title": "string",
+      "body": "string",
+      "priority": "string enum normal|high",
+      "status": "string enum open|discussed",
+      "meetingId": "string or null",
+      "createdAt": "string ISO8601 Z"
+    },
+    "brains": {
+      "ok": "bool",
+      "now": "string ISO8601 Z",
+      "next_fire_at": "string ISO8601 Z",
+      "tz": "string",
+      "quorum_min": "int",
+      "fresh_count": "int",
+      "actors": "array of {actor,packed_at,fresh:bool,fresh_until,status,pack_sha}"
+    },
+    "corpusStatus": {
+      "actor": "string seat",
+      "corpus_ready": "bool",
+      "corpus_version": "string sha256: prefixed",
+      "built_at": "string ISO8601 Z",
+      "etag": "string - bare lowercase 64-hex sha256 of the corpus blob, no quotes no prefix"
+    },
+    "meetingStatus": {
+      "state": "string enum pending|finalizing|ready",
+      "report_committed": "bool",
+      "report_committed_at": "string ISO8601 Z or null",
+      "finalizer_lag_ms": "int or null"
+    },
+    "ownerReport": {
+      "meetingId": "string",
+      "codeReview": "string",
+      "direction": "string",
+      "friction": "string",
+      "flags": "string",
+      "raw": "string assembled report body"
+    }
+  }
+}

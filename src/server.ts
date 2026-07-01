@@ -8,6 +8,7 @@ import path from 'node:path';
 import { initDb, vaultReady, recordBoot } from './store.js';
 import { bridgeRouter, councilRouter, selfRegister, startScheduler, healthMeetingSignal } from './council.js';
 import { rateLimit } from './ratelimit.js';
+import { responseShapesSha } from './contract.js';
 
 const app = express();
 app.disable('x-powered-by'); // never advertise the framework/version (fingerprinting).
@@ -52,7 +53,10 @@ app.get('/api/health', async (_req, res) => {
   // ever writes "deployed/live" - committed HEAD != live. Railway injects RAILWAY_GIT_COMMIT_SHA at build time;
   // read here at request time (never at module top-level). 'unknown' = env not populated (compare is then a no-op).
   const deploy_sha = String(process.env.RAILWAY_GIT_COMMIT_SHA || process.env.DEPLOY_SHA || 'unknown').slice(0, 40);
-  res.json({ ok: true, service: 'architect-council', vault: vaultReady(), ts: Date.now(), deploy_sha, ...signal });
+  // response_shapes_sha (meeting f7f36a14, 2026-06-30): sha256hex(canon(contract/responseShapes.json)) so a
+  // consumer detects response-shape drift with one probe, over canonical JSON not raw bytes. Cached + fail-soft.
+  const response_shapes_sha = responseShapesSha();
+  res.json({ ok: true, service: 'architect-council', vault: vaultReady(), ts: Date.now(), deploy_sha, response_shapes_sha, ...signal });
 });
 
 // Hardening (2026-06-25): a STRICTER per-IP limiter on the sensitive UNAUTHENTICATED owner-auth entry points

@@ -5,7 +5,13 @@ clients (Arke's standalone app, member packagers) wire against a fixed contract 
 Additive only: new fields may appear; existing field names + types never change without a
 `schemaVersion` bump. **Clients MUST ignore unknown fields and MUST NOT depend on key order.**
 
-_Last updated: 2026-06-28 — owner-auth FULL Bearer cutover (owner-greenlit): `/council/scheduler` moved to
+_Last updated: 2026-06-30 — added `response_shapes_sha` to `GET /api/health` (meeting `f7f36a14` homework): the
+sha256hex of the CANONICAL JSON (council-jcs-1.0 `canon()`, not raw bytes) of the new machine-readable contract
+file `contract/responseShapes.json`. A consumer detects response-shape drift with one probe by reproducing
+`sha256hex(canon(their-parsed-copy))` and comparing. `contract/responseShapes.json` (`{contractVersion,
+artifact, artifactVersion, note, shapes:{...}}`) is now the machine source of truth; this doc stays the
+human-readable detail. Value is cached + fail-soft (`'unknown'` if the file is unreadable). Prior:_
+_2026-06-28 — owner-auth FULL Bearer cutover (owner-greenlit): `/council/scheduler` moved to
 `requireOwner` and `resolveActor` now also accepts an owner Bearer session, so the ENTIRE owner surface (both gate
 families) is Bearer-capable; member-secret/agent channel untouched. See the "Bearer forwarding cutover" section.
 Prior same day:_
