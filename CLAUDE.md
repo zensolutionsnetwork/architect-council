@@ -26,6 +26,25 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
+## 🚀 DAILY SESSION-START PROTOCOL (owner directive 2026-07-01 — fires when Mathieu opens a session with my name + a date, e.g. "Kairos session 01/07/2026")
+When a session opens this way, run this WITHOUT being asked, in order:
+1. **Inbox** — read every open message on the hub env-task queue (`_kairos_inbox.ps1` / `_kairos_dump5.ps1`); report-close each after actioning.
+2. **Morning routine output** — read what the automated morning prep produced (today's `council/KAIROS_DEBRIEF_*.md` + the CLAUDE.md/BACKLOG handoff).
+3. **Ground live state, don't trust prose** (#42 lesson) — `_kairos_dayprobe_0701.ps1`-style probe: `/api/health` (deploy_sha vs HEAD, missed_meeting), git HEAD/clean, open agenda, newest meeting phase, brains freshness.
+4. **Decide two work streams** — (a) task(s) owed before the next council meeting (open agenda items), (b) the task to advance on the main project (hub backlog top item).
+5. **Work autonomously until blocked or done** — ship real code through the four gates + CI (Windows git only); verify each deploy (`deploy_sha == HEAD`).
+6. **Report** — a simple summary of what was done.
+7. **Priority list** — remaining tasks for today's session, in priority order.
+8. **Blockers** — state any blockers on any task (esp. owner-gated or Arke-coordinated items).
+Tooling (adopted 2026-07-01, owner directive via Nova): use `gh` (`C:\Program Files\GitHub CLI\gh.exe` — `gh run list` / `gh run view <id> --log-failed` for CI; inherited `zensolutionsnetwork` login) and the Railway CLI (`railway` 5.23.3 on PATH; `railway link` once per repo dir) INSTEAD of browser-Railway or the homegrown `ci-status.mjs` polling.
+
+## 🔁 STANDING EFFICIENCY SELF-CHECK (owner directive 2026-07-01 / council agenda #34)
+"It works" is NOT the bar; "it's the best available way" is. Every session, actively re-check the method before repeating a habit:
+- **Before any recurring op** (CI check, deploy verify, inbox, brain re-pack, meeting debrief) ask: is there now a faster/better tool than what I did last time? (e.g. `gh`/`railway` CLI replaced browser + `ci-status.mjs` this session.)
+- **Seek outside tools for QUALITY**, especially where Cowork is weak (design/art/UX). For Kairos (back-end) the quality levers are OBSERVABILITY and API-CONTRACT quality, not visuals (visual/UX surfaces belong to Arke per the MAMS split).
+- **Quarterly-ish: audit connectors/plugins vs work built** — find tools that were available but unused (see the 2026-07-01 audit in the session report / agenda #34).
+- **Remake for quality design-system-first, in place, surface by surface** through the normal CI gates — never a big-bang rewrite of a live product.
+
 ## Current state (2026-07-01 MORNING PREP — the 07-01 03:15 ET autonomous meeting `f9d22640` RAN + DEBRIEFED [16t/$1.30/verify PASS/`completed`, all 4 seated+paired, 13th consecutive self-close]; all green; inbox 0; agenda 0. The 06-30 DAY SESSION (Mathieu present) shipped FOUR real hub deploys after the morning prep: `83f5ec4` response_shapes_sha on /api/health + contract/responseShapes.json [my meeting carry-out #2, CRITICAL PATH — Arke drift-alarm + Logos freshness consumer gate on it]; `864b803` hub-hosted model config [owner directive, via Logos]; `7148d21` loud-failure guards [storm-counter -> process.exit(1) + sweep fail-exit, my carry-out #5] + 26h freshness floor [my carry-out #4] + Nova id=32 code-derived status probe; `d16da61` app-driven agent provisioning Phase 1 [owner directive — owner-gated register + vault-backed secret endpoints + data-driven council_seats roster; MEETING_DEFAULT untouched; roster still kairos/arke/nova/logos, no agent hand-provisioned]. Plus id=25/id=26 SEEDED as PROPOSED standards [#40 = hub table]. HEAD `d16da61` = live deploy_sha [behavioural deploy-verify PASS]; response_shapes_sha live; CI+Push-on-main GREEN; repo clean 0/0; prod healthy [missed_meeting:false, last_scheduler_status:opened, last_mtg 2026-06-30T07:00:00Z]; no live meeting [cf845456 phase=report]. INBOX 0; AGENDA 1 open [id=32 nova code-derived status probe = my ACCEPT, already shipped `7148d21`]; brains fresh_count=1 at nightly [only arke fresh] -> my re-pack refreshes kairos -> fresh_count=2 for the 07-01 fire) — HANDOFF
 > **MORNING PREP 2026-07-01 (Kairos, automated 06:00). DEBRIEFED the 03:15 ET autonomous meeting `f9d22640` —
 > a FULL 4-seat run (run_id 7, `opened`, seated all 4, excluded [], fresh_count 4; all four re-packed fresh
