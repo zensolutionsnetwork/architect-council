@@ -1762,7 +1762,15 @@ async function computeReadiness(): Promise<SeatReadiness[]> {
     if (!packSha) { out.push({ actor, status: 'no_brain', packSha: null, lastPackSha: null, packedAt: null }); continue; }
     let lastPackSha: string | null = null;
     try { lastPackSha = await lastAttendedPackSha(actor); } catch { lastPackSha = null; }
-    const status: SeatReadiness['status'] = (lastPackSha === null || packSha !== lastPackSha) ? 'fresh' : 'stale';
+    // #4 (2026-06-30): freshness = sha changed AND RECENT. A pack whose sha moved but was committed >26h ago
+    // predates the last daily cycle, so it is not "new material for tonight" and attends as a LISTENER, not a
+    // contributor. SAFE-DEMOTE ONLY: a null/unparseable packedAt (age unprovable) never demotes, so a missing
+    // timestamp can never bench a seat or starve quorum. 26h > the 24h cadence + grace so a nightly re-pack stays fresh.
+    const FRESH_FLOOR_MS = 26 * 60 * 60 * 1000;
+    const shaChanged = (lastPackSha === null || packSha !== lastPackSha);
+    const ageMs = packedAt ? (Date.now() - Date.parse(packedAt)) : null;
+    const recent = ageMs === null || !Number.isFinite(ageMs) || ageMs < FRESH_FLOOR_MS;
+    const status: SeatReadiness['status'] = (shaChanged && recent) ? 'fresh' : 'stale';
     out.push({ actor, status, packSha, lastPackSha, packedAt });
   }
   return out;
@@ -1811,6 +1819,11 @@ export function startScheduler(): void {
   // On-boot stale-close (§3 robustness): any meeting still marked voice_running died with a prior
   // process (Railway redeploy/crash mid-loop). Mark them endedReason hub_restart so they never zombie.
   closeStaleVoiceMeetings().then((n) => { if (n) console.log(`✓ closed ${n} stale voice meeting(s) on boot (hub_restart)`); }).catch(() => {});
+  // Loud-failure guard (#5, 2026-06-30): the 30s tick used to swallow every error ("keep ticking"), so a
+  // persistently-broken loop would silently no-op forever. Now each failure is LOGGED, and after a run of
+  // consecutive failures we exit(1) so Railway restarts a clean process instead of spinning half-dead.
+  const SWEEP_MAX_CONSECUTIVE_FAILS = 5;
+  let sweepFails = 0;
   setInterval(async () => {
     try {
       const { date, hhmm } = torontoParts();
@@ -1824,8 +1837,13 @@ export function startScheduler(): void {
       if (hhmm === '04:30' && lastSweepDate !== date) { lastSweepDate = date; await sweepOutbox(); await sweepEnvTasks(); }
       // #46: every tick, mark any bundled transfer past its flip_deadline `receive_stalled` so a dead/offline
       // destination surfaces LOUD within ~30s instead of hanging on the app's "finishing" guess. Cheap UPDATE.
-      try { const n = await stampStalledTransfers(); if (n) console.log(`[hub:transfer] stamped ${n} stalled transfer(s) receive_stalled`); } catch { /* best-effort */ }
-    } catch { /* keep ticking */ }
+      try { const n = await stampStalledTransfers(); if (n) console.log(`[hub:transfer] stamped ${n} stalled transfer(s) receive_stalled`); } catch { /* best-effort: a stall-stamp miss is not a tick failure */ }
+      sweepFails = 0; // a tick that reached the end cleanly clears the consecutive-failure streak
+    } catch (e) {
+      sweepFails++;
+      console.warn(`[hub:sched] tick failure ${sweepFails}/${SWEEP_MAX_CONSECUTIVE_FAILS}: ${(e as Error).message}`);
+      if (sweepFails >= SWEEP_MAX_CONSECUTIVE_FAILS) { console.error('[hub:fatal] scheduler tick failing repeatedly; exiting(1) for a clean restart'); process.exit(1); }
+    }
   }, 30000);
 }
 

@@ -112,6 +112,25 @@ app.get('/backlog', (_req, res) => {
 // express.static) and does a same-origin fetch (connect-src 'self'); no inline script, no third-party origins.
 app.get('/set-password', (_req, res) => res.sendFile(path.join(publicDir, 'set-password.html')));
 
+// Process-level loud-failure guard (meeting f7f36a14 homework #5, 2026-06-30): a background loop that throws
+// an unhandled rejection must FAIL LOUD, not half-run silently. Node 20 would crash on the first unhandled
+// rejection; we instead LOG a lone stray one (fail-soft, keep serving) but exit(1) on a STORM — many within a
+// short window means the process is wedged, so let Railway restart a clean container rather than serve broken.
+const STORM_WINDOW_MS = 60_000;
+const STORM_THRESHOLD = 10;
+let stormTimes: number[] = [];
+function recordStorm(kind: string, err: unknown): void {
+  const now = Date.now();
+  stormTimes = stormTimes.filter((t) => now - t < STORM_WINDOW_MS);
+  stormTimes.push(now);
+  console.error(`[hub:${kind}] ${((err as Error) && (err as Error).stack) || String(err)} (${stormTimes.length}/${STORM_THRESHOLD} in ${STORM_WINDOW_MS / 1000}s)`);
+  if (stormTimes.length >= STORM_THRESHOLD) {
+    console.error(`[hub:fatal] ${kind} storm — ${stormTimes.length} in ${STORM_WINDOW_MS / 1000}s; exiting(1) for a clean restart`);
+    process.exit(1);
+  }
+}
+process.on('unhandledRejection', (reason) => recordStorm('unhandledRejection', reason));
+
 const port = Number(process.env.PORT) || 8080;
 app.listen(port, async () => {
   console.log(`🏛️  Architects Council on :${port}`);

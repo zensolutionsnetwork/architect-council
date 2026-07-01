@@ -5,7 +5,14 @@ clients (Arke's standalone app, member packagers) wire against a fixed contract 
 Additive only: new fields may appear; existing field names + types never change without a
 `schemaVersion` bump. **Clients MUST ignore unknown fields and MUST NOT depend on key order.**
 
-_Last updated: 2026-06-30 (2) — HUB-HOSTED MODEL CONFIG (owner directive, relayed by Logos). New
+_Last updated: 2026-06-30 (3) — FRESHNESS RECENCY FLOOR (#4). `GET /api/council/brains` `fresh` (and the #36
+readiness gate that seats meeting contributors) now requires the pack sha to have changed AND the pack to have
+been committed within 26h; a sha that moved but is >26h old reads `fresh:false` (attends as a LISTENER, not a
+contributor). SAFE-DEMOTE ONLY: a null/unparseable `packed_at` never demotes, so a missing timestamp can't
+bench a seat. `fresh_until` unchanged in shape. Also internal (no wire change): a process-level
+unhandledRejection storm-counter and a 30s-sweep consecutive-failure guard now exit(1) for a clean restart
+instead of half-running. Prior:_
+_2026-06-30 (2) — HUB-HOSTED MODEL CONFIG (owner directive, relayed by Logos). New
 `GET /api/council/model-config` (member-or-owner) returns `{ok, default, perProject:{project->model},
 updatedAt, knownModels[]}`; with `?project=<name>` it resolves `{ok, project, model, source:override|default,
 default, updatedAt, knownModels}`. Owner-gated `POST /api/council/model-config` body `{default?:string,
