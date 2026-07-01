@@ -1458,7 +1458,11 @@ councilRouter.post('/bridge/brain/:uploadId/commit', requireContract2, async (re
     try { const cm = await getBrainV2Meta(up.actor, up.kind || 'corpus'); committedAt = cm ? cm.committed_at : null; } catch { /* echo is best-effort */ }
     // #28 + RESPONSE_SHAPES.md: ok + schemaVersion are additive. Clients gate on ok===true and branch on
     // schemaVersion; committedAt is the authoritative server time, sha256 is the whole-blob content hash.
-    res.json({ ok: true, schemaVersion: 1, brainVersion, actor: up.actor, kind: up.kind || 'corpus', sha256: whole, bytes: buf.length, committedAt, corpusGuard, droppedFiles });
+    // #50 (2026-07-01): echo an explicit hub-origin `pack_sha` on a PACK commit so a client's corpusVerify
+    // can assert hubReturnedPackSha === manifest.pack_sha without reading the generic `sha256` field. For a
+    // pack commit `whole` IS the pack sha256; the field is omitted for corpus/manifest kinds (self-documenting).
+    const pack_sha = up.kind === 'pack' ? whole : undefined;
+    res.json({ ok: true, schemaVersion: 1, brainVersion, actor: up.actor, kind: up.kind || 'corpus', sha256: whole, pack_sha, bytes: buf.length, committedAt, corpusGuard, droppedFiles });
   } catch (e) { internalError(res, e); }
 });
 councilRouter.get('/bridge/brain-meta/:actor', async (req, res) => {

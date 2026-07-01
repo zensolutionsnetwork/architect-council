@@ -5,7 +5,7 @@ clients (Arke's standalone app, member packagers) wire against a fixed contract 
 Additive only: new fields may appear; existing field names + types never change without a
 `schemaVersion` bump. **Clients MUST ignore unknown fields and MUST NOT depend on key order.**
 
-_Last updated: 2026-07-01 — APP-DRIVEN AGENT PROVISIONING (owner directive; Phase 1, per-owner hub). Two
+_Last updated: 2026-07-01 — #50 explicit `pack_sha` echo on PACK commit (additive; corpusVerify unblock). Prior: APP-DRIVEN AGENT PROVISIONING (owner directive; Phase 1, per-owner hub). Two
 owner-gated endpoints the cockpit "add agent" wizard calls, generic for any agent id/name:
 `POST /api/council/agents/register` body `{id, name, autoJoin?}` → `{ok, id, name, autoJoin, seats:[...]}` (adds
 the seat to the `council_seats` app_setting = the SEATING roster; `id` must match `^[a-z][a-z0-9-]{1,30}$`; a
@@ -108,6 +108,9 @@ manifest actor).
   "actor": "kairos",                // string — the member the brain is committed to
   "kind": "corpus",                 // "pack" | "corpus"
   "sha256": "<whole-hex>",          // string — lowercase-hex sha256 of the whole committed blob (the content hash)
+  "pack_sha": "<whole-hex>",        // string — present on PACK commits ONLY (omitted for corpus/manifest). #50:
+                                        // the hub-origin pack sha256; equals `sha256` for a pack commit. Lets a
+                                        // client's corpusVerify assert hubReturnedPackSha === manifest.pack_sha256.
   "bytes": 123456,                  // integer — committed blob size
   "committedAt": "2026-06-18T07:00:00Z", // string|null — SERVER-stamped commit time (commitBrainV2 writes now()).
                                         // Best-effort echo: may be null if the post-commit meta read missed.
