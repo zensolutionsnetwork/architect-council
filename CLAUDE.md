@@ -26,7 +26,46 @@ credential/scanner tooling — helpers are hardcoded to architectscouncil.com, g
 step could read as offensive security to a zero-context reviewer, narrow it to our infra explicitly
 or ask Mathieu first.
 
-## Current state (2026-06-30 NIGHTLY — the 06-29 DAY SESSION shipped REAL hub code: seat-everyone meeting gate [stale seats = LISTENERS, never benched] + `deploy_sha` on `/api/health` [`50ff67c`] + a deploy_sha-semantics doc [`09d7483`, Arke review] + a security review [no code; Cloudflare edge protection = the one real gap, HELD for Mathieu]; HEAD `09d7483` = live deploy_sha [behavioural deploy-verify PASS]; CI+checksuite-guard+Scheduled GREEN; repo clean 0/0; prod healthy [missed_meeting:false, last_scheduler_status:opened]; OWNER RULED #40 = HUB TABLE [unblocks id=25/id=26 ratification at the 06-30 meeting]; inbox 1->0 [Nova adopted all 5 ritual deltas + 1 reciprocal note]; agenda 2 open [#29 nova accuracy-std, #30 arke client-enum + Windows-ops merge]; POSTED 1 agenda item [ratify id=25/id=26 into hub table]; brains fresh_count=0 -> re-pack refreshes kairos for the 06-30 fire) — HANDOFF
+## Current state (2026-07-01 NIGHTLY — the 06-30 DAY SESSION (Mathieu present) shipped FOUR real hub deploys after the morning prep: `83f5ec4` response_shapes_sha on /api/health + contract/responseShapes.json [my meeting carry-out #2, CRITICAL PATH — Arke drift-alarm + Logos freshness consumer gate on it]; `864b803` hub-hosted model config [owner directive, via Logos]; `7148d21` loud-failure guards [storm-counter -> process.exit(1) + sweep fail-exit, my carry-out #5] + 26h freshness floor [my carry-out #4] + Nova id=32 code-derived status probe; `d16da61` app-driven agent provisioning Phase 1 [owner directive — owner-gated register + vault-backed secret endpoints + data-driven council_seats roster; MEETING_DEFAULT untouched; roster still kairos/arke/nova/logos, no agent hand-provisioned]. Plus id=25/id=26 SEEDED as PROPOSED standards [#40 = hub table]. HEAD `d16da61` = live deploy_sha [behavioural deploy-verify PASS]; response_shapes_sha live; CI+Push-on-main GREEN; repo clean 0/0; prod healthy [missed_meeting:false, last_scheduler_status:opened, last_mtg 2026-06-30T07:00:00Z]; no live meeting [cf845456 phase=report]. INBOX 0; AGENDA 1 open [id=32 nova code-derived status probe = my ACCEPT, already shipped `7148d21`]; brains fresh_count=1 at nightly [only arke fresh] -> my re-pack refreshes kairos -> fresh_count=2 for the 07-01 fire) — HANDOFF
+> **NIGHTLY 2026-07-01 (Kairos, automated midnight ritual, ~00:30 EDT). The 06-30 DAY SESSION (Mathieu present)
+> shipped FOUR real hub deploys after the morning prep; quiet since; all green. Narrated from the day-session
+> transcript (local_bfec87fb), deploy-verified live.** HEAD `d16da61`. The 06-30 day session, past the morning-prep
+> commit `fda9226`: **`83f5ec4` — `response_shapes_sha` on `/api/health` + `contract/responseShapes.json`** (over
+> canonical JSON) — my meeting carry-out #2, CRITICAL PATH (Arke's drift-alarm + Logos's freshness consumer both
+> gate on it; a ritual compares the live contract sha vs the committed contract in one call); **`864b803` —
+> hub-hosted model config** (owner directive 2026-06-30, via Logos — the council voice model is now
+> hub-config-driven, not hardcoded per seat); **`7148d21` — loud-failure guards + freshness floor + status probe**
+> (my carry-out #5: bounded `unhandledRejection` storm-counter -> `process.exit(1)` + the 30s sweep now fail-exits;
+> my carry-out #4: 26h recency freshness floor `pack_sha!=last_attended AND now-packaged_at < 26h`; + Nova's id=32
+> code-derived status probe); **`d16da61` — app-driven agent provisioning, Phase 1** (owner directive — owner-gated
+> generic `POST /api/council/agents/register` + `GET /api/council/agents/:id/secret` [vault-backed, minted-once,
+> never logged] + a data-driven `council_seats` roster feeding `computeReadiness`; **MEETING_DEFAULT untouched** so
+> the standards-ratification quorum is unchanged; a registered seat with no brain reads `no_brain` and is excluded
+> until it uploads one; NO agent hand-provisioned — verified live with non-mutating checks only [founding-seat->409,
+> bad id->400, unauth->401], roster still kairos/arke/nova/logos; Arke births any new agent, e.g. Argus, 100%
+> through his app wizard). Plus **id=25/id=26 SEEDED as PROPOSED standards** now that #40 is ruled hub-table.
+> Working tree clean, in sync origin/main (0/0). **Prod healthy** (`/api/health` ok:true, vault:true, **deploy_sha
+> `d16da61…` = HEAD -> behavioural deploy-verify PASS**, response_shapes_sha live, scheduler_enabled:true,
+> missed_meeting:false, last_scheduler_status `opened`, last_meeting_created_at `2026-06-30T07:00:00Z`). **CI +
+> Push-on-main GREEN on `d16da61`.** **No live meeting** (newest meeting `cf845456` from the 06-30 03:00 ET run,
+> already debriefed at the 06-30 morning prep — safe to push). **No new autonomous meeting since `cf845456`** — the
+> 03:00 ET scheduler fires LATER tonight (07-01 03:00 Toronto, AFTER this ritual), so nothing new to debrief; it
+> appears for the 07-01 morning prep. **INBOX: 0 open.** **AGENDA: 1 open — id=32 (nova/normal): adopt the
+> code-derived status probe as a shared standard** — my position = ACCEPT, and I already SHIPPED it hub-side today
+> (`7148d21`, Nova id=32); do NOT re-post. **id=25/id=26 seeded PROPOSED, WAITING ON** each project's sovereign
+> session to ratify (Kairos ACCEPT recorded). **BRAINS: fresh_count=1 at nightly** (`GET /api/council/brains`,
+> quorum_min=2, next_fire 2026-07-01T07:00Z) — only **arke** fresh (packed 07-01 03:51Z); **kairos stale** (packed
+> 06-30 04:32Z, BEFORE today's 4 deploys — correctly reads stale w.r.t. real work), **nova + logos stale**. **REAL
+> WORK today -> re-pack REQUIRED** (seat-everyone policy); my nightly re-pack bumps kairos to HEAD `d16da61` ->
+> kairos FRESH -> fresh_count=2 (kairos+arke) >= quorum 2, so the 07-01 03:00 fire can run. **No deploy this ritual
+> beyond the BACKLOG/CLAUDE doc refresh + brain re-pack.** **NEXT SESSION top 3:** (1) **morning ritual — debrief
+> the 07-01 03:00 ET autonomous meeting** (check `lastSchedulerRun` seated-vs-listener; nova/logos likely listeners
+> if not re-packed) + check inbox; (2) at that meeting carry ACCEPT on id=32 (already shipped) + walk the 4
+> day-session ships in the standing round; (3) **#42 cadence half** — raise automating nova/logos nightly re-packs
+> (or extend the freshness floor) so quorum stops riding on two seats. **WAITING ON:** nova/logos/arke to ratify
+> id=25/id=26 from their own sessions; Arke runs his app wizard for Argus (provisioning Phase 1 endpoints now live).
+> **TO ASK MATHIEU:** Cloudflare edge-protection go-ahead [held]; #42 freshness automation [option 1 = auto re-pack
+> nova/logos nightly]. Bullets below this line are the 06-30 MORNING PREP snapshot (history).
 > **MORNING PREP 2026-06-30 (Kairos, automated 06:00). DEBRIEFED the 03:00 ET autonomous meeting `cf845456` —
 > the FIRST live PARTIAL run of the seat-everyone gate (`50ff67c`): scheduler seated ALL 4, fresh_count 3,
 > CONTRIBUTORS [kairos/arke/nova], LISTENER [logos] (brain unchanged since 06-27 -> stale, attended advisory-only
