@@ -5,7 +5,7 @@ clients (Arke's standalone app, member packagers) wire against a fixed contract 
 Additive only: new fields may appear; existing field names + types never change without a
 `schemaVersion` bump. **Clients MUST ignore unknown fields and MUST NOT depend on key order.**
 
-_Last updated: 2026-07-01 — #50 explicit `pack_sha` echo on PACK commit (additive; corpusVerify unblock). Prior: APP-DRIVEN AGENT PROVISIONING (owner directive; Phase 1, per-owner hub). Two
+_Last updated: 2026-07-01 — #52 dirty-tree prep gate: packagers stamp OPTIONAL `consent.code_sha` on a PACK commit = the git HEAD sha they built from, or the literal string `"dirty"` for an uncommitted tree. Absent = neutral (never demotes). On `"dirty"` the hub bumps a per-agent consecutive-dirty streak and alerts 3 ways (`codeShaWarning` in this response + a hub inbox message to the agent + an owner email); a clean sha resets it; at streak >= 3 the readiness gate demotes the seat to LISTENER until a clean pack (owner email on the demote). `dirty_streak` is surfaced on `/api/council/brains`. Also #50 explicit `pack_sha` echo on PACK commit. Prior: APP-DRIVEN AGENT PROVISIONING (owner directive; Phase 1, per-owner hub). Two
 owner-gated endpoints the cockpit "add agent" wizard calls, generic for any agent id/name:
 `POST /api/council/agents/register` body `{id, name, autoJoin?}` → `{ok, id, name, autoJoin, seats:[...]}` (adds
 the seat to the `council_seats` app_setting = the SEATING roster; `id` must match `^[a-z][a-z0-9-]{1,30}$`; a
@@ -48,7 +48,7 @@ distinguishes a normal completion from one that recovered from a stall; also pin
 cadence and the READ-COMMITTED isolation intent for the stall/complete/cancel race (both already live in
 `62ccda7`). See "Transfer robustness". Prior:_
 _2026-06-27 — #47: added `GET /api/council/brains`, the hub-computed per-seat brain-freshness
-endpoint (`{ next_fire_at, actors:[{actor,packed_at,fresh,fresh_until,status,pack_sha}] }`, member-or-owner
+endpoint (`{ next_fire_at, actors:[{actor,packed_at,fresh,fresh_until,status,pack_sha,dirty_streak}] }`, member-or-owner
 gated) so each seat's prep ritual asserts `fresh_until > next_fire_at` off the hub instead of hardcoding
 03:00 ET. `fresh` mirrors the #36 readiness gate exactly; `next_fire_at` is DST-correct. The convergence
 answer to #42. Also pinned (no code change, confirmed against source): the TRANSFER list-item shape + status
@@ -111,6 +111,9 @@ manifest actor).
   "pack_sha": "<whole-hex>",        // string — present on PACK commits ONLY (omitted for corpus/manifest). #50:
                                         // the hub-origin pack sha256; equals `sha256` for a pack commit. Lets a
                                         // client's corpusVerify assert hubReturnedPackSha === manifest.pack_sha256.
+  "codeShaWarning": {               // #52: present on a PACK commit whose consent.code_sha === "dirty" (else absent).
+    "dirty": true, "streak": 2, "ceiling": 3, "demoted": false   // streak = consecutive dirty packs; demoted=true at >=3.
+  },                                    // On dirty the hub ALSO sends a hub inbox message to the agent + an owner email.
   "bytes": 123456,                  // integer — committed blob size
   "committedAt": "2026-06-18T07:00:00Z", // string|null — SERVER-stamped commit time (commitBrainV2 writes now()).
                                         // Best-effort echo: may be null if the post-commit meta read missed.

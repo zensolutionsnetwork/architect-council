@@ -178,6 +178,12 @@ export async function initDb(): Promise<void> {
   // at open for every participant; { actor: '<pack-sha-hex>' | null }. Compared by sha equality (Nova's
   // clock-skew fix — never timestamps). Absent on pre-#36 meetings → a seat with no recorded history reads fresh.
   await q.query(`ALTER TABLE meetings ADD COLUMN IF NOT EXISTS attend_pack_sha jsonb`);
+  // #52 (2026-07-01): per-agent dirty-tree prep tracking. code_sha = the git sha a pack was built from, or the
+  // literal 'dirty' when the packager's working tree had uncommitted changes; dirty_streak = consecutive dirty
+  // packs. Absent/unknown code_sha NEVER changes the streak (safe-demote-only). At streak >= 3 the seat is
+  // demoted to LISTENER by computeReadiness until a clean pack resets it.
+  await q.query(`ALTER TABLE members ADD COLUMN IF NOT EXISTS dirty_streak int NOT NULL DEFAULT 0`);
+  await q.query(`ALTER TABLE members ADD COLUMN IF NOT EXISTS code_sha text`);
   // Scheduler decision log (#36): one row per scheduled fire decision so a skip is a RECORDED fact, never a
   // silent no-op. decision ∈ {opened, skipped_quorum, scheduler_off, no_voice_loop, already_live, error}.
   await q.query(`CREATE TABLE IF NOT EXISTS scheduler_runs (
@@ -520,6 +526,20 @@ export async function getMember(name: string): Promise<(Member & { secret: strin
     FROM members m JOIN member_secrets s ON s.member_name=m.name WHERE m.name=$1 AND m.active`, [name]);
   if (!rows[0]) return null;
   return { ...rows[0], capabilities: rows[0].capabilities || [], secret: dec(rows[0].secret_enc) };
+}
+/** #52: bump the actor's consecutive dirty-tree-pack streak; returns the new streak. */
+export async function bumpDirtyStreak(actor: string): Promise<number> {
+  const { rows } = await db().query<any>(`UPDATE members SET dirty_streak = dirty_streak + 1, code_sha='dirty' WHERE name=$1 RETURNING dirty_streak`, [actor]);
+  return rows[0] ? Number(rows[0].dirty_streak) : 0;
+}
+/** #52: a clean pack resets the streak to 0 and records the git sha it was built from. */
+export async function resetDirtyStreak(actor: string, codeSha: string): Promise<void> {
+  await db().query(`UPDATE members SET dirty_streak=0, code_sha=$2 WHERE name=$1`, [actor, codeSha]);
+}
+/** #52: the actor's current consecutive dirty streak (0 if absent). Read by the readiness gate. */
+export async function getDirtyStreak(actor: string): Promise<number> {
+  const { rows } = await db().query<any>(`SELECT dirty_streak FROM members WHERE name=$1`, [actor]);
+  return rows[0] ? Number(rows[0].dirty_streak) : 0;
 }
 
 // ---- Turn: shared transcript turn shape (the v1 conversation store was removed 2026-06-18) ----

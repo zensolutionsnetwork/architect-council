@@ -14,6 +14,7 @@ import { sendOwnerReportEmail, sendPasswordSetEmail } from './mailer.js';
 import { captureError, cronCheckIn } from './sentry.js';
 import {
   upsertMember, listMembers, setMemberActive, getMember,
+  bumpDirtyStreak, resetDirtyStreak, getDirtyStreak, ownerEmailConfigured,
   consumeJoinToken, issueJoinToken,
   type Turn,
   queueOutbox, pendingOutbox, markOutboxDelivered, ackOutbox, sweepOutbox,
@@ -54,6 +55,20 @@ function internalError(res: Response, e: unknown): void {
   try { console.error('[hub:error]', (e as Error)?.message || String(e)); } catch { /* noop */ }
   captureError('http_500', e); // best-effort external report (no-op until SENTRY_DSN is set)
   if (!res.headersSent) res.status(500).json({ error: 'internal_error' });
+}
+/** #52: email the owner about a dirty-tree prep (sent on EVERY dirty) — a stronger notice when the agent is
+ *  demoted to listener at streak 3. Best-effort: reads the notify address, never throws into the commit path. */
+async function notifyOwnerDirty(actor: string, streak: number, demoted: boolean): Promise<void> {
+  try {
+    const to = (await getSetting('owner_notify_email')) || ownerEmailConfigured();
+    const subject = demoted
+      ? `Architects Council — ${actor} demoted to listener (3 dirty preps)`
+      : `Architects Council — ${actor} submitted a dirty-tree prep (${streak}/3)`;
+    const body = demoted
+      ? `Agent "${actor}" has now submitted 3 consecutive brain packs built from a DIRTY git working tree (uncommitted local changes). Per the #52 gate it is DEMOTED to LISTENER at the next meeting until it commits a clean pack (which resets the streak). Heads-up only — no action required.`
+      : `Agent "${actor}" submitted a brain pack built from a DIRTY git working tree (uncommitted local changes). Consecutive dirty streak: ${streak}/3. At 3 it is demoted to listener until it commits clean. Heads-up only.`;
+    void sendOwnerReportEmail(to, subject, body);
+  } catch { /* owner alert is best-effort; never throw into the commit path */ }
 }
 // Owner directive 2026-06-11: the hub's member/voice is KAIROS by name — persona and actor are one.
 // 'architect-council' remains only as the retired pre-naming alias (its row gets a throwaway secret).
@@ -1012,7 +1027,7 @@ councilRouter.get('/council/brains', async (req, res) => {
     const actors = readiness.map((r) => {
       const fresh = r.status === 'fresh';
       const fresh_until = (fresh && nextFire) ? new Date(Date.parse(nextFire) + SCHED_INTERVAL_MS).toISOString() : null;
-      return { actor: r.actor, packed_at: r.packedAt, fresh, fresh_until, status: r.status, pack_sha: r.packSha };
+      return { actor: r.actor, packed_at: r.packedAt, fresh, fresh_until, status: r.status, pack_sha: r.packSha, dirty_streak: r.dirtyStreak ?? 0 };
     });
     res.json({ ok: true, now: new Date().toISOString(), next_fire_at: nextFire, tz: 'America/Toronto',
       quorum_min: QUORUM_MIN, fresh_count: actors.filter((x) => x.fresh).length, actors });
@@ -1464,7 +1479,27 @@ councilRouter.post('/bridge/brain/:uploadId/commit', requireContract2, async (re
     // can assert hubReturnedPackSha === manifest.pack_sha without reading the generic `sha256` field. For a
     // pack commit `whole` IS the pack sha256; the field is omitted for corpus/manifest kinds (self-documenting).
     const pack_sha = up.kind === 'pack' ? whole : undefined;
-    res.json({ ok: true, schemaVersion: 1, brainVersion, actor: up.actor, kind: up.kind || 'corpus', sha256: whole, pack_sha, bytes: buf.length, committedAt, corpusGuard, droppedFiles });
+    // #52: dirty-tree prep tracking + escalation. The packager stamps consent.code_sha = the git sha it built
+    // from, or the literal 'dirty' for an uncommitted tree. On a PACK commit: 'dirty' bumps the streak and
+    // alerts THREE ways (this response's codeShaWarning + a hub message to the agent + an owner email); a clean
+    // sha resets the streak; an absent value is neutral (safe-demote-only). At streak >= 3 the readiness gate
+    // demotes the seat to LISTENER until a clean pack resets it, and the owner email says so.
+    let codeShaWarning: any = undefined;
+    if (up.kind === 'pack') {
+      const codeSha = c.code_sha != null ? String(c.code_sha).trim() : null;
+      if (codeSha === 'dirty') {
+        const streak = await bumpDirtyStreak(up.actor).catch(() => 0);
+        const demoted = streak >= 3;
+        codeShaWarning = { dirty: true, streak, ceiling: 3, demoted };
+        queueEnvTask(SELF, up.actor, 'message', 'Dirty-tree prep warning (#52)',
+          { text: `Your latest brain pack was built from a DIRTY git working tree (uncommitted changes). Consecutive dirty streak ${streak}/3. Commit a clean tree before the next meeting; at 3 you attend as a LISTENER only until you commit clean.` },
+          demoted ? 'high' : 'normal').catch(() => { /* alert is best-effort */ });
+        void notifyOwnerDirty(up.actor, streak, demoted);
+      } else if (codeSha && /^[0-9a-f]{7,64}$/.test(codeSha)) {
+        await resetDirtyStreak(up.actor, codeSha).catch(() => { /* best-effort */ });
+      }
+    }
+    res.json({ ok: true, schemaVersion: 1, brainVersion, actor: up.actor, kind: up.kind || 'corpus', sha256: whole, pack_sha, codeShaWarning, bytes: buf.length, committedAt, corpusGuard, droppedFiles });
   } catch (e) { internalError(res, e); }
 });
 councilRouter.get('/bridge/brain-meta/:actor', async (req, res) => {
@@ -1811,7 +1846,7 @@ export async function healthMeetingSignal(): Promise<{ last_meeting_created_at: 
 // history). FIRING (owner 2026-06-29): the scheduler fires only when >= QUORUM_MIN seats are FRESH (>=2 seats
 // arrive with new material), but it then SEATS EVERYONE WITH A BRAIN - fresh seats as contributors, stale seats
 // as listeners (told in-band via the agenda) - and excludes ONLY no_brain seats. A quiet night (<2 fresh) skips.
-type SeatReadiness = { actor: string; status: 'fresh' | 'stale' | 'no_brain'; packSha: string | null; lastPackSha: string | null; packedAt: string | null };
+type SeatReadiness = { actor: string; status: 'fresh' | 'stale' | 'no_brain'; packSha: string | null; lastPackSha: string | null; packedAt: string | null; dirtyStreak?: number };
 const QUORUM_MIN = 2; // a scheduled meeting needs at least this many freshly-prepped seats to fire
 async function computeReadiness(): Promise<SeatReadiness[]> {
   const out: SeatReadiness[] = [];
@@ -1833,8 +1868,14 @@ async function computeReadiness(): Promise<SeatReadiness[]> {
     const shaChanged = (lastPackSha === null || packSha !== lastPackSha);
     const ageMs = packedAt ? (Date.now() - Date.parse(packedAt)) : null;
     const recent = ageMs === null || !Number.isFinite(ageMs) || ageMs < FRESH_FLOOR_MS;
-    const status: SeatReadiness['status'] = (shaChanged && recent) ? 'fresh' : 'stale';
-    out.push({ actor, status, packSha, lastPackSha, packedAt });
+    let status: SeatReadiness['status'] = (shaChanged && recent) ? 'fresh' : 'stale';
+    // #52: an agent with >= 3 consecutive dirty-tree packs is demoted to LISTENER regardless of content
+    // freshness, until a clean pack resets the streak. Safe-demote-only: 0/absent never demotes, so this can
+    // never bench a seat or starve quorum on its own.
+    let dirtyStreak = 0;
+    try { dirtyStreak = await getDirtyStreak(actor); } catch { dirtyStreak = 0; }
+    if (status === 'fresh' && dirtyStreak >= 3) status = 'stale';
+    out.push({ actor, status, packSha, lastPackSha, packedAt, dirtyStreak });
   }
   return out;
 }
