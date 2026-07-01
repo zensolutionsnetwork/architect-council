@@ -42,7 +42,7 @@ Trivial repeats with a fresh recorded decision SKIP the check and go straight to
 | CI status / failed logs | `gh run list` / `gh run view <id> --log-failed` (NOT browser, NOT ci-status.mjs) | gh removed / a richer CI MCP appears |
 | Deploy verify | `/api/health.deploy_sha == git HEAD` + `railway` CLI (NOT browser Railway) | a Railway MCP appears |
 | Council CLI free-text args | PowerShell `.ps1` via `-File`; commits via `git commit -F msgfile` (never `-Command` with `$`, never `-m` with quotes) | shell changes |
-| Prod error monitoring | NONE wired — homegrown unhandledRejection counter only | connect Sentry (registry) or Datadog → then wire hub error paths |
+| Prod error monitoring | `src/sentry.ts` wired (fail-soft, dormant) at internalError + recordStorm; Sentry MCP connected 2026-07-01 | set `SENTRY_DSN` in Railway to activate; use Sentry OR Datadog, not both |
 | Hub Postgres / deploy inspection | Railway CLI + hub admin endpoints (verified: no Railway/generic-Postgres MCP exists) | a Railway/Postgres MCP appears |
 | Code quality pass on src/ | `security-review` + `engineering:*` skills (NOT ad-hoc reading) | better review skill appears |
 | Hub operational analytics | `data` skill suite over cost_ledger / scheduler_runs / meetings | — |
