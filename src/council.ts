@@ -11,6 +11,7 @@ import { runVoiceLoop, isVoiceRunning } from './voiceloop.js';
 import { capsFromEnv, dailyBudgetExhausted, emptyTotals, addUsage, PRICES } from './cost.js';
 import { projectTranscript, transcriptSha256Hex } from './protocol.js';
 import { sendOwnerReportEmail, sendPasswordSetEmail } from './mailer.js';
+import { captureError } from './sentry.js';
 import {
   upsertMember, listMembers, setMemberActive, getMember,
   consumeJoinToken, issueJoinToken,
@@ -51,6 +52,7 @@ function safeEqual(given: unknown, expected: string): boolean {
  *  Never leak internal/DB/stack detail to the client (security hardening 2026-06-10). */
 function internalError(res: Response, e: unknown): void {
   try { console.error('[hub:error]', (e as Error)?.message || String(e)); } catch { /* noop */ }
+  captureError('http_500', e); // best-effort external report (no-op until SENTRY_DSN is set)
   if (!res.headersSent) res.status(500).json({ error: 'internal_error' });
 }
 // Owner directive 2026-06-11: the hub's member/voice is KAIROS by name — persona and actor are one.

@@ -9,6 +9,7 @@ import { initDb, vaultReady, recordBoot } from './store.js';
 import { bridgeRouter, councilRouter, selfRegister, startScheduler, healthMeetingSignal } from './council.js';
 import { rateLimit } from './ratelimit.js';
 import { responseShapesSha } from './contract.js';
+import { captureError } from './sentry.js';
 
 const app = express();
 app.disable('x-powered-by'); // never advertise the framework/version (fingerprinting).
@@ -124,6 +125,7 @@ function recordStorm(kind: string, err: unknown): void {
   stormTimes = stormTimes.filter((t) => now - t < STORM_WINDOW_MS);
   stormTimes.push(now);
   console.error(`[hub:${kind}] ${((err as Error) && (err as Error).stack) || String(err)} (${stormTimes.length}/${STORM_THRESHOLD} in ${STORM_WINDOW_MS / 1000}s)`);
+  captureError(kind, err); // best-effort external report (no-op until SENTRY_DSN is set)
   if (stormTimes.length >= STORM_THRESHOLD) {
     console.error(`[hub:fatal] ${kind} storm — ${stormTimes.length} in ${STORM_WINDOW_MS / 1000}s; exiting(1) for a clean restart`);
     process.exit(1);
