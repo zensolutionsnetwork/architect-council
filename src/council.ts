@@ -11,7 +11,7 @@ import { runVoiceLoop, isVoiceRunning } from './voiceloop.js';
 import { capsFromEnv, dailyBudgetExhausted, emptyTotals, addUsage, PRICES } from './cost.js';
 import { projectTranscript, transcriptSha256Hex } from './protocol.js';
 import { sendOwnerReportEmail, sendPasswordSetEmail } from './mailer.js';
-import { captureError } from './sentry.js';
+import { captureError, cronCheckIn } from './sentry.js';
 import {
   upsertMember, listMembers, setMemberActive, getMember,
   consumeJoinToken, issueJoinToken,
@@ -1894,7 +1894,13 @@ export function startScheduler(): void {
       // its own app_setting + VOICE_LOOP_ENABLED gates. Fires at the app-configured time (default 03:00
       // Toronto). Replaces the external trigger task.
       if (lastSchedDate !== date && await schedulerEnabled()) {
-        if (hhmm === await getSchedTime()) { lastSchedDate = date; await fireScheduledMeeting(); }
+        if (hhmm === await getSchedTime()) {
+          lastSchedDate = date; await fireScheduledMeeting();
+          // Sentry cron check-in: the daily job RAN (any decision). A MISSED check-in = the scheduler died
+          // silently = the council stopped meeting with nobody noticing. Schedule tracks the configured time.
+          const [sh, sm] = hhmm.split(':');
+          cronCheckIn('nightly-council-meeting', 'ok', `${Number(sm)} ${Number(sh)} * * *`, 'America/Toronto');
+        }
       }
       // Daily outbox retention sweep (council 2026-06-07) — quiet hour, after the meeting window. Runs even while paused.
       if (hhmm === '04:30' && lastSweepDate !== date) { lastSweepDate = date; await sweepOutbox(); await sweepEnvTasks(); }

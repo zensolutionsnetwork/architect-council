@@ -46,3 +46,36 @@ export function captureError(kind: string, err: unknown, extra?: Record<string, 
       .finally(() => clearTimeout(timer));
   } catch { /* capture is best-effort; never throw */ }
 }
+
+/**
+ * Best-effort Sentry Cron check-in. Sends a check-in for `monitorSlug` and (via monitor_config) upserts the
+ * monitor's expected schedule, so Sentry alerts if a scheduled run is ever MISSED — e.g. the nightly council
+ * meeting scheduler dying silently. Same fail-soft contract as captureError: no-op until SENTRY_DSN is set,
+ * never throws into the caller. crontab is UTC/tz-aware via the timezone arg.
+ */
+export function cronCheckIn(monitorSlug: string, status: 'ok' | 'error' | 'in_progress', scheduleCrontab: string, timezone: string): void {
+  const dsn = process.env.SENTRY_DSN;
+  if (!dsn) return;
+  try {
+    const m = /^(https?):\/\/([^@]+)@([^/]+)\/(.+)$/.exec(dsn.trim());
+    if (!m) return;
+    const [, scheme, publicKey, host, projectId] = m;
+    const envHeader = JSON.stringify({ event_id: crypto.randomUUID().replace(/-/g, ''), sent_at: new Date().toISOString(), dsn: dsn.trim() });
+    const itemHeader = JSON.stringify({ type: 'check_in' });
+    const payload = JSON.stringify({
+      check_in_id: crypto.randomUUID().replace(/-/g, ''),
+      monitor_slug: monitorSlug,
+      status,
+      environment: process.env.NODE_ENV || 'production',
+      monitor_config: { schedule: { type: 'crontab', value: scheduleCrontab }, checkin_margin: 30, max_runtime: 45, timezone },
+    });
+    const body = envHeader + '\n' + itemHeader + '\n' + payload + '\n';
+    const url = `${scheme}://${host}/api/${projectId}/envelope/`;
+    const auth = `Sentry sentry_version=7, sentry_client=hub-fetch/1.0, sentry_key=${publicKey}`;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 3000);
+    void fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/x-sentry-envelope', 'X-Sentry-Auth': auth }, body, signal: ctrl.signal })
+      .catch(() => { /* best-effort */ })
+      .finally(() => clearTimeout(timer));
+  } catch { /* check-in is best-effort; never throw */ }
+}
