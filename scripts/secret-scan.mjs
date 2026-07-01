@@ -17,10 +17,17 @@ const PATTERNS = [
 const SKIP_EXT = new Set(['.lock', '.png', '.jpg', '.ico', '.woff', '.woff2', '.ttf']);
 const SKIP_PATH = ['node_modules', 'dist', '.git', 'package-lock.json'];
 
-// council-jcs-1.0 golden/edge vector sha256 hashes are PUBLIC test data, not secrets.
-// Exempt ONLY the hex rule, ONLY in the files whose purpose is to carry those hashes.
-// Every other pattern (keys, db URLs, PEM, passwords) still applies to these files.
-const HEX_RULE_EXEMPT = [/^fixtures\//, /^docs\/CANONICALIZATION\.md$/, /^test\/canon\.test\.ts$/];
+// council-jcs-1.0 golden/edge vector sha256 hashes AND Kairos meeting-debrief
+// transcript sha256 hashes are PUBLIC integrity hashes, not secrets. Exempt ONLY
+// the hex rule, ONLY in the files whose purpose is to carry those hashes. Every
+// other pattern (keys, db URLs, PEM, passwords) still applies to these files, so
+// a real credential pasted into a debrief is still blocked.
+const HEX_RULE_EXEMPT = [
+  /^fixtures\//,
+  /^docs\/CANONICALIZATION\.md$/,
+  /^test\/canon\.test\.ts$/,
+  /^council\/KAIROS_DEBRIEF_.*\.md$/,
+];
 const ALLOW_LIST = [
   'AES-256-GCM', 'aes-256-gcm', 'sha256', 'timingSafeEqual',
   'MASTER_KEY must be 32 bytes', 'COUNCIL_MEMBER_SECRET', 'COUNCIL_ADMIN_TOKEN',
