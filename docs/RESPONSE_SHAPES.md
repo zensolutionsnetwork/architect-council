@@ -5,7 +5,18 @@ clients (Arke's standalone app, member packagers) wire against a fixed contract 
 Additive only: new fields may appear; existing field names + types never change without a
 `schemaVersion` bump. **Clients MUST ignore unknown fields and MUST NOT depend on key order.**
 
-_Last updated: 2026-06-30 (3) — FRESHNESS RECENCY FLOOR (#4). `GET /api/council/brains` `fresh` (and the #36
+_Last updated: 2026-07-01 — APP-DRIVEN AGENT PROVISIONING (owner directive; Phase 1, per-owner hub). Two
+owner-gated endpoints the cockpit "add agent" wizard calls, generic for any agent id/name:
+`POST /api/council/agents/register` body `{id, name, autoJoin?}` → `{ok, id, name, autoJoin, seats:[...]}` (adds
+the seat to the `council_seats` app_setting = the SEATING roster; `id` must match `^[a-z][a-z0-9-]{1,30}$`; a
+founding seat → 409). `GET /api/council/agents/:id/secret` → `{ok, id, secret, minted:bool}` mints a per-seat
+member secret on first request and returns it IDEMPOTENTLY after (vault-backed; value written by the app into the
+agent's `.env`, never logged; a founding seat → 409). Creating the member row also enables that actor's
+`/bridge/brain/*`, `corpus-status`, and manifest paths (same members-table contract as every seat). INVARIANT:
+`MEETING_DEFAULT` (founding roster) remains the standards ratification quorum — a new seat joins the SEATING
+roster only and can never regress an already-adopted standard; a registered seat with no brain reads `no_brain`
+and is excluded until it uploads one. `GET /api/council/brains` now lists the full seating roster. Prior:_
+_2026-06-30 (3) — FRESHNESS RECENCY FLOOR (#4). `GET /api/council/brains` `fresh` (and the #36
 readiness gate that seats meeting contributors) now requires the pack sha to have changed AND the pack to have
 been committed within 26h; a sha that moved but is >26h old reads `fresh:false` (attends as a LISTENER, not a
 contributor). SAFE-DEMOTE ONLY: a null/unparseable `packed_at` never demotes, so a missing timestamp can't

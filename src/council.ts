@@ -1560,6 +1560,61 @@ councilRouter.post('/council/agents/home', requireOwner, async (req, res) => {
   } catch (e) { internalError(res, e); }
 });
 
+// ---------- Agent provisioning, app-driven (owner directive 2026-07-01) ----------
+// Phase 1: each owner runs THEIR OWN hub instance and adds agents to it entirely through the app (the cockpit
+// "add agent" wizard calls these two endpoints). Fully generic — any id/name, gated by OWNER auth only, nothing
+// hardcoded per-agent, so a future user provisions their agents with zero hub-operator involvement.
+// KEY INVARIANT: MEETING_DEFAULT (the founding roster) is ALSO the standards ratification quorum — standardStatus
+// counts only MEETING_DEFAULT members, so a new seat can NEVER regress an already-adopted standard. New seats join
+// the SEATING roster only (via the `council_seats` app_setting); they get seated in meetings once they have a fresh
+// brain (the seat-everyone gate), but never change the ratification quorum. A registered seat with no brain reads
+// no_brain and is excluded — so "registered before born" never lets an empty seat into a meeting.
+const AGENT_ID_RE = /^[a-z][a-z0-9-]{1,30}$/;
+async function extraSeats(): Promise<{ id: string; name: string }[]> {
+  try {
+    const raw = await getSetting('council_seats');
+    if (!raw) return [];
+    const j = JSON.parse(raw);
+    return Array.isArray(j) ? j.filter((s: any) => s && AGENT_ID_RE.test(String(s.id))).map((s: any) => ({ id: String(s.id), name: String(s.name || s.id) })) : [];
+  } catch { return []; }
+}
+/** The full SEATING roster = founding seats + app-registered extra seats (deduped). Used by the readiness gate
+ *  and meeting seating. NOT the ratification quorum (that stays MEETING_DEFAULT). */
+async function seatingRoster(): Promise<string[]> {
+  const extra = (await extraSeats()).map((s) => s.id).filter((id) => !MEETING_DEFAULT.includes(id));
+  return [...MEETING_DEFAULT, ...extra];
+}
+councilRouter.post('/council/agents/register', requireOwner, async (req, res) => {
+  try {
+    const b = req.body || {};
+    const id = String(b.id || '').toLowerCase();
+    if (!AGENT_ID_RE.test(id)) return res.status(400).json({ error: 'bad_id', message: 'id must match ^[a-z][a-z0-9-]{1,30}$' });
+    if (MEETING_DEFAULT.includes(id)) return res.status(409).json({ error: 'founding_seat', message: 'id is a founding seat; already seated' });
+    const name = clip(b.name, 60) || id;
+    const seats = await extraSeats();
+    const found = seats.find((s) => s.id === id);
+    if (!found) { seats.push({ id, name }); await setSetting('council_seats', JSON.stringify(seats)); }
+    else if (b.name && found.name !== name) { found.name = name; await setSetting('council_seats', JSON.stringify(seats)); }
+    res.json({ ok: true, id, name, autoJoin: b.autoJoin !== false, seats: await seatingRoster() });
+  } catch (e) { internalError(res, e); }
+});
+councilRouter.get('/council/agents/:id/secret', requireOwner, async (req, res) => {
+  try {
+    const id = String(req.params.id || '').toLowerCase();
+    if (!AGENT_ID_RE.test(id)) return res.status(400).json({ error: 'bad_id' });
+    if (MEETING_DEFAULT.includes(id)) return res.status(409).json({ error: 'founding_seat', message: 'refusing to expose a founding-seat secret' });
+    // Idempotent: the member row stores the secret in the vault (recoverable on read), so a re-fetch returns the
+    // SAME secret. Mint on first request for a not-yet-provisioned seat. The value is returned to the app to write
+    // into the new agent's .env (as <ID>_SECRET) and is NEVER logged hub-side. Creating the member row also enables
+    // the agent's brain-upload / corpus-status / manifest paths (they key on the members table, same as every seat).
+    const existing = await getMember(id);
+    if (existing && existing.secret) return res.json({ ok: true, id, secret: existing.secret, minted: false });
+    const secret = crypto.randomBytes(24).toString('base64url');
+    await upsertMember({ name: id, base_url: `https://cowork.local/${id}`, rules: 'Council agent (app-provisioned).', capabilities: [] }, secret);
+    res.json({ ok: true, id, secret, minted: true });
+  } catch (e) { internalError(res, e); }
+});
+
 // Stage a move: marks the agent in_transit (single-home invariant — refuses a second concurrent move).
 councilRouter.post('/council/transfer/initiate', requireOwner, async (req, res) => {
   try {
@@ -1754,7 +1809,9 @@ type SeatReadiness = { actor: string; status: 'fresh' | 'stale' | 'no_brain'; pa
 const QUORUM_MIN = 2; // a scheduled meeting needs at least this many freshly-prepped seats to fire
 async function computeReadiness(): Promise<SeatReadiness[]> {
   const out: SeatReadiness[] = [];
-  for (const actor of MEETING_DEFAULT) {
+  // Score the full SEATING roster (founding + app-registered seats), so a newly-provisioned agent is scored
+  // (no_brain until it uploads) and seated once fresh. The ratification quorum stays MEETING_DEFAULT.
+  for (const actor of await seatingRoster()) {
     let packMeta: any = null;
     try { packMeta = await getBrainV2Meta(actor, 'pack'); } catch { /* treat as no_brain below */ }
     const packSha = packMeta ? String(packMeta.sha256) : null;

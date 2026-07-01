@@ -74,6 +74,8 @@ const PROTECTED: { method: string; path: string; body?: object }[] = [
   { method: 'GET',  path: '/api/council/standards' },
   { method: 'GET',  path: '/api/council/model-config' },
   { method: 'POST', path: '/api/council/model-config', body: { default: 'claude-opus-4-8' } },
+  { method: 'POST', path: '/api/council/agents/register', body: { id: 'probe-agent', name: 'Probe' } },
+  { method: 'GET',  path: '/api/council/agents/probe-agent/secret' },
   { method: 'GET',  path: '/api/auth/me' },
   { method: 'POST', path: '/api/auth/logout', body: {} },
   { method: 'GET',  path: '/api/council/manager/digests' },

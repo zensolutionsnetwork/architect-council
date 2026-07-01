@@ -52,6 +52,9 @@ const CHECKS = [
   { id: 'deploy_sha', item: 'deploy_sha on /api/health (behavioural deploy-verify)',
     v: () => fileHas('src/server.ts', /deploy_sha/)
       ? ['DONE', 'server.ts deploy_sha'] : ['OPEN', 'missing'] },
+  { id: 'agent_provisioning', item: 'app-driven agent provisioning (register + secret)',
+    v: () => fileHas('src/council.ts', /'\/council\/agents\/register'/) && fileHas('src/council.ts', /seatingRoster/)
+      ? ['DONE', 'council.ts register + :id/secret + dynamic seatingRoster'] : ['OPEN', 'provisioning endpoints missing'] },
   { id: 'cloudflare_edge', item: 'Cloudflare edge protection',
     v: () => ['OWNER', 'held for Mathieu: registrar + account, shield-first-then-lock'] },
 ];
