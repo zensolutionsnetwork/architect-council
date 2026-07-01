@@ -8,7 +8,7 @@ import { Router, type Request, type Response, type NextFunction } from 'express'
 import crypto from 'node:crypto';
 import { architectReply, reviewProposal, councilBrain, synthesizeOwnerReport, synthesizeMeetingTranslation, OWNER_REPORT_MODEL } from './architect.js';
 import { runVoiceLoop, isVoiceRunning } from './voiceloop.js';
-import { capsFromEnv, dailyBudgetExhausted, emptyTotals, addUsage } from './cost.js';
+import { capsFromEnv, dailyBudgetExhausted, emptyTotals, addUsage, PRICES } from './cost.js';
 import { projectTranscript, transcriptSha256Hex } from './protocol.js';
 import { sendOwnerReportEmail, sendPasswordSetEmail } from './mailer.js';
 import {
@@ -1165,6 +1165,68 @@ councilRouter.post('/council/notify-email/test', requireOwner, async (_req, res)
     if (!to) return res.status(400).json({ error: 'no_registered_email' });
     const r = await sendOwnerReportEmail(to, 'Architects Council — test email', 'This is a test of the Architects Council owner-report email. If you received this, the meeting-close report will be delivered here.');
     res.json({ ok: r.sent, ...r, to });
+  } catch (e) { internalError(res, e); }
+});
+// ---------- Model config, hub-hosted (owner directive 2026-06-30, relayed by Logos) ----------
+// One source of truth for each project's council voice model, SERVED BY the hub instead of pinned in N
+// per-project Railway env vars. A voice resolves its model at runtime from GET /council/model-config?project=
+// and falls back to its own local env only if the hub is unreachable (fail-soft). POST is owner-gated.
+// Stored as one app_settings row `model_config` = JSON {default, perProject, updatedAt}. Default = opus
+// (owner's standing quality-over-cost call, 2026-06-06). Model strings validated by format; the known-model
+// list (cost.ts PRICES keys) is surfaced so Arke's front-end picker offers valid choices. Contract shape is
+// pinned in docs/RESPONSE_SHAPES.md and contract/responseShapes.json.
+const DEFAULT_VOICE_MODEL = 'claude-opus-4-8';
+const MODEL_STR_RE = /^[a-z0-9][a-z0-9.\-]{2,60}$/;
+async function readModelConfig(): Promise<{ default: string; perProject: Record<string, string>; updatedAt: string | null }> {
+  try {
+    const raw = await getSetting('model_config');
+    if (!raw) return { default: DEFAULT_VOICE_MODEL, perProject: {}, updatedAt: null };
+    const j = JSON.parse(raw);
+    const def = (typeof j.default === 'string' && MODEL_STR_RE.test(j.default)) ? j.default : DEFAULT_VOICE_MODEL;
+    const pp: Record<string, string> = {};
+    if (j.perProject && typeof j.perProject === 'object') {
+      for (const [k, v] of Object.entries(j.perProject)) {
+        if (typeof v === 'string' && MODEL_STR_RE.test(v)) pp[String(k).slice(0, 60)] = v;
+      }
+    }
+    return { default: def, perProject: pp, updatedAt: typeof j.updatedAt === 'string' ? j.updatedAt : null };
+  } catch { return { default: DEFAULT_VOICE_MODEL, perProject: {}, updatedAt: null }; }
+}
+councilRouter.get('/council/model-config', async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
+    const cfg = await readModelConfig();
+    const knownModels = Object.keys(PRICES);
+    const project = typeof req.query.project === 'string' ? String(req.query.project).slice(0, 60) : '';
+    if (project) {
+      const model = cfg.perProject[project] || cfg.default;
+      return res.json({ ok: true, project, model, source: cfg.perProject[project] ? 'override' : 'default', default: cfg.default, updatedAt: cfg.updatedAt, knownModels });
+    }
+    res.json({ ok: true, default: cfg.default, perProject: cfg.perProject, updatedAt: cfg.updatedAt, knownModels });
+  } catch (e) { internalError(res, e); }
+});
+councilRouter.post('/council/model-config', requireOwner, async (req, res) => {
+  try {
+    const b = req.body || {};
+    const cfg = await readModelConfig();
+    let nextDefault = cfg.default;
+    if (b.default !== undefined) {
+      if (typeof b.default !== 'string' || !MODEL_STR_RE.test(b.default)) return res.status(400).json({ error: 'bad_default' });
+      nextDefault = b.default;
+    }
+    const perProject: Record<string, string> = { ...cfg.perProject };
+    if (b.perProject !== undefined) {
+      if (b.perProject === null || typeof b.perProject !== 'object' || Array.isArray(b.perProject)) return res.status(400).json({ error: 'bad_perProject' });
+      for (const [k, v] of Object.entries(b.perProject)) {
+        const key = String(k).slice(0, 60);
+        if (v === null) { delete perProject[key]; continue; }        // null clears an override -> falls back to default
+        if (typeof v !== 'string' || !MODEL_STR_RE.test(v)) return res.status(400).json({ error: 'bad_model', message: `invalid model for ${key}` });
+        perProject[key] = v;
+      }
+    }
+    const updatedAt = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+    await setSetting('model_config', JSON.stringify({ default: nextDefault, perProject, updatedAt }));
+    res.json({ ok: true, default: nextDefault, perProject, updatedAt, knownModels: Object.keys(PRICES) });
   } catch (e) { internalError(res, e); }
 });
 // Per-agent living backlog (contract answer 4, ratified 2026-06-09): a write replaces ONLY the writer's

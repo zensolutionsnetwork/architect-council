@@ -78,6 +78,16 @@
       "friction": "string",
       "flags": "string",
       "raw": "string assembled report body"
+    },
+    "modelConfig": {
+      "ok": "bool",
+      "default": "string - default voice model when a project has no override (claude-opus-4-8)",
+      "perProject": "object project->model, only explicit overrides present",
+      "project": "string - echoed only when ?project= is passed",
+      "model": "string - resolved model, only when ?project= is passed",
+      "source": "string enum override|default - only when ?project= is passed",
+      "updatedAt": "string ISO8601 Z or null",
+      "knownModels": "string[] - models the hub prices (cost.ts), for front-end pickers"
     }
   }
 }

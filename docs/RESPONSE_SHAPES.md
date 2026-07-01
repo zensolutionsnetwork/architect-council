@@ -5,7 +5,16 @@ clients (Arke's standalone app, member packagers) wire against a fixed contract 
 Additive only: new fields may appear; existing field names + types never change without a
 `schemaVersion` bump. **Clients MUST ignore unknown fields and MUST NOT depend on key order.**
 
-_Last updated: 2026-06-30 — added `response_shapes_sha` to `GET /api/health` (meeting `f7f36a14` homework): the
+_Last updated: 2026-06-30 (2) — HUB-HOSTED MODEL CONFIG (owner directive, relayed by Logos). New
+`GET /api/council/model-config` (member-or-owner) returns `{ok, default, perProject:{project->model},
+updatedAt, knownModels[]}`; with `?project=<name>` it resolves `{ok, project, model, source:override|default,
+default, updatedAt, knownModels}`. Owner-gated `POST /api/council/model-config` body `{default?:string,
+perProject?:{name:string|null}}` (a `null` value clears an override → falls back to default); model strings
+validated `^[a-z0-9][a-z0-9.\-]{2,60}$`. One source of truth so a project resolves its council voice model
+from the hub at runtime instead of a per-project env var, falling back to its own local env only if the hub is
+unreachable. Default = `claude-opus-4-8` (owner's standing quality call). Stored in app_settings `model_config`.
+Prior:_
+_2026-06-30 — added `response_shapes_sha` to `GET /api/health` (meeting `f7f36a14` homework): the
 sha256hex of the CANONICAL JSON (council-jcs-1.0 `canon()`, not raw bytes) of the new machine-readable contract
 file `contract/responseShapes.json`. A consumer detects response-shape drift with one probe by reproducing
 `sha256hex(canon(their-parsed-copy))` and comparing. `contract/responseShapes.json` (`{contractVersion,
