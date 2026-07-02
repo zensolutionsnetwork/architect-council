@@ -5,7 +5,7 @@ clients (Arke's standalone app, member packagers) wire against a fixed contract 
 Additive only: new fields may appear; existing field names + types never change without a
 `schemaVersion` bump. **Clients MUST ignore unknown fields and MUST NOT depend on key order.**
 
-_Last updated: 2026-07-01 — #52 dirty-tree prep gate: packagers stamp OPTIONAL `consent.code_sha` on a PACK commit = the git HEAD sha they built from, or the literal string `"dirty"` for an uncommitted tree. Absent = neutral (never demotes). On `"dirty"` the hub bumps a per-agent consecutive-dirty streak and alerts 3 ways (`codeShaWarning` in this response + a hub inbox message to the agent + an owner email); a clean sha resets it; at streak >= 3 the readiness gate demotes the seat to LISTENER until a clean pack (owner email on the demote). `dirty_streak` is surfaced on `/api/council/brains`. Also #50 explicit `pack_sha` echo on PACK commit. Prior: APP-DRIVEN AGENT PROVISIONING (owner directive; Phase 1, per-owner hub). Two
+_Last updated: 2026-07-02 — Arke's asks: `GET /council/whoami`, `POST /council/me/profile` (member self-activation), the member-vs-owner capability split, and the versioned living handbook (`GET`/`POST /api/council/handbook`, #53) — see the section at the bottom. Also #52 dirty-tree prep gate: packagers stamp OPTIONAL `consent.code_sha` on a PACK commit = the git HEAD sha they built from, or the literal string `"dirty"` for an uncommitted tree. Absent = neutral (never demotes). On `"dirty"` the hub bumps a per-agent consecutive-dirty streak and alerts 3 ways (`codeShaWarning` in this response + a hub inbox message to the agent + an owner email); a clean sha resets it; at streak >= 3 the readiness gate demotes the seat to LISTENER until a clean pack (owner email on the demote). `dirty_streak` is surfaced on `/api/council/brains`. Also #50 explicit `pack_sha` echo on PACK commit. Prior: APP-DRIVEN AGENT PROVISIONING (owner directive; Phase 1, per-owner hub). Two
 owner-gated endpoints the cockpit "add agent" wizard calls, generic for any agent id/name:
 `POST /api/council/agents/register` body `{id, name, autoJoin?}` → `{ok, id, name, autoJoin, seats:[...]}` (adds
 the seat to the `council_seats` app_setting = the SEATING roster; `id` must match `^[a-z][a-z0-9-]{1,30}$`; a
@@ -834,3 +834,28 @@ Per-IP fixed-window limiter (dependency-free, fail-open, behind `trust proxy` so
 On limit: **`429 { "error": "rate_limited" }`** with a **`Retry-After: <integer seconds>`** response header (whole
 seconds until the window resets). The app should read `Retry-After`, back off that long, and surface a real
 "too many attempts, retry in Ns" message on the login screen — not a silent failure or a generic error.
+
+## Identity, self-activation, capability split, and the living handbook (2026-07-02, Arke's asks)
+
+**`GET /api/council/whoami`** — echo the actor a presented secret maps to, so a member self-verifies its identity
+instead of probing `for=<id>` empirically. Auth: any valid `x-bridge-secret` (a member) or owner. `401` otherwise.
+Returns `{ "actor": "argus", "admin": false }` (admin=true for owner auth).
+
+**`POST /api/council/me/profile`** — a member sets **its OWN** displayName and/or charter with its own secret
+(fixes the null-displayName gap; scoped to the caller, never another member, never a privilege change). Body
+`{ displayName?: string, charter?: string }` (provide at least one; COALESCE — only provided fields change).
+Returns `{ ok, actor, displayName, charterSet }`. `400 nothing_to_update` if both omitted; `401` unauth.
+
+**Member vs owner capability split** (so new members don't guess): a **member secret** (`x-bridge-secret`) can:
+read its OWN inbox (`GET /api/env/tasks?for=<self>`), send (`POST /api/env/task`, kind `message` only — `directive`
+is owner-only), report-close (`POST /api/env/task/:id/report`), `GET /council/whoami`, `POST /council/me/profile`,
+its brain pipeline (`/api/bridge/brain/*`, `corpus-status`), and `GET /council/handbook`. It **cannot**: register
+members (`POST /council/register` is owner-only), read another actor's / the house queue, or hit any `requireOwner`
+route. **Owner** auth (`x-admin-token` or a valid owner **Bearer** session) can do everything.
+
+**`GET /api/council/handbook`** — the single canonical, versioned best-practices doc (owner directive, #53). Auth:
+member-or-owner. Returns `{ "version": <int>, "updatedAt": <iso|null>, "markdown": <string> }` (`version:0`,
+`markdown:""` until first set). The intake app injects the latest and every project re-pulls this always-current
+copy instead of a per-agent static baseline.
+**`POST /api/council/handbook`** (owner-only) `{ markdown }` → `{ ok, version, updatedAt }`; bumps `version`.
+Meetings update it on standard adoption via the owner-token path.

@@ -541,6 +541,12 @@ export async function getDirtyStreak(actor: string): Promise<number> {
   const { rows } = await db().query<any>(`SELECT dirty_streak FROM members WHERE name=$1`, [actor]);
   return rows[0] ? Number(rows[0].dirty_streak) : 0;
 }
+/** Member self-activation (Arke, 2026-07-02): a member updates its OWN display name / charter. COALESCE so only
+ *  provided fields change. The caller is scoped to its own row upstream (never another member, never a privilege
+ *  change). display_name is what every seat is addressed by in the cockpit; rules = the member's charter. */
+export async function setMemberProfile(name: string, displayName?: string, charter?: string): Promise<void> {
+  await db().query(`UPDATE members SET display_name = COALESCE($2, display_name), rules = COALESCE($3, rules) WHERE name=$1`, [name, displayName ?? null, charter ?? null]);
+}
 
 // ---- Turn: shared transcript turn shape (the v1 conversation store was removed 2026-06-18) ----
 export interface Turn { speaker: string; text: string }

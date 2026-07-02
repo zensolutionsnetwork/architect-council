@@ -14,7 +14,7 @@ import { sendOwnerReportEmail, sendPasswordSetEmail } from './mailer.js';
 import { captureError, cronCheckIn } from './sentry.js';
 import {
   upsertMember, listMembers, setMemberActive, getMember,
-  bumpDirtyStreak, resetDirtyStreak, getDirtyStreak, ownerEmailConfigured,
+  bumpDirtyStreak, resetDirtyStreak, getDirtyStreak, ownerEmailConfigured, setMemberProfile,
   consumeJoinToken, issueJoinToken,
   type Turn,
   queueOutbox, pendingOutbox, markOutboxDelivered, ackOutbox, sweepOutbox,
@@ -69,6 +69,14 @@ async function notifyOwnerDirty(actor: string, streak: number, demoted: boolean)
       : `Agent "${actor}" submitted a brain pack built from a DIRTY git working tree (uncommitted local changes). Consecutive dirty streak: ${streak}/3. At 3 it is demoted to listener until it commits clean. Heads-up only.`;
     void sendOwnerReportEmail(to, subject, body);
   } catch { /* owner alert is best-effort; never throw into the commit path */ }
+}
+/** #53 living handbook: the single canonical, versioned best-practices doc the hub serves. Stored as one JSON
+ *  app_setting so version bumps are atomic. Returns {version:0, markdown:''} until first set. */
+async function getHandbook(): Promise<{ version: number; updatedAt: string | null; markdown: string }> {
+  const raw = await getSetting('council_handbook');
+  if (!raw) return { version: 0, updatedAt: null, markdown: '' };
+  try { const j = JSON.parse(raw); return { version: Number(j.version) || 0, updatedAt: j.updatedAt || null, markdown: String(j.markdown || '') }; }
+  catch { return { version: 0, updatedAt: null, markdown: '' }; }
 }
 // Owner directive 2026-06-11: the hub's member/voice is KAIROS by name — persona and actor are one.
 // 'architect-council' remains only as the retired pre-naming alias (its row gets a throwaway secret).
@@ -1637,6 +1645,49 @@ councilRouter.post('/council/agents/register', requireOwner, async (req, res) =>
     if (!found) { seats.push({ id, name }); await setSetting('council_seats', JSON.stringify(seats)); }
     else if (b.name && found.name !== name) { found.name = name; await setSetting('council_seats', JSON.stringify(seats)); }
     res.json({ ok: true, id, name, autoJoin: b.autoJoin !== false, seats: await seatingRoster() });
+  } catch (e) { internalError(res, e); }
+});
+// whoami (Arke, 2026-07-02): echo the actor a presented secret maps to, so a new member self-verifies its
+// identity instead of probing for=<id> empirically. Any valid secret; 401 otherwise.
+councilRouter.get('/council/whoami', async (req, res) => {
+  try {
+    const a = await resolveActor(req);
+    if (!a) return res.status(401).json({ error: 'unauthorized' });
+    res.json({ actor: a.actor, admin: a.admin });
+  } catch (e) { internalError(res, e); }
+});
+// Member self-activation (Arke, 2026-07-02): a member sets ITS OWN displayName/charter with its own secret.
+// Scoped to the caller (a.actor) only — never another member, never a privilege change; owner may also call.
+councilRouter.post('/council/me/profile', async (req, res) => {
+  try {
+    const a = await resolveActor(req);
+    if (!a) return res.status(401).json({ error: 'unauthorized' });
+    const b = req.body || {};
+    const displayName = b.displayName != null ? clip(b.displayName, 60) : undefined;
+    const charter = b.charter != null ? clip(b.charter, 4000) : undefined;
+    if (displayName === undefined && charter === undefined) return res.status(400).json({ error: 'nothing_to_update', message: 'provide displayName and/or charter' });
+    await setMemberProfile(a.actor, displayName, charter);
+    res.json({ ok: true, actor: a.actor, displayName: displayName ?? null, charterSet: charter !== undefined });
+  } catch (e) { internalError(res, e); }
+});
+// #53 living handbook (owner directive via Arke, 2026-07-02): ONE canonical, versioned best-practices doc the
+// hub serves so every project injects/re-pulls the same always-current copy. GET is member-or-owner; POST is
+// owner-only and bumps the version (meetings update it on standard adoption via the owner-token path).
+councilRouter.get('/council/handbook', async (req, res) => {
+  try {
+    const a = await resolveActor(req);
+    if (!a) return res.status(401).json({ error: 'unauthorized' });
+    res.json(await getHandbook());
+  } catch (e) { internalError(res, e); }
+});
+councilRouter.post('/council/handbook', requireOwner, async (req, res) => {
+  try {
+    const md = String((req.body || {}).markdown ?? '');
+    if (!md.trim()) return res.status(400).json({ error: 'empty_markdown' });
+    const cur = await getHandbook();
+    const next = { version: cur.version + 1, updatedAt: new Date().toISOString(), markdown: md };
+    await setSetting('council_handbook', JSON.stringify(next));
+    res.json({ ok: true, version: next.version, updatedAt: next.updatedAt });
   } catch (e) { internalError(res, e); }
 });
 councilRouter.get('/council/agents/:id/secret', requireOwner, async (req, res) => {
