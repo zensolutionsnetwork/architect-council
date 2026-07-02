@@ -143,6 +143,11 @@ export async function initDb(): Promise<void> {
   // notify email for the meeting-close report. Owner-gated at the route layer.
   await q.query(`CREATE TABLE IF NOT EXISTS app_settings (
     key text PRIMARY KEY, value text, updated_at timestamptz NOT NULL DEFAULT now())`);
+  // #53 living handbook: a single-row versioned doc. Its OWN table (not app_settings, whose setSetting caps
+  // values at 500 chars) so the full markdown persists and the version bump is atomic in SQL.
+  await q.query(`CREATE TABLE IF NOT EXISTS council_handbook (
+    id int PRIMARY KEY DEFAULT 1, version int NOT NULL DEFAULT 0, markdown text NOT NULL DEFAULT '',
+    updated_at timestamptz)`);
   // Boot-stamp log (P1 #8, Nova's pattern 4ef9e66b/0bdf1dd): one row per server start. deploy_sha +
   // a sha256 FINGERPRINT of a secret (never the secret). Two consecutive rows with the same deploy_sha =
   // the container cycled WITHOUT a new deploy (crash-loop / platform restart) — visibility the heartbeat
@@ -471,6 +476,19 @@ export async function setSetting(key: string, value: string | null): Promise<voi
   await db().query(`INSERT INTO app_settings (key, value, updated_at) VALUES ($1,$2,now())
     ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=now()`,
     [String(key).slice(0, 120), value == null ? null : String(value).slice(0, 500)]);
+}
+/** #53 living handbook: read the single-row versioned doc (no 500-char cap). {version:0, markdown:''} if unset. */
+export async function getHandbookDoc(): Promise<{ version: number; updatedAt: string | null; markdown: string }> {
+  const { rows } = await db().query<any>(`SELECT version, markdown, updated_at FROM council_handbook WHERE id=1`);
+  if (!rows[0]) return { version: 0, updatedAt: null, markdown: '' };
+  return { version: Number(rows[0].version) || 0, updatedAt: rows[0].updated_at ? new Date(rows[0].updated_at).toISOString() : null, markdown: String(rows[0].markdown || '') };
+}
+/** #53: replace the handbook markdown and bump the version atomically (in SQL). Returns the new version + time. */
+export async function setHandbookDoc(markdown: string): Promise<{ version: number; updatedAt: string }> {
+  const { rows } = await db().query<any>(`INSERT INTO council_handbook (id, version, markdown, updated_at) VALUES (1, 1, $1, now())
+    ON CONFLICT (id) DO UPDATE SET version = council_handbook.version + 1, markdown = EXCLUDED.markdown, updated_at = now()
+    RETURNING version, updated_at`, [markdown]);
+  return { version: Number(rows[0].version), updatedAt: new Date(rows[0].updated_at).toISOString() };
 }
 // Owner-tunable meeting limits (owner 2026-06-23), DB-backed so Arke's app sets them with no redeploy.
 // Single source of truth shared by the voice loop (enforcement) and the /council/limits routes (display/set).

@@ -15,6 +15,7 @@ import { captureError, cronCheckIn } from './sentry.js';
 import {
   upsertMember, listMembers, setMemberActive, getMember,
   bumpDirtyStreak, resetDirtyStreak, getDirtyStreak, ownerEmailConfigured, setMemberProfile,
+  getHandbookDoc, setHandbookDoc,
   consumeJoinToken, issueJoinToken,
   type Turn,
   queueOutbox, pendingOutbox, markOutboxDelivered, ackOutbox, sweepOutbox,
@@ -70,14 +71,8 @@ async function notifyOwnerDirty(actor: string, streak: number, demoted: boolean)
     void sendOwnerReportEmail(to, subject, body);
   } catch { /* owner alert is best-effort; never throw into the commit path */ }
 }
-/** #53 living handbook: the single canonical, versioned best-practices doc the hub serves. Stored as one JSON
- *  app_setting so version bumps are atomic. Returns {version:0, markdown:''} until first set. */
-async function getHandbook(): Promise<{ version: number; updatedAt: string | null; markdown: string }> {
-  const raw = await getSetting('council_handbook');
-  if (!raw) return { version: 0, updatedAt: null, markdown: '' };
-  try { const j = JSON.parse(raw); return { version: Number(j.version) || 0, updatedAt: j.updatedAt || null, markdown: String(j.markdown || '') }; }
-  catch { return { version: 0, updatedAt: null, markdown: '' }; }
-}
+/** #53 living handbook: the single canonical, versioned best-practices doc the hub serves. Backed by its own
+ *  council_handbook table (store.getHandbookDoc/setHandbookDoc) — NOT app_settings, whose setSetting caps at 500. */
 // Owner directive 2026-06-11: the hub's member/voice is KAIROS by name — persona and actor are one.
 // 'architect-council' remains only as the retired pre-naming alias (its row gets a throwaway secret).
 const SELF = 'kairos';
@@ -1677,17 +1672,15 @@ councilRouter.get('/council/handbook', async (req, res) => {
   try {
     const a = await resolveActor(req);
     if (!a) return res.status(401).json({ error: 'unauthorized' });
-    res.json(await getHandbook());
+    res.json(await getHandbookDoc());
   } catch (e) { internalError(res, e); }
 });
 councilRouter.post('/council/handbook', requireOwner, async (req, res) => {
   try {
     const md = String((req.body || {}).markdown ?? '');
     if (!md.trim()) return res.status(400).json({ error: 'empty_markdown' });
-    const cur = await getHandbook();
-    const next = { version: cur.version + 1, updatedAt: new Date().toISOString(), markdown: md };
-    await setSetting('council_handbook', JSON.stringify(next));
-    res.json({ ok: true, version: next.version, updatedAt: next.updatedAt });
+    const r = await setHandbookDoc(md);
+    res.json({ ok: true, version: r.version, updatedAt: r.updatedAt });
   } catch (e) { internalError(res, e); }
 });
 councilRouter.get('/council/agents/:id/secret', requireOwner, async (req, res) => {
