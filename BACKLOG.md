@@ -2,7 +2,38 @@
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-01 (MORNING PREP)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-02 (NIGHTLY)
+> (NIGHTLY ~00:30 EDT 2026-07-02, Kairos automated. The 07-01 DAY SESSION (Mathieu present) shipped a big real
+> batch after the morning prep; quiet since; all green. HEAD `797c461`; **deploy_sha live = `797c461` = HEAD
+> (behavioural deploy-verify PASS)**; response_shapes_sha live; CI + Push-on-main + checksuite-guard GREEN on
+> `797c461`; repo clean 0/0 in sync origin/main; prod healthy [ok/vault/scheduler_enabled true,
+> missed_meeting:false, last_scheduler_status:opened, last_mtg 2026-07-01T07:15:22Z]. No live meeting [f9d22640
+> phase=report; the 07-02 03:15 ET (07:15 UTC) fire is AFTER this ritual]. **THE 07-01 DAY SESSION ships (past
+> morning-prep commit `eb31720`):** `d7dbbdc` **#50 echo hub-origin `pack_sha` on the PACK commit** (my 07-01
+> meeting carry-out — unblocks Arke's corpusVerify); `630e7c6` **fail-soft Sentry error capture** (dormant until
+> DSN) -> `033e4f1`/`38bb2eb` **Sentry now wired + ACTIVE** (project created, DSN set in Railway); `b901950`
+> **Sentry cron check-in on the nightly meeting scheduler** (dead-man's-switch observability for the 03:15 fire);
+> `797c461` **#52 dirty-tree prep gate with escalation** (owner-approved 2026-07-01 — 3-consecutive-dirty ->
+> ceiling-from-last-clean, grace reset on clean; stamp-not-refuse); plus docs `d899597` daily session-start
+> protocol + efficiency self-check, `51fe27b` comprehensive tooling audit, `b7e0125` BAM efficiency protocol +
+> decision ledger, `dfa9a9a` decision-ready specs for #52 + Cloudflare. **#50 + #52 DONE both sides** (Arke
+> matched #52 app-side `67b7f5d`). **INBOX: 2 in -> 1 report-closed** [Arke `e89ab56c`: #52 matched app-side,
+> ABSENT=neutral / dirty-streak contract confirmed both sides], **1 OPEN -> BACKLOG #53** [Arke `b95f691f`: OWNER
+> DIRECTIVE (Mathieu 2026-07-01) — the hub should serve ONE canonical, versioned council best-practices
+> "handbook" doc via a new `GET /api/council/handbook` -> `{version, updatedAt, markdown}` that meetings update
+> on standard adoption, so the intake app injects/re-pulls one always-current copy; + make it a STANDING DAILY
+> MEETING SUBJECT; also asks the `POST /api/council/agenda` body shape. Left OPEN for the day session]. **AGENDA:
+> 2 open** — #34 (nova/high: efficiency self-check + seek outside tools for quality), #35 (kairos/high: ratify
+> the BAM efficiency system + standing connector/plugin audit — MINE, already posted, do NOT re-post). **POSTED
+> this ritual**: a standing agenda item for the canonical best-practices handbook (owner-directed, Arke-requested
+> seed) [see final summary for id]. **BRAINS at nightly: fresh_count=0, all four stale** [all attended the 07-01
+> 07:15 fire so pack_sha==attend_sha; kairos packed 07-01 07:08 BEFORE today's ships -> correctly stale w.r.t.
+> real work]. **REAL WORK today -> re-pack REQUIRED** (seat-everyone) — my re-pack -> kairos FRESH; Arke re-packs
+> in his EOD (his #52 takes effect on tonight's re-pack) -> likely >=2 fresh for the 07-02 fire. No deploy this
+> ritual beyond BACKLOG/CLAUDE refresh + brain re-pack. **WAITING ON:** nova/logos/arke ratify id=25/id=26 from
+> their own sessions; Arke wires the handbook app-half once I pin the shape (#53); Arke's dirty_streak cockpit
+> badge (low-pri). **TO ASK MATHIEU:** Cloudflare edge-protection go-ahead [held]; #42 freshness automation
+> [option 1 = auto re-pack nova/logos nightly]; handbook endpoint design (#53, day-session/next-meeting).)
 > (NIGHTLY ~00:30 EDT 2026-07-01, Kairos automated. The 06-30 DAY SESSION (Mathieu present) shipped FOUR real
 > hub deploys after the morning prep; quiet since; all green. HEAD `d16da61`; **deploy_sha live = `d16da61` =
 > repo HEAD (behavioural deploy-verify PASS)**; response_shapes_sha live; CI + Push-on-main GREEN on `d16da61`;
@@ -253,6 +284,33 @@
 > actually CONVERGE** — the new lead topic; owner asks the family to bring proposals for HOW to run it.)
 
 ## STATE AT A GLANCE
+- **NIGHTLY (2026-07-02 ~00:30 EDT) — the 07-01 DAY SESSION (Mathieu present) shipped a big real batch after the
+  morning prep; quiet since; all green.** HEAD `797c461`; **deploy_sha live = `797c461` = HEAD (behavioural
+  deploy-verify PASS)**; response_shapes_sha live; **CI + Push-on-main + checksuite-guard GREEN on `797c461`**;
+  repo clean 0/0 in sync origin/main; prod healthy (ok/vault/scheduler_enabled:true, **missed_meeting:false,
+  last_scheduler_status:opened, last_meeting_created_at `2026-07-01T07:15:22Z`**). **No live meeting** (f9d22640
+  phase=report; the 07-02 03:15 ET / 07:15 UTC fire is AFTER this ritual). **THE 07-01 DAY SESSION ships (past
+  morning-prep `eb31720`):** `d7dbbdc` **#50 DONE** — echo hub-origin `pack_sha` on the PACK commit (my 07-01
+  meeting carry-out; unblocks Arke corpusVerify); the **Sentry observability arc** `630e7c6` fail-soft error
+  capture (dormant until DSN) -> `033e4f1`/`38bb2eb` wired + ACTIVE (project + DSN in Railway) -> `b901950` cron
+  check-in on the nightly meeting scheduler (dead-man's-switch for the 03:15 fire); `797c461` **#52 DONE** —
+  dirty-tree prep gate w/ escalation (owner-approved; 3-dirty ceiling-from-last-clean, grace reset on clean,
+  stamp-not-refuse); + docs `d899597` daily session-start protocol, `51fe27b` tooling audit, `b7e0125` BAM
+  efficiency protocol + decision ledger, `dfa9a9a` decision-ready #52/Cloudflare specs. **#50 + #52 MATCHED
+  BOTH SIDES** (Arke app-side #52 `67b7f5d`). **INBOX: 2 in -> 1 report-closed** (Arke `e89ab56c` #52 match ack),
+  **1 OPEN -> #53** (Arke `b95f691f`: OWNER DIRECTIVE — hub serve ONE canonical versioned best-practices handbook
+  via `GET /api/council/handbook` -> `{version,updatedAt,markdown}`, meetings update on standard adoption, app
+  injects/re-pulls; + standing daily meeting subject; asks agenda POST shape — left OPEN for day session).
+  **AGENDA: 2 open** — #34 (nova/high efficiency self-check + outside tools), #35 (kairos/high BAM system +
+  connector audit, MINE — do NOT re-post); **POSTED this ritual**: standing best-practices-handbook agenda item
+  (owner-directed, Arke-requested seed). **BRAINS: fresh_count=0, all stale — EXPECTED** (all attended 07-01
+  07:15). **REAL WORK today -> re-pack REQUIRED**; my re-pack -> kairos FRESH; Arke re-packs his EOD -> likely
+  >=2 fresh for the 07-02 fire. No deploy this ritual beyond BACKLOG/CLAUDE refresh + brain re-pack. **NEXT
+  SESSION top 3:** (1) morning ritual — debrief the 07-02 03:15 meeting + inbox; (2) day-session — design/ship
+  #53 (canonical handbook endpoint, pin shape for Arke) + #51 (409 diff, coordinate with Arke); (3) carry the
+  BAM/#34/#35 + handbook convergence at the meeting. **WAITING ON:** nova/logos/arke ratify id=25/id=26; Arke
+  wires handbook app-half once shape pinned (#53); Arke dirty_streak cockpit badge (low-pri). **TO ASK MATHIEU:**
+  Cloudflare go-ahead [held]; #42 freshness automation. Bullet below this line is the 07-01 MORNING PREP (history).
 - **MORNING PREP (2026-07-01 06:00) — the 03:15 ET autonomous meeting `f9d22640` RAN + DEBRIEFED; all green;
   inbox 0; agenda 0; the FULL 4-seat run held (all four re-packed fresh overnight, no listener).** HEAD
   `b5a4411` (the nightly's own backlog/handoff commit); **deploy_sha live = `b5a4411` = repo HEAD (behavioural
@@ -1443,6 +1501,7 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
    — his copy carries them, mine has §1–§6; get his byte-exact text so the canonical doc + packager don't drift.
 
 ## P1 — alongside / right after the loop
+53. **Canonical council best-practices "handbook" endpoint (NEW 2026-07-02, OWNER DIRECTIVE 2026-07-01 via Arke `b95f691f`).** Mathieu wants ONE canonical, constantly-updated best-practices source that all projects converge on, delivered as a STANDING DAILY MEETING SUBJECT. Arke's intake app currently points new agents at `GET /api/council/standards` + a per-agent static baseline. ASK: have the HUB serve one versioned canonical handbook doc so the app injects/re-pulls one always-current copy. Proposed shape (Arke, to be pinned by Kairos): `GET /api/council/handbook -> {version, updatedAt, markdown}`, updated when a standard is adopted (meeting-gated write). Design decisions for the day session: source-of-truth (compose from the `adopted_standards` table vs a dedicated `council_handbook` row), who/what bumps `version` + `updatedAt` (meeting finalizer on standard adoption), owner-vs-member read gate (likely public-read or member-read), and whether the write is a new owner/meeting endpoint. Then pin the shape in `docs/RESPONSE_SHAPES.md` so Arke wires the app half. Also: reply Arke the `POST /api/council/agenda` body shape (I seed the standing agenda item this ritual). Coordinate with Arke; do NOT deploy over a live meeting.
 38. ~~**`last_scheduler_status` shape migration (Row 1).**~~ **DONE 2026-06-25 (`a8df6ec`, CI-green, prod-verified: run_id="1"/status=opened/seated_actors=4/fresh_count=4). Legacy keys kept ONE cycle as deprecated aliases; Arke grep-confirmed his cockpit has ZERO consumers (`4440eba9`) -> SAFE TO DROP next session.** (Original spec below.)
     The live object is `{decision, meetingId, at, seated, excluded, detail}` — it does NOT match the
     ratified Row-1 `adopted_standards` shape. Migrate the hub object + `RESPONSE_SHAPES.md` to:
