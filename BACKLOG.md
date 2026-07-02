@@ -2,7 +2,7 @@
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-02 (NIGHTLY)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-02 (MORNING PREP)
 > (NIGHTLY ~00:30 EDT 2026-07-02, Kairos automated. The 07-01 DAY SESSION (Mathieu present) shipped a big real
 > batch after the morning prep; quiet since; all green. HEAD `797c461`; **deploy_sha live = `797c461` = HEAD
 > (behavioural deploy-verify PASS)**; response_shapes_sha live; CI + Push-on-main + checksuite-guard GREEN on
@@ -284,6 +284,51 @@
 > actually CONVERGE** — the new lead topic; owner asks the family to bring proposals for HOW to run it.)
 
 ## STATE AT A GLANCE
+- **MORNING PREP (2026-07-02 06:00) — the 03:15 ET autonomous meeting `6bcb5c18` RAN + DEBRIEFED; the FIRST
+  5-SEAT run (argus now a seated contributor); all green; inbox 2->0; #53 + #54 shipped this morning + verified
+  LIVE.** HEAD `2577246` (== origin/main, deploy_sha, behavioural deploy-verify PASS); response_shapes_sha live;
+  **CI + Push-on-main + CodeQL GREEN on `2577246`** (confirmed via `gh run list`); repo clean 0/0 in sync
+  origin/main; prod healthy (ok/vault/scheduler_enabled:true, **missed_meeting:false, last_scheduler_status:opened,
+  last_meeting_created_at `2026-07-02T07:15:15Z`**). **No live meeting** (6bcb5c18 phase=report; next_fire
+  2026-07-03T07:15Z). **DEBRIEFED `6bcb5c18`** (`council/KAIROS_DEBRIEF_2026-07-02.md`): run_id 8, `opened`,
+  seated ALL 5 [kairos,arke,nova,logos,**argus**], excluded [], fresh_count 5; **20 turns / 20 speak / 0 pass /
+  4 rounds / `completed` / $1.7774525** (owner-report $0.0447, layer1 $0.0208), **verify-transcript PASS** (sha
+  `2f1137f6…782d95`), **4-of-5 seats 2.1 paired** (argus=none(no_manifest), per-kind fallback, LOUD+logged) —
+  **14th consecutive autonomous self-close**. Economics: $1.78 rides the UPPER half of the SS2 $1.30-2 envelope —
+  EXPECTED for a 5-seat room (5x~$0.29 + arke $0.50 outlier); watch >$2/>24t. **THE ROUND CONVERGED on the owner
+  directives:** BAM efficiency standard (agenda #34/#35) RATIFIED across all seats; canonical hub handbook
+  (agenda #53) PROPOSED + ratified as direction, with living-best-practices as a STANDING DAILY SUBJECT.
+  **VOICE INTEGRITY CLEAN** (all "proposed for next architect session; none committed"; direction = no divergence
+  from owner). **BIG NEWS — #53 + #54 ALREADY SHIPPED + LIVE:** a ~04:30 EDT session (after the meeting closed
+  03:23 EDT, before this prep) shipped **#53 handbook** (`bae169b`+`2577246`: `GET /api/council/handbook` ->
+  `{version:1,updatedAt,markdown(3226ch)}` backed by its own `council_handbook` table — NOT app_settings, whose
+  500-char cap truncated markdown = the `fix`) + **#54 Argus-intake gaps** (`GET /council/whoami` -> `{actor,admin}`
+  + member self-activation of own displayName/charter + capability-split doc). Both VERIFIED LIVE this ritual.
+  **MY JUDGED CARRY-OUTS from the round (all ACCEPT, all additive/low-urgency, Arke/Logos-coordinated, NONE deploy
+  over a live meeting):** (a) anchor behavioural deploy-verify on Railway's last-healthy-release sha (not
+  git-remote-HEAD) [Arke->Kairos]; (b) dual Sentry fingerprints `deploy-drift-detected` / `deploy-verify-lookup-failed`
+  with auto-resolve on reconvergence [Kairos->room; Argus: lookup-failed auto-resolves on next success]; (c)
+  `attention_age` (since last self-check) vs `pack_age` (since sha moved) as separate freshness observables
+  [Nova->Kairos]; (d) `repo_id` field on the manifest + `/api/health` for a machine-checkable same-repo precondition
+  [Logos->Kairos]. ADOPT into pack: the two-gate external-tooling acceptance standard (CSP-compat + dep-pin/`npm
+  audit --production`) + Argus's `stale_read:true` all-zeros-digest floor-check. **INBOX: 2 in -> both
+  report-closed -> 0** (Arke `b95f691f` = #53 handbook directive [now shipped]; Arke `21a3167b` = #54 Argus gaps
+  [now shipped]). **AGENDA: 0 open** (the 5-seat meeting consumed #34/#35/#53 + Arke/Logos convergence items).
+  **BRAINS: fresh_count=0, all 5 stale — EXPECTED post-meeting** (all attended 07:15). **OWNER ACTIONS the room
+  flagged:** (1) Sentry MCP token — Kairos+Argus both flagged it top-value; Argus needs a PRIVACY-SCOPE review
+  before mint (Guardian telemetry has process names/file paths); (2) Neural-TTS trial (Logos) — Scripture-TTS
+  provider-retention boundary; (3) design-system trial (Nova, low risk). **COSMETIC:** owner-report `raw`+`flags`
+  truncate mid-sentence at the Tier-1-digest flag (assembly length cap; recurring). **No deploy this ritual beyond
+  the debrief + BACKLOG/CLAUDE refresh + brain re-pack** (the brain re-pack is the nightly's job; kairos re-packs
+  tonight for the 07-03 fire). **NEXT SESSION top 3:** (1) morning ritual — debrief the 07-03 03:15 meeting +
+  inbox; (2) day-session hygiene on #53/#54 — confirm both shapes are pinned in RESPONSE_SHAPES, verify #54
+  member self-activation write end-to-end, deliver Arke the `POST /api/council/agenda` body shape so he wires the
+  handbook app-half; (3) land the accepted carry-outs (a)-(d) when I next touch the deploy-verify/Sentry/freshness/
+  manifest paths + #51 (409 torn-state diff, coordinate with Arke). **WAITING ON:** nova/logos/arke ratify
+  id=25/id=26 from their own sessions; Argus's packager to emit a paired 2.1 manifest (his onboarding item, via
+  Arke's intake wizard). **TO ASK MATHIEU:** Sentry token privacy-scope review + mint (Argus's Guardian gap);
+  Cloudflare edge-protection go-ahead [held]; #42 freshness automation. Bullet below this line is the 07-02
+  NIGHTLY (history).
 - **NIGHTLY (2026-07-02 ~00:30 EDT) — the 07-01 DAY SESSION (Mathieu present) shipped a big real batch after the
   morning prep; quiet since; all green.** HEAD `797c461`; **deploy_sha live = `797c461` = HEAD (behavioural
   deploy-verify PASS)**; response_shapes_sha live; **CI + Push-on-main + checksuite-guard GREEN on `797c461`**;
@@ -1501,7 +1546,9 @@ XSS-in-inbox-feed fixed, CSP, Electron sandboxed.
    — his copy carries them, mine has §1–§6; get his byte-exact text so the canonical doc + packager don't drift.
 
 ## P1 — alongside / right after the loop
-53. **Canonical council best-practices "handbook" endpoint (NEW 2026-07-02, OWNER DIRECTIVE 2026-07-01 via Arke `b95f691f`).** Mathieu wants ONE canonical, constantly-updated best-practices source that all projects converge on, delivered as a STANDING DAILY MEETING SUBJECT. Arke's intake app currently points new agents at `GET /api/council/standards` + a per-agent static baseline. ASK: have the HUB serve one versioned canonical handbook doc so the app injects/re-pulls one always-current copy. Proposed shape (Arke, to be pinned by Kairos): `GET /api/council/handbook -> {version, updatedAt, markdown}`, updated when a standard is adopted (meeting-gated write). Design decisions for the day session: source-of-truth (compose from the `adopted_standards` table vs a dedicated `council_handbook` row), who/what bumps `version` + `updatedAt` (meeting finalizer on standard adoption), owner-vs-member read gate (likely public-read or member-read), and whether the write is a new owner/meeting endpoint. Then pin the shape in `docs/RESPONSE_SHAPES.md` so Arke wires the app half. Also: reply Arke the `POST /api/council/agenda` body shape (I seed the standing agenda item this ritual). Coordinate with Arke; do NOT deploy over a live meeting.
+53. ~~**Canonical council best-practices "handbook" endpoint.**~~ **DONE 2026-07-02 (`bae169b` feat + `2577246` fix, CI green, VERIFIED LIVE this morning-prep: `GET /api/council/handbook` -> `{version:1, updatedAt:2026-07-02T08:35:25Z, markdown(3226 chars)}`, member + admin read both 200). Built by the ~04:30 EDT session after the 03:15 meeting ratified it. Backed by its OWN `council_handbook` table (NOT `app_settings`, whose `setSetting` caps values at 500 chars and truncated the markdown — the `fix` commit). RATIFIED as direction at meeting `6bcb5c18`. NEXT (day session): confirm the shape is pinned in `docs/RESPONSE_SHAPES.md` + delivered the `POST /api/council/agenda` body shape to Arke so he wires the app inject/re-pull; confirm the finalizer bumps `version`+`updatedAt` on standard adoption; decide compose-from-`adopted_standards` vs the dedicated table as the long-term source.** (Original ask below.)
+53-orig. **Canonical council best-practices "handbook" endpoint (NEW 2026-07-02, OWNER DIRECTIVE 2026-07-01 via Arke `b95f691f`).** Mathieu wants ONE canonical, constantly-updated best-practices source that all projects converge on, delivered as a STANDING DAILY MEETING SUBJECT. Arke's intake app currently points new agents at `GET /api/council/standards` + a per-agent static baseline. ASK: have the HUB serve one versioned canonical handbook doc so the app injects/re-pulls one always-current copy. Proposed shape (Arke, to be pinned by Kairos): `GET /api/council/handbook -> {version, updatedAt, markdown}`, updated when a standard is adopted (meeting-gated write). Design decisions for the day session: source-of-truth (compose from the `adopted_standards` table vs a dedicated `council_handbook` row), who/what bumps `version` + `updatedAt` (meeting finalizer on standard adoption), owner-vs-member read gate (likely public-read or member-read), and whether the write is a new owner/meeting endpoint. Then pin the shape in `docs/RESPONSE_SHAPES.md` so Arke wires the app half. Also: reply Arke the `POST /api/council/agenda` body shape (I seed the standing agenda item this ritual). Coordinate with Arke; do NOT deploy over a live meeting.
+54. ~~**Argus-intake hub gaps (whoami + member self-activation + capability doc).**~~ **DONE 2026-07-02 (`bae169b`, CI green, VERIFIED LIVE: `GET /api/council/whoami` with a member secret -> `{actor:"kairos", admin:false}`). Raised by Arke `21a3167b` from Argus's onboarding retrospective; shipped by the same ~04:30 EDT morning session.** Three gaps: (1) `GET /council/whoami` echoes the actor a presented `x-bridge-secret` maps to, so onboarding self-verifies instead of empirically probing `for=<id>` 200-vs-401; (2) member self-activation — a member secret can set its OWN `displayName`/`charter` (previously `/council/register` was owner-token-only, 400 for a member secret, so every member row showed null displayName); (3) the member-vs-owner capability split documented (member secret can read its own `for=self`, send, report-close; cannot register or read the house queue). NEXT (day-session hygiene): confirm all three shapes/capability split are pinned in `docs/RESPONSE_SHAPES.md`; verify the self-activation write path end-to-end (a member secret setting its own displayName). Report-closed `21a3167b`.
 38. ~~**`last_scheduler_status` shape migration (Row 1).**~~ **DONE 2026-06-25 (`a8df6ec`, CI-green, prod-verified: run_id="1"/status=opened/seated_actors=4/fresh_count=4). Legacy keys kept ONE cycle as deprecated aliases; Arke grep-confirmed his cockpit has ZERO consumers (`4440eba9`) -> SAFE TO DROP next session.** (Original spec below.)
     The live object is `{decision, meetingId, at, seated, excluded, detail}` — it does NOT match the
     ratified Row-1 `adopted_standards` shape. Migrate the hub object + `RESPONSE_SHAPES.md` to:
