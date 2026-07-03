@@ -1041,6 +1041,25 @@ councilRouter.get('/council/brains', async (req, res) => {
   } catch (e) { internalError(res, e); }
 });
 
+// Logos ask 2026-07-03 (msg e9144f43): a MEMBER-or-owner readable view of the LATEST scheduler fire, so a
+// seat can gate its own behaviour on whether it was actually seated (and as contributor vs listener) WITHOUT
+// owner access to the dashboard and WITHOUT needing a meeting id. Reuses latestSchedulerRun() — the #38
+// canonical Row-1 shape {run_id, status, fired_at, seated_actors, excluded[{actor,reason}], meeting_id,
+// fresh_count} — but REDACTS the raw `error` string (raw server text, owner-gated surface only) down to a
+// boolean `has_error`. `seated_actors` is [] on any non-opened status; `status` is the scheduler decision
+// enum (opened | skipped_quorum | already_live | scheduler_off | error). Meeting *phase* (rounds | report)
+// lives on GET /api/meeting/:id/state via `meeting_id`. Member-or-owner gated like /council/brains. Pinned
+// in RESPONSE_SHAPES.md.
+councilRouter.get('/council/scheduler-runs/latest', async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
+    const r = await latestSchedulerRun();
+    if (!r) return res.json({ ok: true, run: null });
+    const { error, ...safe } = r;
+    res.json({ ok: true, run: { ...safe, has_error: error != null } });
+  } catch (e) { internalError(res, e); }
+});
+
 // Owner-tunable meeting limits (owner 2026-06-23) — DB-backed (app_settings) so Arke's app can read/set
 // them without a redeploy. turnTarget (default 50) + usdCeiling (default 4, per meeting). These are SOFT
 // targets the voices try to finish within; at the limit, an unfinished meeting closes gracefully, auto-

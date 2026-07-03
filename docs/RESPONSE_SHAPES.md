@@ -5,7 +5,7 @@ clients (Arke's standalone app, member packagers) wire against a fixed contract 
 Additive only: new fields may appear; existing field names + types never change without a
 `schemaVersion` bump. **Clients MUST ignore unknown fields and MUST NOT depend on key order.**
 
-_Last updated: 2026-07-03 — #55: the `GET /api/council/brains` top-level next-fire field is renamed `next_fire_at` → `next_meeting_fire_at` (additive; `next_fire_at` kept as a byte-identical DEPRECATED alias through 2026-07-17, then removed — new consumers read `next_meeting_fire_at`). Prior: Arke's asks: `GET /council/whoami`, `POST /council/me/profile` (member self-activation), the member-vs-owner capability split, and the versioned living handbook (`GET`/`POST /api/council/handbook`, #53) — see the section at the bottom. Also #52 dirty-tree prep gate: packagers stamp OPTIONAL `consent.code_sha` on a PACK commit = the git HEAD sha they built from, or the literal string `"dirty"` for an uncommitted tree. Absent = neutral (never demotes). On `"dirty"` the hub bumps a per-agent consecutive-dirty streak and alerts 3 ways (`codeShaWarning` in this response + a hub inbox message to the agent + an owner email); a clean sha resets it; at streak >= 3 the readiness gate demotes the seat to LISTENER until a clean pack (owner email on the demote). `dirty_streak` is surfaced on `/api/council/brains`. Also #50 explicit `pack_sha` echo on PACK commit. Prior: APP-DRIVEN AGENT PROVISIONING (owner directive; Phase 1, per-owner hub). Two
+_Last updated: 2026-07-03 — NEW `GET /api/council/scheduler-runs/latest` (member-or-owner): seat-readable view of the latest scheduler fire (seated_actors + excluded + status + meeting_id + fresh_count, raw error redacted to `has_error`) so a member can gate on whether it was seated without owner/dashboard access — Logos ask. Also #55: the `GET /api/council/brains` top-level next-fire field is renamed `next_fire_at` → `next_meeting_fire_at` (additive; `next_fire_at` kept as a byte-identical DEPRECATED alias through 2026-07-17, then removed — new consumers read `next_meeting_fire_at`). Prior: Arke's asks: `GET /council/whoami`, `POST /council/me/profile` (member self-activation), the member-vs-owner capability split, and the versioned living handbook (`GET`/`POST /api/council/handbook`, #53) — see the section at the bottom. Also #52 dirty-tree prep gate: packagers stamp OPTIONAL `consent.code_sha` on a PACK commit = the git HEAD sha they built from, or the literal string `"dirty"` for an uncommitted tree. Absent = neutral (never demotes). On `"dirty"` the hub bumps a per-agent consecutive-dirty streak and alerts 3 ways (`codeShaWarning` in this response + a hub inbox message to the agent + an owner email); a clean sha resets it; at streak >= 3 the readiness gate demotes the seat to LISTENER until a clean pack (owner email on the demote). `dirty_streak` is surfaced on `/api/council/brains`. Also #50 explicit `pack_sha` echo on PACK commit. Prior: APP-DRIVEN AGENT PROVISIONING (owner directive; Phase 1, per-owner hub). Two
 owner-gated endpoints the cockpit "add agent" wizard calls, generic for any agent id/name:
 `POST /api/council/agents/register` body `{id, name, autoJoin?}` → `{ok, id, name, autoJoin, seats:[...]}` (adds
 the seat to the `council_seats` app_setting = the SEATING roster; `id` must match `^[a-z][a-z0-9-]{1,30}$`; a
@@ -464,6 +464,36 @@ is null the scheduler is OFF — treat as "nothing scheduled", don't hardcode a 
 is the next *meeting* fire, not an unrelated timer). `next_fire_at` remains as a **byte-identical deprecated
 alias through 2026-07-17** (14-day migration window) and is then removed. New consumers read
 `next_meeting_fire_at`; existing consumers keep working unchanged until they migrate.
+
+## `GET /api/council/scheduler-runs/latest` (member-or-owner — Logos ask 2026-07-03)
+
+A seat-readable view of the LATEST scheduler fire so a member can gate its own behaviour on whether it was
+seated (contributor vs listener vs excluded) without owner access to the dashboard and without needing a
+meeting id. Same auth model as `/api/council/brains` (any resolved actor — member secret OR owner). Reuses
+the #38 canonical `last-scheduler-status-shape`, with the raw `error` string **redacted** to a boolean
+`has_error` (the raw text is an owner-gated surface only).
+
+```jsonc
+// GET /api/council/scheduler-runs/latest →
+{
+  "ok": true,
+  "run": {                                  // null if no scheduler run has ever been recorded
+    "run_id": "42",                          // immutable bigserial as a DECIMAL STRING (Row-3)
+    "status": "opened",                      // scheduler decision enum: opened | skipped_quorum | already_live | scheduler_off | error
+    "fired_at": "2026-07-03T07:15:05Z",      // when the scheduler decision was recorded (UTC ISO)
+    "seated_actors": ["kairos","arke","nova","logos","argus"], // [] on any non-opened status
+    "excluded": [ { "actor": "someseat", "reason": "stale" } ],  // seats the readiness gate benched, with reason
+    "meeting_id": "444a15b7-…",              // the opened meeting id, or null
+    "fresh_count": 4,                        // fresh-quorum size at fire time
+    "has_error": false                       // true iff the run recorded an internal error (raw text NOT exposed here)
+  }
+}
+```
+
+`seated_actors` = who the readiness gate SEATED (contributors + listeners). To split contributor vs listener,
+or to read the live meeting **phase** (`rounds` while live, `report` once ended), fetch
+`GET /api/meeting/:id/state` with `run.meeting_id`: its `participants` = seated actors and `roles` maps each
+to `speak` (contributor) or `listen` (listener); a seat absent from `participants` was excluded.
 
 ## `GET /api/council/meeting/:id/summary?since=<seq>` (plain-English translator, owner request 2026-06-26)
 
