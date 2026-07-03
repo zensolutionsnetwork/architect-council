@@ -2,7 +2,7 @@
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-03 (NIGHTLY)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-03 (MORNING PREP)
 > (NIGHTLY ~00:30 EDT 2026-07-03, Kairos automated. QUIET 07-02 — the 07-02 DAY SESSION (Mathieu present) shipped
 > NO hub code (verification + coordination only, scope discipline); all green; no new meeting since `6bcb5c18`. HEAD
 > `e4a4e8f` (07-02 morning-prep commit; nothing code-bearing since). **#53 handbook (`bae169b` + fix `2577246`
@@ -307,6 +307,48 @@
 > actually CONVERGE** — the new lead topic; owner asks the family to bring proposals for HOW to run it.)
 
 ## STATE AT A GLANCE
+- **MORNING PREP (2026-07-03 06:00) — the 07:15 UTC autonomous meeting `444a15b7` RAN + DEBRIEFED; a 5-seat
+  SECURITY convergence round triggered by a real credential-leak incident; all green; inbox 1->0.** HEAD
+  `1dc1054` (== origin/main == deploy_sha, behavioural deploy-verify PASS); response_shapes_sha live; **CI +
+  CodeQL + checksuite-guard GREEN**; repo clean 0/0; prod healthy (ok/vault/scheduler_enabled:true,
+  missed_meeting:false, last_scheduler_status:opened, last_meeting_created_at `2026-07-03T07:15:05Z`). No live
+  meeting (444a15b7 phase=report, voiceRunning:false; next_fire 2026-07-04T07:15Z). **DEBRIEFED `444a15b7`**
+  (`council/KAIROS_DEBRIEF_2026-07-03.md`): contributors [kairos,arke,nova,argus] + LISTENER [logos]; **19
+  turns / 19 speak / 0 pass / 4 rounds / `completed` / $1.7581** (owner-report $0.0449, layer1 $0.0183),
+  **verify-transcript PASS** (sha `6f223438…679624`), 4-of-5 seats 2.1 paired (argus=none(no_manifest), per-kind
+  fallback LOUD+logged) — **15th consecutive autonomous self-close**. Economics: $1.76 rides the UPPER half of
+  the SS2 $1.30-2 envelope (EXPECTED 5-seat; arke $0.526 recurring outlier); under $2 / 19t < 24t watch line.
+  **THE ROUND — a real incident (2026-07-03): a cockpit publisher PASSWORD transited the env-task queue in
+  plaintext** (root cause: cockpit publish has no in-app token-minting -> operator fell back to a reusable
+  credential). Converged the 4 open agenda items as one security block: **#39** dev-machine standard (nova/high,
+  Dev Mode -> real 79.6MB NSIS installer), **#40** shared EOD/morning ritual MINIMUM BAR (argus), **#41**
+  reusable creds NEVER travel the queue; only short-lived namespace-scoped write-only `zut1.*` tokens (argus/high),
+  **#42** cockpit publish SELF-MINTS a scoped write-only token + discards (arke/high — the mechanism enforcing
+  #41). Converged artifact: canonical `assertSafePayload` (Nova + all: narrowed SECRET_KEYS[drop pass/pw],
+  Argus depth>32 + WeakSet cycle guard, Logos NON_SECRET backstop + whitespace-is-prose guard) -> Arke vendors
+  into genesis kit, Argus 7-case test corpus (Nova owns). **MY back-end contributions landed:** HSTS
+  value-assertion (Argus extended w/ CSP unsafe-inline) -> ritual Section D; server-side `exp` clamp (60s..7d) on
+  the `zut1.*` upload token + Nova `ns` allow-list clamp -> makes #41 server-enforced. **LISTENER GUARD HELD**
+  (logos reviewed Nova's code, did not re-litigate). **VOICE INTEGRITY CLEAN** (all "proposed"/future).
+  **MY JUDGED CARRY-OUTS (all ACCEPT):** (1) adopt the fail-closed security-headers morning check (HSTS/CSP/
+  X-Frame/nosniff/no x-powered-by, value-asserted) + StrictMode/explicit-exit into my ritual .ps1 [outside repo];
+  (2) **#56** server-side `exp` clamp + `ns` allow-list on `zut1.*` upload-token validation [hub-side, coordinate
+  Arke #42 app-side, CI-green+owner-adjacent, ship after his app-side lands]; (3) **#55** additive rename
+  `next_fire_at`->`next_meeting_fire_at` in responseShapes.json + RESPONSE_SHAPES pin, keep old as deprecated
+  alias 14 days [hub-side, mine, small day-session]. **INBOX: 1 in -> report-closed -> 0** (Argus `64ce3377` =
+  the ritual-standard proposal; the meeting ratified/converged agenda #40 so it is consumed). **AGENDA: 0 open**
+  (444a15b7 consumed #39/#40/#41/#42). **BRAINS: fresh_count=0, all 5 stale — EXPECTED post-meeting** (4 seats
+  re-packed fresh overnight [kairos 04:33 / arke 06:01 / nova 05:16 / argus 05:26, all 07-03] + attended 07:15;
+  logos 07-02 = listener; tonight's re-pack refreshes kairos for the 07-04 fire). No deploy this ritual beyond
+  debrief + BACKLOG/CLAUDE refresh + brain re-pack (nightly's job). **OWNER FLAGS (top = IMMEDIATE):** rotate the
+  **leaked cockpit publisher password** (in queue + transcripts, treat compromised); Sentry token privacy-scope +
+  mint (Argus Guardian gap); Cloudflare go-ahead [held]; #42 freshness automation [option 1]. Also: `/security-
+  selfcheck` returns 400 (Nova) — 3-discriminator probe queued for next session. **NEXT SESSION top 3:** (1)
+  morning ritual — debrief the 07-04 fire + inbox; (2) day-session — ship #55 (next_meeting_fire_at rename, mine,
+  small) + adopt the security-headers/StrictMode ritual deltas; (3) #56 server-side token clamp (sequence after
+  Arke #42 app-side lands). **WAITING ON:** nova/logos/arke ratify id=25/id=26 from their own sessions; Argus's
+  packager emits a paired 2.1 manifest; Arke vendors assertSafePayload + ships NSIS `latest.json`. Bullet below
+  this line is the 07-02 MORNING PREP (history).
 - **MORNING PREP (2026-07-02 06:00) — the 03:15 ET autonomous meeting `6bcb5c18` RAN + DEBRIEFED; the FIRST
   5-SEAT run (argus now a seated contributor); all green; inbox 2->0; #53 + #54 shipped this morning + verified
   LIVE.** HEAD `2577246` (== origin/main, deploy_sha, behavioural deploy-verify PASS); response_shapes_sha live;
