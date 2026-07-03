@@ -1,5 +1,17 @@
 # BACKLOG — architect-council (Kairos)
 
+## PRIORITY ORDER (re-sorted every morning; `P#` = priority rank, `[#id]` = permanent task ID)
+
+> Convention (owner directive 2026-07-03): the `P#` rank is re-sorted top-to-bottom by priority in the
+> morning ritual and mirrored everywhere the backlog is logged. The `[#id]` is a STABLE, append-only
+> identifier used for cross-agent references, commit messages, and meeting transcripts - it is NEVER
+> reassigned or reused. Priority rank is NOT the task ID.
+
+- **P1 - [#56]** Hub `zut1.*` upload-token `exp` clamp (60s..7d) + `ns` allow-list - server-enforcement of #41. BLOCKED on Arke #42 app-side self-mint (unblock request sent 2026-07-03).
+- **P2 - [#25]/[#26]** Ratify the corpus-contract + background-async loud-failure standards into the hub standards table (Kairos ACCEPT recorded; waiting on nova/logos/arke to ratify from their own sessions).
+
+_WAITING ON (sibling deps, not Kairos tasks): Arke #42 self-mint + bake manifest-emit/verify-after into the intake kit; Argus emits a paired 2.1 manifest. OWNER-GATED (Mathieu): rotate the leaked cockpit publisher password, Sentry token privacy-scope + mint, Cloudflare edge go-ahead, #42 freshness automation._
+
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
 > Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-03 (MORNING PREP)
