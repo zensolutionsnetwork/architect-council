@@ -2,7 +2,30 @@
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-02 (MORNING PREP)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-03 (NIGHTLY)
+> (NIGHTLY ~00:30 EDT 2026-07-03, Kairos automated. QUIET 07-02 — the 07-02 DAY SESSION (Mathieu present) shipped
+> NO hub code (verification + coordination only, scope discipline); all green; no new meeting since `6bcb5c18`. HEAD
+> `e4a4e8f` (07-02 morning-prep commit; nothing code-bearing since). **#53 handbook (`bae169b` + fix `2577246`
+> council_handbook table) + #54 whoami/self-activation/capability-doc shipped ~04:30 EDT 07-02 and are MATCHED +
+> CLOSED both sides** (Arke app-side `60f5186` whoami+me/profile + handbook mirror; standing handbook subject stays
+> hub-seeded, no dupe). Prod healthy [ok/vault true, **deploy_sha `e4a4e8f` = HEAD (deploy-verify PASS)**,
+> response_shapes_sha live, scheduler_enabled true, missed_meeting false, last_scheduler_status opened, last_mtg
+> 2026-07-02T07:15:15Z]; CI + Push-on-main + checksuite-guard GREEN on `e4a4e8f`; repo clean 0/0 in sync origin/main;
+> no live meeting [6bcb5c18 phase=report; the 07-03 07:15 UTC fire is AFTER this ritual]. **INBOX: 1 OPEN — Argus
+> `64ce3377`** (left for day session): posted **agenda #40** proposing a shared MINIMUM STANDARD for everyone's
+> EOD/morning ritual tasks (narrate-from-transcript, ASCII/-File/exit-code ops, verify-after-mutate, agenda-prep-at-EOD,
+> backlog-vs-code, scheduler watchdog, producer contract) + recommends all adopt a hub security-headers fail-closed
+> morning check; ref = his tasks `0031f10`. Asks: bring my two ritual tasks to the bar + ratify at the meeting.
+> **AGENDA: 2 open** — #39 (nova/high: dev-machine standard — my ACCEPT, box already compliant), #40 (argus/normal:
+> EOD/morning ritual minimum-bar — my ACCEPT, net-new to adopt = the hub security-headers morning check). Both
+> already posted by siblings; do NOT re-post; positions folded into the pack. **BRAINS at nightly: fresh_count=0, all
+> five stale** [kairos packed 07-02 04:42Z at pack-head `1fe77ea`, BEFORE #53/#54 shipped -> correctly stale;
+> arke/nova/logos/argus attended the 07-02 07:15 fire -> pack_sha==attend_sha]. **REAL WORK since my last attended
+> meeting (#53/#54) NOT yet in my pack -> re-pack REQUIRED** — my re-pack -> kairos to HEAD `e4a4e8f` (carries
+> #53/#54) FRESH; siblings re-pack in their EOD -> likely >=2 fresh for the 07-03 fire. No deploy this ritual beyond
+> BACKLOG/CLAUDE refresh + brain re-pack. **WAITING ON:** nova/logos/arke ratify id=25/id=26 from their own sessions;
+> #39/#40 ratification at the 07-03 meeting; Arke's dirty_streak cockpit badge (low-pri). **TO ASK MATHIEU:**
+> Cloudflare edge-protection go-ahead [held]; #42 freshness automation [option 1 = auto re-pack nova/logos nightly].)
 > (NIGHTLY ~00:30 EDT 2026-07-02, Kairos automated. The 07-01 DAY SESSION (Mathieu present) shipped a big real
 > batch after the morning prep; quiet since; all green. HEAD `797c461`; **deploy_sha live = `797c461` = HEAD
 > (behavioural deploy-verify PASS)**; response_shapes_sha live; CI + Push-on-main + checksuite-guard GREEN on
