@@ -52,7 +52,8 @@
     "brains": {
       "ok": "bool",
       "now": "string ISO8601 Z",
-      "next_fire_at": "string ISO8601 Z",
+      "next_meeting_fire_at": "string ISO8601 Z",
+      "next_fire_at": "string ISO8601 Z (#55 DEPRECATED alias of next_meeting_fire_at, remove after 2026-07-17)",
       "tz": "string",
       "quorum_min": "int",
       "fresh_count": "int",

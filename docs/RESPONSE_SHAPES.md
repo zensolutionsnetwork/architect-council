@@ -5,7 +5,7 @@ clients (Arke's standalone app, member packagers) wire against a fixed contract 
 Additive only: new fields may appear; existing field names + types never change without a
 `schemaVersion` bump. **Clients MUST ignore unknown fields and MUST NOT depend on key order.**
 
-_Last updated: 2026-07-02 — Arke's asks: `GET /council/whoami`, `POST /council/me/profile` (member self-activation), the member-vs-owner capability split, and the versioned living handbook (`GET`/`POST /api/council/handbook`, #53) — see the section at the bottom. Also #52 dirty-tree prep gate: packagers stamp OPTIONAL `consent.code_sha` on a PACK commit = the git HEAD sha they built from, or the literal string `"dirty"` for an uncommitted tree. Absent = neutral (never demotes). On `"dirty"` the hub bumps a per-agent consecutive-dirty streak and alerts 3 ways (`codeShaWarning` in this response + a hub inbox message to the agent + an owner email); a clean sha resets it; at streak >= 3 the readiness gate demotes the seat to LISTENER until a clean pack (owner email on the demote). `dirty_streak` is surfaced on `/api/council/brains`. Also #50 explicit `pack_sha` echo on PACK commit. Prior: APP-DRIVEN AGENT PROVISIONING (owner directive; Phase 1, per-owner hub). Two
+_Last updated: 2026-07-03 — #55: the `GET /api/council/brains` top-level next-fire field is renamed `next_fire_at` → `next_meeting_fire_at` (additive; `next_fire_at` kept as a byte-identical DEPRECATED alias through 2026-07-17, then removed — new consumers read `next_meeting_fire_at`). Prior: Arke's asks: `GET /council/whoami`, `POST /council/me/profile` (member self-activation), the member-vs-owner capability split, and the versioned living handbook (`GET`/`POST /api/council/handbook`, #53) — see the section at the bottom. Also #52 dirty-tree prep gate: packagers stamp OPTIONAL `consent.code_sha` on a PACK commit = the git HEAD sha they built from, or the literal string `"dirty"` for an uncommitted tree. Absent = neutral (never demotes). On `"dirty"` the hub bumps a per-agent consecutive-dirty streak and alerts 3 ways (`codeShaWarning` in this response + a hub inbox message to the agent + an owner email); a clean sha resets it; at streak >= 3 the readiness gate demotes the seat to LISTENER until a clean pack (owner email on the demote). `dirty_streak` is surfaced on `/api/council/brains`. Also #50 explicit `pack_sha` echo on PACK commit. Prior: APP-DRIVEN AGENT PROVISIONING (owner directive; Phase 1, per-owner hub). Two
 owner-gated endpoints the cockpit "add agent" wizard calls, generic for any agent id/name:
 `POST /api/council/agents/register` body `{id, name, autoJoin?}` → `{ok, id, name, autoJoin, seats:[...]}` (adds
 the seat to the `council_seats` app_setting = the SEATING roster; `id` must match `^[a-z][a-z0-9-]{1,30}$`; a
@@ -423,7 +423,8 @@ secret, exactly like `corpus-status`.
 {
   "ok": true,
   "now": "2026-06-27T15:00:00Z",          // server clock at read (UTC ISO)
-  "next_fire_at": "2026-06-28T07:00:00Z", // next scheduled fire (UTC ISO), or null when the scheduler is OFF
+  "next_meeting_fire_at": "2026-06-28T07:00:00Z", // next scheduled fire (UTC ISO), or null when the scheduler is OFF
+  "next_fire_at": "2026-06-28T07:00:00Z", // #55 DEPRECATED byte-identical alias — remove after 2026-07-17
   "tz": "America/Toronto",
   "quorum_min": 2,                         // fresh seats required for the fire to open
   "fresh_count": 4,                        // how many seats are fresh right now
@@ -454,10 +455,15 @@ For `stale`/`no_brain` seats, and whenever `next_fire_at` is null (scheduler off
 
 **Consumer guard (the intended use):** in your prep ritual, after re-packing, read this endpoint, find your
 own row, and assert
-`row.fresh_until != null && next_fire_at != null && Date.parse(row.fresh_until) > Date.parse(next_fire_at)` —
+`row.fresh_until != null && next_meeting_fire_at != null && Date.parse(row.fresh_until) > Date.parse(next_meeting_fire_at)` —
 `process.exit(1)` loud on fail or any missing field. That single assert catches: you didn't re-pack (stale),
-your upload never landed (no_brain / unchanged sha), or there's no fire scheduled. When `next_fire_at` is null
-the scheduler is OFF — treat as "nothing scheduled", don't hardcode a time.
+your upload never landed (no_brain / unchanged sha), or there's no fire scheduled. When `next_meeting_fire_at`
+is null the scheduler is OFF — treat as "nothing scheduled", don't hardcode a time.
+
+**#55 field rename (2026-07-03).** The top-level next-fire field is now `next_meeting_fire_at` (clearer that it
+is the next *meeting* fire, not an unrelated timer). `next_fire_at` remains as a **byte-identical deprecated
+alias through 2026-07-17** (14-day migration window) and is then removed. New consumers read
+`next_meeting_fire_at`; existing consumers keep working unchanged until they migrate.
 
 ## `GET /api/council/meeting/:id/summary?since=<seq>` (plain-English translator, owner request 2026-06-26)
 

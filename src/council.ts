@@ -1015,8 +1015,10 @@ councilRouter.post('/council/scheduler', requireOwner, async (req, res) => {
 // freshness, computed HUB-SIDE, so each seat's prep ritual can verify it will be SEATED at the next fire
 // instead of hardcoding 03:00 ET or re-deriving the gate locally. `fresh` mirrors the scheduler's readiness
 // gate EXACTLY (sha-based: a pack whose sha differs from the one the seat carried at its last-attended
-// meeting; a seat with no recorded attendance reads fresh — fail-toward-inclusive). `next_fire_at` is the
-// next scheduled fire (UTC ISO), null when the scheduler is OFF. `fresh_until` is the horizon through which
+// meeting; a seat with no recorded attendance reads fresh — fail-toward-inclusive). `next_meeting_fire_at`
+// is the next scheduled fire (UTC ISO), null when the scheduler is OFF. (#55: `next_fire_at` is a DEPRECATED
+// byte-identical alias kept through 2026-07-17 for the 14-day migration window; consumers move to
+// `next_meeting_fire_at`.) `fresh_until` is the horizon through which
 // `fresh` is guaranteed to hold: a fresh seat stays fresh until it ATTENDS a meeting, so it is guaranteed
 // fresh through the upcoming fire and first risks staleness one cadence later — hence next_fire_at + cadence;
 // stale / no_brain => null. Consumer guard: assert(fresh_until && next_fire_at && Date.parse(fresh_until) >
@@ -1032,7 +1034,9 @@ councilRouter.get('/council/brains', async (req, res) => {
       const fresh_until = (fresh && nextFire) ? new Date(Date.parse(nextFire) + SCHED_INTERVAL_MS).toISOString() : null;
       return { actor: r.actor, packed_at: r.packedAt, fresh, fresh_until, status: r.status, pack_sha: r.packSha, dirty_streak: r.dirtyStreak ?? 0 };
     });
-    res.json({ ok: true, now: new Date().toISOString(), next_fire_at: nextFire, tz: 'America/Toronto',
+    res.json({ ok: true, now: new Date().toISOString(), next_meeting_fire_at: nextFire,
+      next_fire_at: nextFire, // #55 DEPRECATED alias of next_meeting_fire_at — remove after 2026-07-17 (14-day window)
+      tz: 'America/Toronto',
       quorum_min: QUORUM_MIN, fresh_count: actors.filter((x) => x.fresh).length, actors });
   } catch (e) { internalError(res, e); }
 });
