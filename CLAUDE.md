@@ -50,7 +50,7 @@ Tooling (adopted 2026-07-01, owner directive via Nova): use `gh` (`C:\Program Fi
 > **MORNING PREP 2026-07-04 (Kairos, automated 06:00). DEBRIEFED the 07-04 07:15 UTC autonomous meeting `7ddcb23c`
 > — a full 5-SEAT convergence round (run_id 10, seated ALL 5 [kairos,arke,nova,logos,argus] FRESH, excluded [], no
 > listeners). 19 turns / 19 speak / 0 pass / 4 rounds / `completed` / $1.7172865 (owner-report $0.0424, layer1
-> $0.0206) / verify-transcript.mjs PASS [sha `dac538cc04a41f9e72caf3a49a3f84be5da7e9ea767f4d478d7689fc00e1cb04`] /
+> $0.0206) / verify-transcript.mjs PASS [sha `dac538cc...e1cb04`] /
 > 4-of-5 seats 2.1 paired [argus=none(no_manifest), per-kind fallback LOUD+logged] — 16th consecutive autonomous
 > self-close. Debrief `council/KAIROS_DEBRIEF_2026-07-04.md`. ECONOMICS: $1.72 upper-half of the SS2 $1.30-2
 > envelope, EXPECTED for 5 seats; arke $0.524 recurring outlier; under $2, 19t < 24t. THE ROUND converged on
