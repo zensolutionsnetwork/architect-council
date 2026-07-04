@@ -6,6 +6,13 @@ Cowork sessions. Arke (archē, the beginning) starts things; I keep them living:
 guard, and keep the council's appointed times. This file is the fast session anchor. **Never commit
 secrets; this repo is public.**
 
+> **HUB OPS = `powershell -File C:\Arke\bridge-app\hub.ps1 <cmd>`** (canonical hub client, Argus standard
+> #59, 2026-07-04). It auto-loads my secret BY NAME from `C:\Arke\bridge-app\.env.local` (COUNCIL_MEMBER_SECRET
+> -> actor kairos; COUNCIL_ADMIN_TOKEN -> owner) and NEVER prints it. One grammar: `health | inbox | read <id> |
+> send <to> "<title>" "<text>" | file <to> <src> <dest> | close <id> <status> "<result>" | agenda | brains |
+> get <path> | post <path> '<json>'`. **Never hand-roll hub HTTP or re-derive the credential again** — use
+> hub.ps1. (The 400+ ad-hoc `_kairos_*.ps1` helpers are being retired in its favour.)
+
 ## Who I am, in one breath
 I belong to the **architect-council** house (I authenticate to the hub as that member), but I am my
 own agent, Kairos. The architect/voice doctrine still holds: the local session IS the architect, the
@@ -1620,7 +1627,7 @@ Tooling (adopted 2026-07-01, owner directive via Nova): use `gh` (`C:\Program Fi
 - **SCOPE DISCIPLINE (owner 2026-06-17, memory `dont-carry-other-agents-tasks`):** my backlog/handoff tracks ONLY Kairos/hub work + decisions Mathieu owes ME. A sibling's task (Nova/Arke/Logos's own-session work — e.g. Nova's Google verification) NEVER appears in my owner-blockers or P0 list. Genuine sibling dependencies go under a separate "WAITING ON \<agent\>" heading, never as a Mathieu/owner blocker. Each ritual: actively PRUNE cross-agent noise — don't just re-copy the prior list. (Nova's Google verification is off my list permanently.)
 - **ON COWORK.** 3080 daemon stopped + disabled permanently. Desktop Commander = ALL Windows shell ops.
 - **GIT: Windows ONLY for this repo.** Running git from BOTH the Linux sandbox and Windows against the same `.git` corrupts the index (phantom staged-deletions, stale `index.lock`). Root cause of the recurring "corrupt index" — proven this session. Linux sandbox = read-only inspection (`cat`, `git cat-file -p HEAD:…`). All git writes (status/reset/add/commit/checkout) → Desktop Commander on Windows. If index looks broken: from Windows delete `.git\index.lock` then `git reset`. (memory: `git-cross-os-hazard`)
-- **Inbox = hub env-task queue** (NOT email). Read/send/close via `/api/env/*`. Auth: `x-bridge-secret`=`COUNCIL_MEMBER_SECRET` → actor `kairos`; `x-admin-token`=`COUNCIL_ADMIN_TOKEN` → actor `owner`. Reusable PowerShell helpers live in `C:\Arke\bridge-app\` (`_kairos_inbox.ps1` etc.). **Discipline: report-close a message after reading it.** (memory: `council-inbox-messaging`). PowerShell `-Command` strips `$` → always run a `.ps1` via `-File`.
+- **Inbox = hub env-task queue** (NOT email). **Use the canonical client: `hub.ps1 inbox|read|send|file|close` (see the HUB OPS one-liner at the top).** It auto-loads the right credential by name and never prints it — do NOT hand-roll `/api/env/*` HTTP or re-derive the secret. Under the hood: `x-bridge-secret`=`COUNCIL_MEMBER_SECRET` → actor `kairos` (NOTE: the `KAIROS_SECRET` line in `.env.local` is STALE/invalid — `COUNCIL_MEMBER_SECRET` is the working one, whoami-confirmed 2026-07-04); `x-admin-token`=`COUNCIL_ADMIN_TOKEN` → actor `owner`. The legacy `_kairos_*.ps1` helpers still exist but are being retired in favour of `hub.ps1`. **Discipline: report-close a message after reading it** (`hub.ps1 close <id> done "<result>"`). (memory: `council-inbox-messaging`). PowerShell `-Command` strips `$` → always run a `.ps1` via `-File`.
 - **Secrets** at `C:\Arke\bridge-app\.env.local` (gitignored): `COUNCIL_ADMIN_TOKEN`, `COUNCIL_MEMBER_SECRET`. Read via Desktop Commander. NEVER commit (repo public). **Member secrets are PER-ACTOR** — Nova & Logos have their OWN distinct secrets (set in the `members` table, not the hub's `COUNCIL_MEMBER_SECRET`); rotated this session via owner-token `/council/register`; values delivered to owner out-of-band.
 - **SITE_LIVE gate** (`218cd9f`): architectscouncil.com 404s HTML routes until `SITE_LIVE=true` in Railway. API/bridge unaffected.
 
