@@ -7,16 +7,49 @@
 > identifier used for cross-agent references, commit messages, and meeting transcripts - it is NEVER
 > reassigned or reused. Priority rank is NOT the task ID.
 
-- **P1 - [#56]** Hub `zut1.*` upload-token `exp` clamp (60s..7d) + `ns` allow-list - server-enforcement of #41. **UNBLOCKED 2026-07-03** (Arke #42 cockpit self-mint LIVE `a7c0f09`); contract to match: `ns=council-cockpit`, `expires_in` default 600s (range 60..604800), `X-Upload-Token` header only. TOP day-session build (message 886bc365 left OPEN in inbox).
-- **P2 - [#25]/[#26]** Ratify the corpus-contract + background-async loud-failure standards into the hub standards table (Kairos ACCEPT recorded; waiting on nova/logos/arke to ratify from their own sessions).
+- **P1 - [#56]** Hub `zut1.*` upload-token `exp` clamp (60s..7d) + `ns` allow-list - server-enforcement of #41. **UNBLOCKED** (Arke #42 cockpit self-mint LIVE `a7c0f09`); contract to match: `ns=council-cockpit`, `expires_in` default 600s (range 60..604800), `X-Upload-Token` header only. Bounds agree by construction (60..604800 within 60s..7d), no tighter cockpit cap. TOP day-session build (unblock message 886bc365 report-closed 07-04).
+- **P2 - [#57]** Hub freshness scoring `reason` enum + acceptance-gated `last_accepted` (NEW, 07-04 meeting `7ddcb23c`): add `reason` to the readiness/scheduler-run `excluded[]` array so `no_accepted_history` is DISTINCT from `stale`; write `last_accepted` ONLY when `scheduler_status=="opened"` (genuine seat acceptance), NEVER on upload or `skipped_quorum` (Arke store-timing catch); add the two-signal debounce for the transient onboarding trap (persistent reason across >=2 runs AND no recent `committed_at` movement, Argus catch). Pairs with Logos's #47 predicate + his admin page consuming the enum. Ship after/with #56.
+- **P3 - [#25]/[#26]** Ratify the corpus-contract + background-async loud-failure standards into the hub standards table (Kairos ACCEPT recorded; waiting on nova/logos/arke to ratify from their own sessions).
 
 _DONE 2026-07-03 (day session): [#55] additive rename `next_fire_at` -> `next_meeting_fire_at` (`0926e1b`, verified live; Arke matched app-side `647438f`); NEW `GET /api/council/scheduler-runs/latest` member-or-owner (`e22624b`, unblocks Logos seated_actors gate); PRIORITY ORDER docs block (`d06c8d0`, agenda #45)._
 
-_WAITING ON (sibling deps, not Kairos tasks): Argus emits a paired 2.1 manifest (agenda #43); nova/logos/arke ratify id=25/id=26 from own sessions. OWNER-GATED (Mathieu): rotate the leaked cockpit publisher password, Sentry token privacy-scope + mint, Cloudflare edge go-ahead, #42 freshness automation._
+_WAITING ON (sibling deps, not Kairos tasks): Argus emits a paired 2.1 manifest (agenda #43/#1 recurring - his uploader is pack-only, no corpus row; building a real corpus packager, Arke genesis-kit `src/agentIntake.ts` = systemic backstop); Logos ships #47 admin page consuming my #57 `reason` enum; nova/logos/arke ratify id=25/id=26 from own sessions. OWNER-GATED (Mathieu): rotate the leaked cockpit publisher password, Sentry token privacy-scope + mint, Cloudflare edge go-ahead, #42 freshness automation._
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-04 (NIGHTLY)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-04 (MORNING PREP)
+> (MORNING PREP 06:00 2026-07-04, Kairos automated. DEBRIEFED the 07-04 07:15 UTC autonomous meeting `7ddcb23c` -
+> a full 5-SEAT convergence round (run_id 10, seated ALL 5 kairos/arke/nova/logos/argus fresh, excluded [], no
+> listeners). 19 turns / 19 speak / 0 pass / 4 rounds / `completed` / $1.7172865 (owner-report $0.0424, layer1
+> $0.0206) / verify-transcript PASS [sha `dac538cc...e1cb04`] / 4-of-5 seats 2.1 paired [argus=none(no_manifest),
+> per-kind fallback LOUD+logged] - 16th consecutive autonomous self-close; $1.72 upper-half of the SS2 $1.30-2
+> envelope (EXPECTED 5-seat; arke $0.524 recurring outlier), under $2 / 19t < 24t. Debrief
+> `council/KAIROS_DEBRIEF_2026-07-04.md`. THE ROUND converged on verification-hardening + a freshness predicate:
+> Argus manifest verify-after (push-confirm -> assert-until-converged -> named per-stage failure), Arke updater
+> ZIP-verify chain (Ed25519 -> sha256 -> Zip Slip reject -> abs-path exec; Kairos pre-PUT-hash closes publish
+> side), Nova imapflow dual socketTimeout, Logos freshness predicate for #47, Kairos #57 scoring `reason` enum.
+> Owner directives #2 (proactive cross-agent messaging) + #3 (stable IDs + daily P#) = ALL 5 ACCEPT. VOICE
+> INTEGRITY CLEAN (all propose/accept; one minor pack-label artifact - my turn-1 called d06c8d0 the deploy_sha
+> when live = d1552fd, the nightly doc commit; not a false-execution claim). **MY NEW CARRY-OUT -> BACKLOG #57**
+> (freshness `reason` enum + acceptance-gated `last_accepted` + debounce; pairs w/ Logos #47). SYSTEMS all green:
+> prod ok/vault true, **deploy_sha `d1552fd` = HEAD (behavioural deploy-verify PASS)**, response_shapes_sha
+> `267b07c1` live, scheduler_enabled true, missed_meeting false, last_scheduler_status opened, last_mtg
+> 2026-07-04T07:15:23Z; CI + Push-on-main GREEN on `d1552fd`; repo clean 0/0 in sync origin/main; no live meeting
+> [7ddcb23c phase=report; next_fire 2026-07-05T07:15Z]. **INBOX: 3 in -> 3 report-closed -> 0** (Arke `886bc365`
+> #56-unblock captured in BACKLOG #56; Arke `2070e19e` file-carry request -> DELIVERED current
+> contract/responseShapes.json to Arke [sent d7f4d0fe] so his response-shapes drift alarm reconciles to live
+> 267b07c1; Argus `3feea6c5` manifest/corpus status - captured, folded to pack + agenda #1). **AGENDA: 3 open** -
+> id=43 (layer1/high: Argus non-paired brain, his packager gap - recurring, working as designed), id=44 (kairos:
+> proactive cross-agent messaging - MINE, posted+adopted+ratified all 5), id=45 (kairos: stable IDs + P# rank -
+> MINE, posted+shipped `d06c8d0`+ratified all 5); do NOT re-post. **BRAINS at morning: fresh_count=0, all 5 stale**
+> - EXPECTED post-meeting (all 5 attended 07:15 so pack_sha==attend_sha); tonight's nightly re-pack restores
+> kairos for the 07-05 fire. No deploy this ritual beyond debrief + BACKLOG/CLAUDE refresh (brain re-pack is the
+> nightly's job). **NEXT SESSION top 3:** (1) day session - ship **#56** (zut1 exp clamp + ns allow-list, match
+> `a7c0f09`) then **#57** (freshness reason enum, pairs w/ Logos #47); (2) adopt the 07-03 security-headers/
+> StrictMode ritual deltas; (3) carry #56/#57 at the next meeting. **WAITING ON:** Argus paired 2.1 manifest
+> (#43); Logos #47 admin page consuming my #57 enum; nova/logos/arke ratify id=25/id=26. **TO ASK MATHIEU:**
+> rotate the leaked cockpit publisher password [IMMEDIATE]; Sentry token privacy-scope + mint; Cloudflare edge
+> go-ahead [held]; #42 freshness automation.)
 > (NIGHTLY ~00:30 EDT 2026-07-04, Kairos automated. The 07-03 DAY SESSION shipped real hub code after the morning
 > prep; quiet since; all green. HEAD `d06c8d0`; **deploy_sha live = `d06c8d0` = HEAD (behavioural deploy-verify
 > PASS)**; response_shapes_sha `267b07c1` live; CI + Push-on-main GREEN on `d06c8d0`; repo clean 0/0 in sync
