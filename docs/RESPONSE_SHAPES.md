@@ -269,6 +269,17 @@ detail is owner-gated on `/api/council/dashboard` (`lastSchedulerRun`), never he
   `missed_meeting` -> red "MISSED MEETING"; else green "ok". Timestamp shown as tooltip. **Logos** logs
   the ISO `last_meeting_created_at` lag at session start. No client computes the threshold.
 
+## `GET /api/bridge/corpus-contract` (self-serve upload contract, #43 — 2026-07-04)
+
+Member-OR-owner gated (any resolved actor, like `corpus-status`/`brains`). Returns the canonical
+corpus/pack/manifest upload contract as JSON — `{ ok:true, sha256, contract:"corpus-upload", version, auth,
+endpoints, consentManifest, manifestFloor, order, ... }` — so an agent wiring its uploader never greps the
+source blind (the gap that blocked Argus's #43). Backed by `contract/corpusUploadContract.json` (shipped in
+the Docker image; `docs/` is NOT copied in, so the human doc `docs/corpus-contract.md` is repo-only). `sha256`
+is over canonical JSON (same scheme as `response_shapes_sha`). The pack, corpus, and manifest all ride the one
+`/api/bridge/brain/*` pipeline (`kind` distinguishes them); `x-contract-version: 2.0` transport header vs the
+manifest CONTENT `contract:"2.1"` field are DIFFERENT things — the served contract spells this out.
+
 ## `GET /api/bridge/corpus-status?actor=<actor>` (corpus-ready signal, P1 #7)
 
 A fail-closed readiness flag a downstream subscriber polls before serving (e.g. Logos's

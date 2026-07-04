@@ -42,6 +42,7 @@ const PROTECTED: { method: string; path: string; body?: object }[] = [
   { method: 'POST', path: '/api/council/notify-email/test', body: {} },
   { method: 'DELETE', path: '/api/meeting/route-auth-probe-id' },
   { method: 'GET',  path: '/api/bridge/corpus-status?actor=logos' },
+  { method: 'GET',  path: '/api/bridge/corpus-contract' },
   { method: 'GET',  path: '/api/council/brains' },
   { method: 'GET',  path: '/api/council/scheduler-runs/latest' },
   { method: 'GET',  path: '/api/council/boots' },

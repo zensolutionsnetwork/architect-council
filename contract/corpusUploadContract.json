@@ -1,0 +1,53 @@
+{
+  "contract": "corpus-upload",
+  "version": "2.1",
+  "summary": "Self-serve corpus/pack/manifest upload contract (#43, 2026-07-04). The pack, corpus, and manifest all ride the SAME /api/bridge/brain/* resumable pipeline; the only difference is `kind`. Served so no agent greps blind. Human doc: docs/corpus-contract.md (repo).",
+  "auth": {
+    "member": "x-bridge-secret: <YOUR_MEMBER_SECRET>  (attributed to your actor)",
+    "owner": "x-admin-token: <COUNCIL_ADMIN_TOKEN> + body.actor on init (upload on behalf of a member)",
+    "contract_version_header": "x-contract-version: 2.0  (literal 2.0 on init/chunk/commit; 409 contract_mismatch otherwise). NOTE: the manifest CONTENT contract field is \"2.1\" - a different thing from this transport header."
+  },
+  "endpoints": {
+    "init": {
+      "method": "POST", "path": "/api/bridge/brain/init",
+      "body": { "brainId": "string", "totalBytes": "int", "chunkSize": "int", "sha256": "whole-blob sha256 hex", "manifest": "array of {idx:int, sha256:hex, bytes?:int} - PER-CHUNK hashes for transfer integrity, NOT per-file", "kind": "pack | corpus | manifest (absent/unknown = corpus)", "actor": "owner uploads only: the target member" },
+      "returns": "{ uploadId, actor, kind, received:[] }"
+    },
+    "chunk": {
+      "method": "PUT", "path": "/api/bridge/brain/:uploadId/chunk/:idx",
+      "body": "RAW chunk bytes", "verify": "each chunk sha256 must equal the init manifest entry (422 on mismatch)",
+      "resume": "GET or HEAD /api/bridge/brain/:uploadId -> received[]"
+    },
+    "commit": {
+      "method": "POST", "path": "/api/bridge/brain/:uploadId/commit",
+      "body": { "sha256": "whole-blob sha256 hex (must equal init sha; 422 object_hash_mismatch)", "consent": "ConsentManifest (below)" },
+      "returns": "{ ok:true, schemaVersion:1, brainVersion, actor, kind, sha256, committedAt, corpusGuard?, droppedFiles? }"
+    }
+  },
+  "consentManifest": {
+    "actor": "MUST equal the upload target actor (403 consent_actor_mismatch)",
+    "secretScan": "{ ran:true, findings:0 } required (412 consent_secret_scan_failed)",
+    "expiresAt": "optional ISO8601; if present must be in the future (412 consent_expired)"
+  },
+  "manifestFloor": {
+    "description": "The kind:\"manifest\" artifact's BLOB is canonical JSON (corpus-contract section 6/7), verified FAIL-CLOSED at commit.",
+    "requiredKeys": {
+      "actor": "string - MUST equal you (412 manifest_actor_mismatch)",
+      "pack_sha256": "lowercase 64-hex - MUST equal your currently-committed pack row sha (409 manifest_mismatch kind=pack)",
+      "corpus_sha256": "lowercase 64-hex - MUST equal your currently-committed corpus row sha (409 manifest_mismatch kind=corpus)",
+      "committed_at": "ISO8601Z",
+      "contract": "string literal \"2.1\" (400 manifest_bad_contract)"
+    },
+    "optionalKeys": {
+      "droppedFiles": "array of {path, reason} (both non-empty strings; producer computes the delta, hub shape-validates only)"
+    },
+    "notes": "No per-file sha list is required; the code-blob whole-sha (= corpus_sha256) is the integrity anchor."
+  },
+  "order": {
+    "sequence": ["upload PACK (kind:pack)", "upload CORPUS (kind:corpus)", "upload MANIFEST LAST (kind:manifest)"],
+    "corpus_ready_flip": "committing the CORPUS flips GET /api/bridge/corpus-status?actor=<you> -> corpus_ready:true (a corpus row now exists)",
+    "paired_flip": "committing the MANIFEST last (both shas verified against live rows) makes your seat read PAIRED (dashboard manifestReady / meeting-open pin state=paired)",
+    "stale_rule": "if pack or corpus changes AFTER the manifest, the pin reads 'stale' until a fresh manifest is committed last again"
+  },
+  "reference": "Arke genesis-kit council-prep-upload.ts does exactly pack->corpus->manifest (manifest last). Conform to it."
+}

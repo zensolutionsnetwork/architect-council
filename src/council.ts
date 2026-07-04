@@ -41,6 +41,7 @@ import {
   getOwner, setOwnerPasswordHash, createOwnerSession, getOwnerSession, touchOwnerSession,
   deleteOwnerSession, deleteOwnerSessionsForOwner, createPasswordToken, consumePasswordToken,
 } from './store.js';
+import { corpusUploadContract } from './contract.js';
 import { validateHierarchy, canCrossRead, type Tenant, type ShareScope } from './hierarchy.js';
 import { finalizeMeetingClose } from './finalize.js';
 
@@ -1544,6 +1545,16 @@ councilRouter.get('/bridge/brain-content/:actor', async (req, res) => {
     if (!a.admin && a.actor !== req.params.actor && !scope.includes('code')) return res.status(403).json({ error: 'consent_scope_denied' });
     res.setHeader('x-brain-version', got.meta.brain_version || '');
     res.json({ ...got.meta, contentBase64: got.content.toString('base64') });
+  } catch (e) { internalError(res, e); }
+});
+// #43 self-serve fix (2026-07-04, Argus fa3d2137): the corpus/pack/manifest upload contract, served so no
+// agent has to grep the source blind. Member-OR-owner gated like corpus-status/brains. Backed by
+// contract/corpusUploadContract.json (shipped in the image; docs/ is not). `sha256` is over canonical JSON.
+councilRouter.get('/bridge/corpus-contract', async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
+    const c = corpusUploadContract(); if (!c) return res.status(404).json({ error: 'contract_unavailable' });
+    res.json({ ok: true, sha256: c.sha256, ...c.json });
   } catch (e) { internalError(res, e); }
 });
 
