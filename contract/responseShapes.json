@@ -21,7 +21,7 @@
       "status": "string enum opened|skipped_quorum|already_live|scheduler_off",
       "fired_at": "string ISO8601 Z",
       "seated_actors": "string[] - [] on any non-opened status",
-      "excluded": "array of {actor:string, reason:string}",
+      "excluded": "array of {actor:string, reason:string enum no_brain|stale|onboarding|no_accepted_history (#57)}",
       "meeting_id": "string or null",
       "fresh_count": "int",
       "error": "string raw server text, owner-gated surface only, never on the public probe"
@@ -57,7 +57,7 @@
       "tz": "string",
       "quorum_min": "int",
       "fresh_count": "int",
-      "actors": "array of {actor,packed_at,fresh:bool,fresh_until,status,pack_sha}"
+      "actors": "array of {actor,packed_at,fresh:bool,fresh_until,status,reason,pack_sha,dirty_streak} - reason (#57) enum fresh|stale|no_brain|onboarding|no_accepted_history refines status, descriptive-only"
     },
     "corpusStatus": {
       "actor": "string seat",
