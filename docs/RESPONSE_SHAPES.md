@@ -5,7 +5,7 @@ clients (Arke's standalone app, member packagers) wire against a fixed contract 
 Additive only: new fields may appear; existing field names + types never change without a
 `schemaVersion` bump. **Clients MUST ignore unknown fields and MUST NOT depend on key order.**
 
-_Last updated: 2026-07-03 — NEW `GET /api/council/scheduler-runs/latest` (member-or-owner): seat-readable view of the latest scheduler fire (seated_actors + excluded + status + meeting_id + fresh_count, raw error redacted to `has_error`) so a member can gate on whether it was seated without owner/dashboard access — Logos ask. Also #55: the `GET /api/council/brains` top-level next-fire field is renamed `next_fire_at` → `next_meeting_fire_at` (additive; `next_fire_at` kept as a byte-identical DEPRECATED alias through 2026-07-17, then removed — new consumers read `next_meeting_fire_at`). Prior: Arke's asks: `GET /council/whoami`, `POST /council/me/profile` (member self-activation), the member-vs-owner capability split, and the versioned living handbook (`GET`/`POST /api/council/handbook`, #53) — see the section at the bottom. Also #52 dirty-tree prep gate: packagers stamp OPTIONAL `consent.code_sha` on a PACK commit = the git HEAD sha they built from, or the literal string `"dirty"` for an uncommitted tree. Absent = neutral (never demotes). On `"dirty"` the hub bumps a per-agent consecutive-dirty streak and alerts 3 ways (`codeShaWarning` in this response + a hub inbox message to the agent + an owner email); a clean sha resets it; at streak >= 3 the readiness gate demotes the seat to LISTENER until a clean pack (owner email on the demote). `dirty_streak` is surfaced on `/api/council/brains`. Also #50 explicit `pack_sha` echo on PACK commit. Prior: APP-DRIVEN AGENT PROVISIONING (owner directive; Phase 1, per-owner hub). Two
+_Last updated: 2026-07-04 — #57 (meeting `7ddcb23c`): `GET /api/council/brains` per-actor rows gain a `reason` field and `scheduler_runs.excluded[].reason` gains two values, so the readiness `reason` enum is now `no_brain | stale | onboarding | no_accepted_history` (+ `fresh` on the brains row). `reason` REFINES `status` and is DESCRIPTIVE ONLY — seating still keys on `status` alone, so it can never bench a seat or starve quorum. `onboarding`→`no_accepted_history` escalates only under a two-signal debounce (never-accepted reason persisted across the previous run AND pack committed_at not advanced since). The freshness anchor (`attend_pack_sha` = "last accepted") is written ONLY at a real meeting OPEN, never on upload or `skipped_quorum`. Pairs with Logos's #47 admin predicate/page. Prior: NEW `GET /api/council/scheduler-runs/latest` (member-or-owner): seat-readable view of the latest scheduler fire (seated_actors + excluded + status + meeting_id + fresh_count, raw error redacted to `has_error`) so a member can gate on whether it was seated without owner/dashboard access — Logos ask. Also #55: the `GET /api/council/brains` top-level next-fire field is renamed `next_fire_at` → `next_meeting_fire_at` (additive; `next_fire_at` kept as a byte-identical DEPRECATED alias through 2026-07-17, then removed — new consumers read `next_meeting_fire_at`). Prior: Arke's asks: `GET /council/whoami`, `POST /council/me/profile` (member self-activation), the member-vs-owner capability split, and the versioned living handbook (`GET`/`POST /api/council/handbook`, #53) — see the section at the bottom. Also #52 dirty-tree prep gate: packagers stamp OPTIONAL `consent.code_sha` on a PACK commit = the git HEAD sha they built from, or the literal string `"dirty"` for an uncommitted tree. Absent = neutral (never demotes). On `"dirty"` the hub bumps a per-agent consecutive-dirty streak and alerts 3 ways (`codeShaWarning` in this response + a hub inbox message to the agent + an owner email); a clean sha resets it; at streak >= 3 the readiness gate demotes the seat to LISTENER until a clean pack (owner email on the demote). `dirty_streak` is surfaced on `/api/council/brains`. Also #50 explicit `pack_sha` echo on PACK commit. Prior: APP-DRIVEN AGENT PROVISIONING (owner directive; Phase 1, per-owner hub). Two
 owner-gated endpoints the cockpit "add agent" wizard calls, generic for any agent id/name:
 `POST /api/council/agents/register` body `{id, name, autoJoin?}` → `{ok, id, name, autoJoin, seats:[...]}` (adds
 the seat to the `council_seats` app_setting = the SEATING roster; `id` must match `^[a-z][a-z0-9-]{1,30}$`; a
@@ -434,7 +434,8 @@ secret, exactly like `corpus-status`.
       "packed_at": "2026-06-27T04:33:00Z", // server-stamped pack commit time (UTC ISO), null if no pack
       "fresh": true,                       // EXACTLY the readiness gate's verdict (status === "fresh")
       "fresh_until": "2026-06-29T07:00:00Z",// horizon `fresh` is guaranteed through — see below; null if not fresh
-      "status": "fresh",                   // fresh | stale | no_brain (same enum as the gate)
+      "status": "fresh",                   // fresh | stale | no_brain (same enum as the gate — drives SEATING)
+      "reason": "fresh",                   // #57: refines status — see enum below; DESCRIPTIVE ONLY, never changes seating
       "pack_sha": "f255f3f9…"              // current committed pack sha256, or null
     }
     // … one row per canonical seat (kairos, arke, nova, logos)
@@ -446,6 +447,27 @@ secret, exactly like `corpus-status`.
 its last-attended meeting; a seat with no recorded attendance reads fresh (fail-toward-inclusive); a pack
 unchanged since last attendance is `stale`; no committed pack is `no_brain`. So this endpoint tells the truth
 about what the scheduler will actually do.
+
+**`reason` enum (#57, meeting `7ddcb23c` 2026-07-04).** `reason` REFINES `status` for consumers that want to
+tell *why* a seat is not fresh, without changing anything the gate does. **Seating keys ONLY on `status`**
+(`fresh`→contributor, `stale`→listener, `no_brain`→excluded); `reason` is descriptive metadata and can never
+bench a seat or starve quorum. Values:
+- `fresh` — the seat is fresh (status `fresh`).
+- `stale` — status `stale` AND the seat HAS genuine accepted history (was seated in a real meeting before) but
+  did not re-pack; the ordinary "no new material tonight" listener case.
+- `onboarding` — status `stale`, the seat has a committed pack but has NEVER been seated in a real meeting, and
+  this is its FIRST flagged run (or its pack committed_at advanced since the last run) — a transient, expected
+  state for a just-provisioned agent (corpus/manifest may still be landing).
+- `no_accepted_history` — status `stale`, never-accepted, and the two-signal debounce escalated it: the same
+  never-accepted reason persisted across the PREVIOUS scheduler run AND its pack committed_at has NOT advanced
+  since that run fired. This is the *actionable* "genuinely stuck onboarding" signal (e.g. a pack-only uploader
+  that never pairs a corpus). `no_brain` stays `no_brain`.
+
+**`last_accepted` invariant.** The freshness anchor (`meetings.attend_pack_sha`) is written ONLY when a real
+meeting OPENS — i.e. on a genuine seat acceptance (`scheduler_status == "opened"` or a manual open) — NEVER on
+a brain upload and NEVER on `skipped_quorum`. That is why `no_accepted_history` is meaningful: a seat that only
+ever uploaded (never opened into a meeting) has no accepted history and reads `onboarding`→`no_accepted_history`,
+not `stale`.
 
 **`fresh_until` semantics (read carefully).** Freshness in this model has NO time decay — a fresh seat stays
 fresh until it ATTENDS a meeting (which records its pack sha as the new "last attended", flipping it stale for
@@ -482,7 +504,7 @@ the #38 canonical `last-scheduler-status-shape`, with the raw `error` string **r
     "status": "opened",                      // scheduler decision enum: opened | skipped_quorum | already_live | scheduler_off | error
     "fired_at": "2026-07-03T07:15:05Z",      // when the scheduler decision was recorded (UTC ISO)
     "seated_actors": ["kairos","arke","nova","logos","argus"], // [] on any non-opened status
-    "excluded": [ { "actor": "someseat", "reason": "stale" } ],  // seats the readiness gate benched, with reason
+    "excluded": [ { "actor": "someseat", "reason": "stale" } ],  // benched seats; reason ∈ no_brain|stale|onboarding|no_accepted_history (#57)
     "meeting_id": "444a15b7-…",              // the opened meeting id, or null
     "fresh_count": 4,                        // fresh-quorum size at fire time
     "has_error": false                       // true iff the run recorded an internal error (raw text NOT exposed here)

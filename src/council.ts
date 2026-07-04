@@ -1032,7 +1032,7 @@ councilRouter.get('/council/brains', async (req, res) => {
     const actors = readiness.map((r) => {
       const fresh = r.status === 'fresh';
       const fresh_until = (fresh && nextFire) ? new Date(Date.parse(nextFire) + SCHED_INTERVAL_MS).toISOString() : null;
-      return { actor: r.actor, packed_at: r.packedAt, fresh, fresh_until, status: r.status, pack_sha: r.packSha, dirty_streak: r.dirtyStreak ?? 0 };
+      return { actor: r.actor, packed_at: r.packedAt, fresh, fresh_until, status: r.status, reason: r.reason, pack_sha: r.packSha, dirty_streak: r.dirtyStreak ?? 0 };
     });
     res.json({ ok: true, now: new Date().toISOString(), next_meeting_fire_at: nextFire,
       next_fire_at: nextFire, // #55 DEPRECATED alias of next_meeting_fire_at — remove after 2026-07-17 (14-day window)
@@ -1913,10 +1913,34 @@ export async function healthMeetingSignal(): Promise<{ last_meeting_created_at: 
 // history). FIRING (owner 2026-06-29): the scheduler fires only when >= QUORUM_MIN seats are FRESH (>=2 seats
 // arrive with new material), but it then SEATS EVERYONE WITH A BRAIN - fresh seats as contributors, stale seats
 // as listeners (told in-band via the agenda) - and excludes ONLY no_brain seats. A quiet night (<2 fresh) skips.
-type SeatReadiness = { actor: string; status: 'fresh' | 'stale' | 'no_brain'; packSha: string | null; lastPackSha: string | null; packedAt: string | null; dirtyStreak?: number };
+// #57 (meeting 7ddcb23c 2026-07-04): `reason` REFINES `status` for the excluded[]/brains surface without
+// changing WHO is seated. It splits a `stale` seat into `stale` (has genuine accepted history — merely did
+// not re-pack) vs `no_accepted_history`/`onboarding` (a pack committed but NEVER seated in a real meeting).
+// The seating decision still keys ONLY on `status` (fresh->contributor, stale->listener, no_brain->excluded),
+// so `reason` is purely descriptive metadata and can NEVER bench a seat or starve quorum. Enum pinned in
+// RESPONSE_SHAPES.md; consumed by Logos's #47 admin predicate + page.
+type ReadinessReason = 'fresh' | 'stale' | 'no_brain' | 'no_accepted_history' | 'onboarding';
+type SeatReadiness = { actor: string; status: 'fresh' | 'stale' | 'no_brain'; reason: ReadinessReason; packSha: string | null; lastPackSha: string | null; packedAt: string | null; dirtyStreak?: number };
 const QUORUM_MIN = 2; // a scheduled meeting needs at least this many freshly-prepped seats to fire
 async function computeReadiness(): Promise<SeatReadiness[]> {
   const out: SeatReadiness[] = [];
+  // #57 two-signal debounce (Argus catch): a never-accepted stale seat reads `onboarding` (transient) on
+  // first sight and only ESCALATES to `no_accepted_history` once the SAME never-accepted reason persisted
+  // across the PREVIOUS scheduler run AND its pack committed_at has NOT advanced since that run fired (a
+  // genuinely stuck onboarding, not a mid-upload race where corpus/manifest land minutes after the pack).
+  // Read the prior run BEFORE recording this one (fire path records after computeReadiness), so this is the
+  // last decision, never the current. Best-effort: no prior run -> every never-accepted seat starts `onboarding`.
+  const prevReason = new Map<string, string>();
+  let prevAtMs: number | null = null;
+  try {
+    const prev = await latestSchedulerRun();
+    if (prev) {
+      prevAtMs = prev.fired_at ? Date.parse(prev.fired_at) : null;
+      for (const e of (Array.isArray(prev.excluded) ? prev.excluded : [])) {
+        if (e && e.actor) prevReason.set(String(e.actor), String(e.reason || ''));
+      }
+    }
+  } catch { /* no prior run readable -> onboarding-first, never escalate falsely */ }
   // Score the full SEATING roster (founding + app-registered seats), so a newly-provisioned agent is scored
   // (no_brain until it uploads) and seated once fresh. The ratification quorum stays MEETING_DEFAULT.
   for (const actor of await seatingRoster()) {
@@ -1924,7 +1948,7 @@ async function computeReadiness(): Promise<SeatReadiness[]> {
     try { packMeta = await getBrainV2Meta(actor, 'pack'); } catch { /* treat as no_brain below */ }
     const packSha = packMeta ? String(packMeta.sha256) : null;
     const packedAt = packMeta ? (packMeta.committed_at || null) : null; // #47: server-stamped pack commit time (UTC ISO)
-    if (!packSha) { out.push({ actor, status: 'no_brain', packSha: null, lastPackSha: null, packedAt: null }); continue; }
+    if (!packSha) { out.push({ actor, status: 'no_brain', reason: 'no_brain', packSha: null, lastPackSha: null, packedAt: null }); continue; }
     let lastPackSha: string | null = null;
     try { lastPackSha = await lastAttendedPackSha(actor); } catch { lastPackSha = null; }
     // #4 (2026-06-30): freshness = sha changed AND RECENT. A pack whose sha moved but was committed >26h ago
@@ -1942,7 +1966,19 @@ async function computeReadiness(): Promise<SeatReadiness[]> {
     let dirtyStreak = 0;
     try { dirtyStreak = await getDirtyStreak(actor); } catch { dirtyStreak = 0; }
     if (status === 'fresh' && dirtyStreak >= 3) status = 'stale';
-    out.push({ actor, status, packSha, lastPackSha, packedAt, dirtyStreak });
+    // #57: refine the reason for the excluded[]/brains surface. A stale seat WITH accepted history is plain
+    // `stale`; a stale seat that has NEVER been seated in a real meeting (lastPackSha === null) is
+    // `onboarding` on first sight, escalating to `no_accepted_history` only under the two-signal debounce.
+    let reason: ReadinessReason;
+    if (status === 'fresh') reason = 'fresh';
+    else if (lastPackSha !== null) reason = 'stale';
+    else {
+      const wasFlagged = ['no_accepted_history', 'onboarding'].includes(prevReason.get(actor) ?? '');
+      const packedAtMs = packedAt ? Date.parse(packedAt) : NaN;
+      const noMovement = prevAtMs !== null && Number.isFinite(packedAtMs) && packedAtMs <= prevAtMs;
+      reason = (wasFlagged && noMovement) ? 'no_accepted_history' : 'onboarding';
+    }
+    out.push({ actor, status, reason, packSha, lastPackSha, packedAt, dirtyStreak });
   }
   return out;
 }
@@ -1966,7 +2002,7 @@ async function fireScheduledMeeting(): Promise<void> {
   const excluded = noBrain.map((a) => ({ actor: a, reason: 'no_brain' }));
   if (fresh.length < QUORUM_MIN) {
     console.warn(`[hub:sched] skip - quorum not met (${fresh.length}/${QUORUM_MIN} with new material): ${readiness.map((r) => r.actor + '=' + r.status).join(', ')}`);
-    await recordSchedulerRun('skipped_quorum', null, [], readiness.filter((r) => r.status !== 'fresh').map((r) => ({ actor: r.actor, reason: r.status })), { fresh, stale, freshCount: fresh.length, quorumMin: QUORUM_MIN, readiness }).catch(() => {});
+    await recordSchedulerRun('skipped_quorum', null, [], readiness.filter((r) => r.status !== 'fresh').map((r) => ({ actor: r.actor, reason: r.reason })), { fresh, stale, freshCount: fresh.length, quorumMin: QUORUM_MIN, readiness }).catch(() => {});
     return;
   }
   const seated = [...fresh, ...stale];
