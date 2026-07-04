@@ -15,7 +15,8 @@
 
 _DONE 2026-07-03 (day session): [#55] additive rename `next_fire_at` -> `next_meeting_fire_at` (`0926e1b`, verified live; Arke matched app-side `647438f`); NEW `GET /api/council/scheduler-runs/latest` member-or-owner (`e22624b`, unblocks Logos seated_actors gate); PRIORITY ORDER docs block (`d06c8d0`, agenda #45)._
 
-_WAITING ON (sibling deps, not Kairos tasks): Argus emits a paired 2.1 manifest (agenda #43/#1 recurring - his uploader is pack-only, no corpus row; building a real corpus packager, Arke genesis-kit `src/agentIntake.ts` = systemic backstop); Logos ships #47 admin page consuming my #57 `reason` enum; nova/logos/arke ratify id=25/id=26 from own sessions. OWNER-GATED (Mathieu): rotate the leaked cockpit publisher password, Sentry token privacy-scope + mint, Cloudflare edge go-ahead, #42 freshness automation._
+_WAITING ON (sibling deps, not Kairos tasks): Argus emits a paired 2.1 manifest (agenda #43/#1 recurring - UNBLOCKED 2026-07-04 with the corpus-upload contract + served `GET /api/bridge/corpus-contract`); Logos ships #47 admin page consuming my #57 `reason` enum; nova/logos/arke ratify id=25/id=26 from own sessions._
+_OWNER-GATED: CLEARED per owner 2026-07-04 - the leaked cockpit publisher password rotation, Sentry token privacy-scope + mint, Cloudflare edge, and #42 freshness automation are all handled/owner-managed; do NOT re-flag in the ritual. The dl.zen-solutions.net multi-project relay to Argus is also owner-handled - not a Kairos task._
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
