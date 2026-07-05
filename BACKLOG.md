@@ -20,7 +20,40 @@ _OWNER-GATED: CLEARED per owner 2026-07-04 - the leaked cockpit publisher passwo
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-04 (MORNING PREP)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-05 (NIGHTLY)
+> (NIGHTLY ~00:30 EDT 2026-07-05, Kairos automated. The 07-04 DAY SESSION shipped real hub code after the morning
+> prep; quiet since; all green; inbox 0. HEAD `cd1f452`; **deploy_sha live = `cd1f452` = HEAD (behavioural
+> deploy-verify PASS)**; response_shapes_sha `01a3875d` live; CI + Push-on-main GREEN on `cd1f452`; repo clean 0/0
+> in sync origin/main; prod healthy [ok/vault/scheduler_enabled true, missed_meeting:false,
+> last_scheduler_status:opened, last_mtg 2026-07-04T07:15:23Z]. No live meeting [7ddcb23c phase=report; the 07-05
+> 07:15 UTC fire is AFTER this ritual, so nothing new to debrief - it appears for the 07-05 morning prep]. **07-04
+> DAY SESSION ships (past morning-prep commit `1c717c0`):** `06951a8`+`6f5facf` **#57 freshness scoring `reason`
+> enum + two-signal debounce** (computeReadiness emits reason refining status: onboarding vs no_accepted_history;
+> surfaced on scheduler_runs.excluded[].reason + brains actors[].reason; seating still keys only on status;
+> response_shapes_sha `267b07c1`->`01a3875d`; VERIFIED LIVE); `3cc4bf8` **#58/#43 served `GET
+> /api/bridge/corpus-contract`** (member-or-owner; full corpus/pack/manifest upload contract backed by NEW
+> `contract/corpusUploadContract.json`; kills the recurring grep-blind gap; route-auth 72/0; VERIFIED LIVE); `#59`
+> **client `hub.ps1`** (canonical Kairos hub client in bridge-app, auto-loads secret by name, one grammar; adopted
+> the HUB-OPS one-liner in CLAUDE.md; FINDING: `.env.local` `KAIROS_SECRET` line is stale/invalid,
+> `COUNCIL_MEMBER_SECRET` is the working kairos secret); `cd1f452` **WAITING-ON RECONCILE rule** (a WAITING-ON /
+> ratification line is a CLAIM about live state - verify against `_kairos_waiting_reconcile.ps1` before carrying,
+> never re-copy prose; both rituals step 4 + CLAUDE.md anchor; fixes the #25/#26 stale-backlog miss). **#56
+> DROPPED** (zut1 upload-token lives entirely on the zen file server, not the hub; routed the systemic fix to
+> Argus). **INBOX: 0 open.** **AGENDA: 1 open** - id=46 (nova/normal: council-prep should code-verify the friction
+> list before packing) - my position = ACCEPT (this is exactly the #42 content-freshness discipline I already run:
+> pack-head==HEAD assertion + rebuild the changelog from the real git log); folded into the pack, do NOT re-post.
+> **WAITING-ON RECONCILE (ran `_kairos_waiting_reconcile.ps1`): all 5 hub standards `adopted` by all four -
+> RESOLVED, no ratification WAITING line carried.** **BRAINS at nightly: fresh_count=0/2, all 5 stale** - EXPECTED
+> post-meeting (all 5 attended the 07-04 07:15 fire so pack_sha==attend_sha). **REAL WORK shipped since my last
+> attended meeting (#57 + #43 hub code) NOT yet in my committed pack -> re-pack REQUIRED** - my re-pack -> kairos
+> to HEAD `cd1f452` FRESH -> fresh_count>=1 (kairos); siblings re-pack in their own EOD -> aim >=2 fresh for the
+> 07-05 fire. No deploy this ritual beyond BACKLOG/CLAUDE refresh + brain re-pack. **NEXT SESSION top 3:** (1)
+> morning ritual - debrief the 07-05 07:15 UTC autonomous meeting + inbox; (2) carry ACCEPT on agenda id=46 +
+> ratify #59 hub-client standard into the living handbook at the meeting; (3) adopt the 07-03 security-headers/
+> StrictMode ritual deltas into my scripts if not already. **WAITING ON (sibling deps, reconcile-verified):** Argus
+> emits a paired 2.1 manifest (agenda #43 recurring - UNBLOCKED with the served corpus-contract endpoint); Logos
+> ships #47 admin page consuming my #57 `reason` enum. **OWNER-GATED: CLEARED** per owner 2026-07-04 - do NOT
+> re-flag.)
 > (MORNING PREP 06:00 2026-07-04, Kairos automated. DEBRIEFED the 07-04 07:15 UTC autonomous meeting `7ddcb23c` -
 > a full 5-SEAT convergence round (run_id 10, seated ALL 5 kairos/arke/nova/logos/argus fresh, excluded [], no
 > listeners). 19 turns / 19 speak / 0 pass / 4 rounds / `completed` / $1.7172865 (owner-report $0.0424, layer1
