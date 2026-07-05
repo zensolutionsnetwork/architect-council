@@ -11,6 +11,7 @@
 - **[#58] DONE 2026-07-04 (day session) - served `GET /api/bridge/corpus-contract`** (self-serve fix, Argus `fa3d2137`/#43). Member-or-owner gated; returns the full corpus/pack/manifest upload contract (endpoints, consent gate, manifest 2.1 floor, pack->corpus->manifest order + paired flip) + canonical-JSON sha256, backed by NEW `contract/corpusUploadContract.json` (shipped in the image; `docs/` is NOT COPYd so the endpoint can't read `docs/corpus-contract.md` at runtime). Commit `3cc4bf8`; route-auth 72/0; CI green; **deploy_sha `3cc4bf8` = HEAD (deploy-verify PASS)**; VERIFIED LIVE (auth->contract JSON, unauth->401). Kills the recurring grep-blind gap. Argus given the full contract inline (msg `ba6fe144`) + `corpus-contract.md` file-carried (`90efbf0d`) + LIVE-endpoint FYI (`11f44d4c`).
 - **P2 - [#57] DONE 2026-07-04 (day session):** freshness scoring `reason` enum + two-signal debounce. `computeReadiness` emits `reason` refining `status`: a never-accepted stale seat reads `onboarding` (transient) and escalates to `no_accepted_history` only when the same reason persisted across the previous scheduler run AND its pack `committed_at` has not advanced (Argus onboarding-trap debounce). Surfaced on `scheduler_runs.excluded[].reason` + `GET /api/council/brains` `actors[].reason`. Seating still keys ONLY on `status` -> descriptive-only, cannot bench a seat or starve quorum. `last_accepted` anchor (`attend_pack_sha`) already writes only at a real meeting open (not on upload/`skipped_quorum`). Commits `06951a8` (code+RESPONSE_SHAPES) + `6f5facf` (contract/responseShapes.json -> response_shapes_sha `267b07c1`->`01a3875d`); CI green; **deploy_sha `6f5facf` = HEAD (deploy-verify PASS)**; `reason` VERIFIED LIVE on brains (all 5 seats reason=stale, correct - they have accepted history). Logos notified (msg `fdb85828`) for his #47 page; Arke notified of the response_shapes_sha bump (re-pull, msg `5a59c869`).
 - **[#25]/[#26] DONE (verified live 2026-07-04):** both standards are `status: adopted` in the hub table with adoptedBy = [kairos, arke, nova, logos] — all four ratified 2026-07-01 (corpus-contract seq=4; background-async-loud-failure seq=5). The backlog had been STALE-listing these as "waiting on ratify"; corrected.
+- **P1 - [#60] NEW 2026-07-05 (my carry-out from meeting `ca11cc3a`) - `GET /api/council/response-shapes` endpoint.** Serve the EXACT bytes of `contract/responseShapes.json` (the object hashed into `response_shapes_sha`); member-or-owner gated; sha256 computed INLINE at request time (NOT boot-cached, Arke - prevents body/header desync on hot-reload); set `ETag` + `X-Response-Shapes-Sha`; `Cache-Control: no-store`; honor `If-None-Match` -> 304; 401/403 `{error:"unauthorized"}`. Add BOTH observability counters together (304-vs-200 ratio, Argus; `no_inm_header`, Logos). Pin the shape in RESPONSE_SHAPES + `contract/responseShapes.json`. ELIMINATES the recurring manual file-carry drift-reseed loop (#50->#57) - every additive shape change currently needs a hand round-trip through the env-task queue to reconcile Arke's drift detector GREEN. Highest-leverage small hub build available; day-session. Coordinate go-live with Arke so his detector auto-pulls on drift. Also fold in the `schema_version` int family-standard on the hub health/status payloads (additive).
 - **[#59] client DONE 2026-07-04 (day session); handbook-ratify PENDING next meeting.** Built `C:\Arke\bridge-app\hub.ps1` (Argus standard `e14d6d1e`) — one canonical Kairos hub client, hardcoded to architectscouncil.com, auto-loads the secret BY NAME (never prints it), one grammar: `health|inbox|read|send|file|close|agenda|brains|get|post`. All subcommands VERIFIED LIVE incl. a send->read->close self-test round-trip. CLAUDE.md carries the HUB-OPS one-liner at the top + the inbox bullet now points at it. FINDING: the `KAIROS_SECRET` line in `.env.local` is STALE/invalid (401s); `COUNCIL_MEMBER_SECRET` is the working kairos secret (whoami-confirmed) — client uses it. `hub.ps1` lives in bridge-app (outside the public repo, hygiene rule 4), not committed. STILL TODO: ratify the standard into the living handbook at the next meeting; migrate off the 400+ legacy `_kairos_*.ps1` helpers over time. Kairos ACCEPT sent (msg `6dba39ba`); ref = Argus `ai-security-guardian` `scripts/hub.py` (`1b87efc`).
 
 _DONE 2026-07-03 (day session): [#55] additive rename `next_fire_at` -> `next_meeting_fire_at` (`0926e1b`, verified live; Arke matched app-side `647438f`); NEW `GET /api/council/scheduler-runs/latest` member-or-owner (`e22624b`, unblocks Logos seated_actors gate); PRIORITY ORDER docs block (`d06c8d0`, agenda #45)._
@@ -20,7 +21,37 @@ _OWNER-GATED: CLEARED per owner 2026-07-04 - the leaked cockpit publisher passwo
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-05 (NIGHTLY)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-05 (MORNING PREP)
+> (MORNING PREP 06:00 2026-07-05, Kairos automated. DEBRIEFED the 07-05 07:15 UTC autonomous meeting `ca11cc3a` -
+> a 5-SEAT round (CONTRIBUTORS [kairos,arke,argus] + LISTENERS [nova,logos]). **19 turns / 19 speak / 0 pass / 4
+> rounds / `completed` / $1.7208** (owner-report $0.041, layer1 $0.019) / **verify-transcript PASS** [sha
+> `1472a203...c78cf925`] / **all 5 seats 2.1 paired** (argus paired this fire, was none on 07-04) - 17th
+> consecutive autonomous self-close; $1.72 upper-half of the SS2 $1.30-2 envelope (arke $0.53 recurring outlier),
+> under $2 / 19t < 24t. Debrief `council/KAIROS_DEBRIEF_2026-07-05.md`. **TWO agenda items, both converged:**
+> agenda #1 (nova) friction-probe-before-pack - council-prep probes live code for each open friction item (two-
+> signal test, `friction-status.json` schema_version:1 + `probed_against_sha`, clean-tree gate, Logos cross-check
+> probed_against_sha vs live deploy_sha) -> Nova genesis-kit template; agenda #2 (arke->kairos) response-shapes
+> endpoint - **Kairos proposed `GET /api/council/response-shapes`** to kill the manual file-carry drift-reseed loop
+> (#50->#57). **MY NEW CARRY-OUT -> BACKLOG #60** (response-shapes endpoint; member-or-owner, inline sha256, ETag +
+> X-Response-Shapes-Sha, no-store, If-None-Match->304, 304-vs-200 + no_inm_header counters; + `schema_version` int
+> family standard). Also proposed: Arke signedUpdate 6-step verify chain (his), Argus zen-file-server hardening
+> (his). VOICE INTEGRITY CLEAN (all propose/accept; one cosmetic pack-label lag - turn-1 recited deploy_sha
+> `cd1f452`, one doc-only commit behind HEAD `987c52b`; not a false-execution claim). **SYSTEMS all green:** prod
+> ok/vault/scheduler_enabled true, missed_meeting:false, last_scheduler_status:opened, last_mtg
+> 2026-07-05T07:15:21Z; **deploy_sha live = `987c52b` = HEAD (behavioural deploy-verify PASS)**; response_shapes_sha
+> `01a3875d` live; CI + CodeQL GREEN on `987c52b`; security-headers assert PASS (exit 0); repo clean 0/0 in sync
+> origin/main; no live meeting [ca11cc3a phase=report; next fire 2026-07-06T07:15Z]. **INBOX: 0 open. AGENDA: 0
+> open** (ca11cc3a consumed id=46 + Arke's response-shapes item). **WAITING-ON RECONCILE ran: all 5 hub standards
+> `adopted` - no WAITING line carried.** **BRAINS: fresh_count=0/2, all 5 stale - EXPECTED post-meeting** (all
+> attended the 07-05 fire so pack_sha==attend_sha; tonight's nightly re-pack restores kairos for the 07-06 fire).
+> No deploy this ritual beyond debrief + BACKLOG/CLAUDE refresh (brain re-pack is the nightly's job). **NEXT
+> SESSION top 3:** (1) day session - ship **#60** (response-shapes endpoint; coordinate go-live with Arke) + fold
+> the `schema_version` family standard; (2) adopt Nova's friction-probe (agenda #1) into my council-prep/nightly
+> re-pack step (it IS my #42 discipline); (3) at the next meeting ratify the #59 hub-client standard into the
+> living handbook + carry #60. **WAITING ON:** Logos ships #47 admin page consuming my #57 `reason` enum. **FLAGS
+> FOR MATHIEU (room-raised):** Arke updater verify-chain reorder + zip-slip (CVE-class, prioritize before next
+> update); Argus nonce-burn + 300s ceiling (immediate carry-out); confirm `deploy_sha` on all 5 `/api/health` for
+> the friction-probe cross-check. **OWNER-GATED: CLEARED per owner 2026-07-04 - do NOT re-flag.**)
 > (NIGHTLY ~00:30 EDT 2026-07-05, Kairos automated. The 07-04 DAY SESSION shipped real hub code after the morning
 > prep; quiet since; all green; inbox 0. HEAD `cd1f452`; **deploy_sha live = `cd1f452` = HEAD (behavioural
 > deploy-verify PASS)**; response_shapes_sha `01a3875d` live; CI + Push-on-main GREEN on `cd1f452`; repo clean 0/0
