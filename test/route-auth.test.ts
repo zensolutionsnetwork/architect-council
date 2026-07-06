@@ -83,6 +83,8 @@ const PROTECTED: { method: string; path: string; body?: object }[] = [
   { method: 'POST', path: '/api/council/model-config', body: { default: 'claude-opus-4-8' } },
   { method: 'POST', path: '/api/council/agents/register', body: { id: 'probe-agent', name: 'Probe' } },
   { method: 'GET',  path: '/api/council/agents/probe-agent/secret' },
+  { method: 'POST', path: '/api/council/agents/probe-agent/retire', body: {} },
+  { method: 'DELETE', path: '/api/council/agents/probe-agent' },
   { method: 'GET',  path: '/api/auth/me' },
   { method: 'POST', path: '/api/auth/logout', body: {} },
   { method: 'GET',  path: '/api/council/manager/digests' },

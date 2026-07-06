@@ -13,7 +13,7 @@ import { projectTranscript, transcriptSha256Hex } from './protocol.js';
 import { sendOwnerReportEmail, sendPasswordSetEmail } from './mailer.js';
 import { captureError, cronCheckIn } from './sentry.js';
 import {
-  upsertMember, listMembers, setMemberActive, getMember,
+  upsertMember, listMembers, setMemberActive, getMember, revokeMemberSecret, deleteMember,
   bumpDirtyStreak, resetDirtyStreak, getDirtyStreak, ownerEmailConfigured, setMemberProfile,
   getHandbookDoc, setHandbookDoc,
   consumeJoinToken, issueJoinToken,
@@ -1711,6 +1711,37 @@ councilRouter.post('/council/agents/register', requireOwner, async (req, res) =>
     if (!found) { seats.push({ id, name }); await setSetting('council_seats', JSON.stringify(seats)); }
     else if (b.name && found.name !== name) { found.name = name; await setSetting('council_seats', JSON.stringify(seats)); }
     res.json({ ok: true, id, name, autoJoin: b.autoJoin !== false, seats: await seatingRoster() });
+  } catch (e) { internalError(res, e); }
+});
+// #54 agent lifecycle (Arke, 2026-07-06): the REVERSE of /agents/register (+ /secret). Owner-gated. RETIRE drops the
+// seat from the SEATING roster + revokes the secret but KEEPS a retired member row (auditable); DELETE removes the
+// seat + member row + secret entirely (member_secrets cascades). A founding seat (MEETING_DEFAULT) is refused 409 —
+// so neither op can ever drop a ratification-quorum member, and since standardStatus counts only MEETING_DEFAULT,
+// removing an extra 5th seat can NEVER flip an adopted standard to partial (the #43 roster-separation invariant, in
+// reverse). Unknown seat (not in the app-registered roster) -> 404. Both return the recomputed seatingRoster.
+councilRouter.post('/council/agents/:id/retire', requireOwner, async (req, res) => {
+  try {
+    const id = String(req.params.id || '').toLowerCase();
+    if (!AGENT_ID_RE.test(id)) return res.status(400).json({ error: 'bad_id', message: 'id must match ^[a-z][a-z0-9-]{1,30}$' });
+    if (MEETING_DEFAULT.includes(id)) return res.status(409).json({ error: 'founding_seat', message: 'refusing to retire a founding seat' });
+    const seats = await extraSeats();
+    if (!seats.find((s) => s.id === id)) return res.status(404).json({ error: 'unknown_agent' });
+    await setSetting('council_seats', JSON.stringify(seats.filter((s) => s.id !== id))); // drop from seating roster + quorum
+    await setMemberActive(id, false); // keep the row (retired, auditable), mark inactive
+    await revokeMemberSecret(id);     // revoke auth: resolveActor joins member_secrets AND m.active, so both close it
+    res.json({ ok: true, id, status: 'retired', seats: await seatingRoster() });
+  } catch (e) { internalError(res, e); }
+});
+councilRouter.delete('/council/agents/:id', requireOwner, async (req, res) => {
+  try {
+    const id = String(req.params.id || '').toLowerCase();
+    if (!AGENT_ID_RE.test(id)) return res.status(400).json({ error: 'bad_id', message: 'id must match ^[a-z][a-z0-9-]{1,30}$' });
+    if (MEETING_DEFAULT.includes(id)) return res.status(409).json({ error: 'founding_seat', message: 'refusing to delete a founding seat' });
+    const seats = await extraSeats();
+    if (!seats.find((s) => s.id === id)) return res.status(404).json({ error: 'unknown_agent' });
+    await setSetting('council_seats', JSON.stringify(seats.filter((s) => s.id !== id))); // drop from seating roster + quorum
+    await deleteMember(id); // hard-delete member row; member_secrets cascades
+    res.json({ ok: true, id, status: 'deleted', seats: await seatingRoster() });
   } catch (e) { internalError(res, e); }
 });
 // whoami (Arke, 2026-07-02): echo the actor a presented secret maps to, so a new member self-verifies its

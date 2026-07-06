@@ -565,6 +565,23 @@ export async function getDirtyStreak(actor: string): Promise<number> {
 export async function setMemberProfile(name: string, displayName?: string, charter?: string): Promise<void> {
   await db().query(`UPDATE members SET display_name = COALESCE($2, display_name), rules = COALESCE($3, rules) WHERE name=$1`, [name, displayName ?? null, charter ?? null]);
 }
+/** #54 lifecycle (Arke, 2026-07-06): revoke a member's secret WITHOUT dropping the member row — used by RETIRE,
+ *  which keeps a retired row (auditable) but kills auth (resolveActor joins on member_secrets AND m.active).
+ *  Idempotent; bumps the registry version so members re-cache the directory. Returns true if a secret was removed. */
+export async function revokeMemberSecret(name: string): Promise<boolean> {
+  const q = db();
+  const { rowCount } = await q.query(`DELETE FROM member_secrets WHERE member_name=$1`, [name]);
+  if ((rowCount ?? 0) > 0) await q.query(`UPDATE registry_meta SET version = version + 1 WHERE id = 1`);
+  return (rowCount ?? 0) > 0;
+}
+/** #54 lifecycle: hard-delete a member row — used by DELETE. member_secrets cascades (ON DELETE CASCADE), so the
+ *  secret goes with it. Bumps the registry version. Returns true if a row was removed. */
+export async function deleteMember(name: string): Promise<boolean> {
+  const q = db();
+  const { rowCount } = await q.query(`DELETE FROM members WHERE name=$1`, [name]);
+  if ((rowCount ?? 0) > 0) await q.query(`UPDATE registry_meta SET version = version + 1 WHERE id = 1`);
+  return (rowCount ?? 0) > 0;
+}
 
 // ---- Turn: shared transcript turn shape (the v1 conversation store was removed 2026-06-18) ----
 export interface Turn { speaker: string; text: string }
