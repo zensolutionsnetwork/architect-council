@@ -49,3 +49,20 @@ export function corpusUploadContract(): { json: any; sha256: string } | null {
   }
   return corpusCached;
 }
+
+/** Fresh (UNCACHED) read of contract/responseShapes.json for the GET /api/council/response-shapes
+ *  serve endpoint (#60, meeting ca11cc3a). Returns the EXACT file bytes + the canonical-JSON sha256
+ *  (identical to responseShapesSha()), both derived from the SAME read so the served body and the
+ *  ETag/X-Response-Shapes-Sha header can NEVER desync on a hot-reload (Arke's requirement — a
+ *  boot-cached sha over a freshly-read body would drift). Fail-soft: null if missing/unparseable so
+ *  the endpoint 404s rather than crashing. */
+export function responseShapesContract(): { bytes: Buffer; sha256: string } | null {
+  try {
+    const bytes = fs.readFileSync(CONTRACT_PATH);
+    const parsed = JSON.parse(bytes.toString('utf8'));
+    const sha256 = crypto.createHash('sha256').update(Buffer.from(canon(parsed), 'utf8')).digest('hex');
+    return { bytes, sha256 };
+  } catch {
+    return null;
+  }
+}

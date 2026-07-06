@@ -7,6 +7,7 @@
     "health": {
       "ok": "bool",
       "service": "string const architect-council",
+      "schema_version": "int - health payload shape version, assert >= 1 (family standard, meeting ca11cc3a)",
       "vault": "bool - master key loaded",
       "ts": "int epoch ms",
       "deploy_sha": "string - RAILWAY_GIT_COMMIT_SHA the container was built from, 40 hex or unknown",
@@ -79,6 +80,13 @@
       "friction": "string",
       "flags": "string",
       "raw": "string assembled report body"
+    },
+    "responseShapesEndpoint": {
+      "_route": "GET /api/council/response-shapes (#60) - member-or-owner gated; serves the EXACT bytes of contract/responseShapes.json (this file)",
+      "_headers": "ETag: \"<sha>\"; X-Response-Shapes-Sha: <bare 64-hex sha, = /api/health response_shapes_sha>; Cache-Control: no-store",
+      "_conditional": "If-None-Match matching the sha -> 304 (empty body); otherwise 200 with the raw JSON bytes",
+      "_errors": "401 {error:unauthorized} unauthenticated; 404 {error:contract_unavailable} if the contract file is missing/unparseable",
+      "_body": "on 200: the verbatim bytes of this contract file (parse + canon to reproduce the sha)"
     },
     "modelConfig": {
       "ok": "bool",

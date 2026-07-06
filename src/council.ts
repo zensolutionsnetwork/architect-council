@@ -41,7 +41,7 @@ import {
   getOwner, setOwnerPasswordHash, createOwnerSession, getOwnerSession, touchOwnerSession,
   deleteOwnerSession, deleteOwnerSessionsForOwner, createPasswordToken, consumePasswordToken,
 } from './store.js';
-import { corpusUploadContract } from './contract.js';
+import { corpusUploadContract, responseShapesContract } from './contract.js';
 import { validateHierarchy, canCrossRead, type Tenant, type ShareScope } from './hierarchy.js';
 import { finalizeMeetingClose } from './finalize.js';
 
@@ -1555,6 +1555,43 @@ councilRouter.get('/bridge/corpus-contract', async (req, res) => {
     const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
     const c = corpusUploadContract(); if (!c) return res.status(404).json({ error: 'contract_unavailable' });
     res.json({ ok: true, sha256: c.sha256, ...c.json });
+  } catch (e) { internalError(res, e); }
+});
+
+// #60 observability counters (process-lifetime, in-memory). Argus: 304-vs-200 ratio; Logos: no_inm_header
+// (requests missing a conditional If-None-Match header) — logged together so real sha churn is separable
+// from a client that dropped the conditional header. Reset on redeploy (process restart) by design.
+let rsServed200 = 0, rsServed304 = 0, rsNoInmHeader = 0;
+
+// #60 (meeting ca11cc3a, 2026-07-05): serve the EXACT bytes of contract/responseShapes.json so Arke's
+// drift detector auto-pulls the current contract instead of a manual file-carry+re-seed round-trip through
+// the env-task queue on every additive shape change (#50->#57). Member-or-owner gated (resolveActor).
+// The sha256 (= /api/health response_shapes_sha) is computed INLINE per request over canonical JSON, from
+// the SAME read as the body, so body and ETag/X-Response-Shapes-Sha can't desync on hot-reload (Arke).
+// Cache-Control: no-store; honor If-None-Match -> 304. Observability (Argus 304-vs-200 ratio + Logos
+// no_inm_header counter) logged together so a real sha churn is distinguishable from a dropped conditional
+// header. This is the LAST manual re-seed: after go-live Arke's detector branches 304(green)/200(re-seed)/
+// 401-403(hold-last-good).
+councilRouter.get('/council/response-shapes', async (req, res) => {
+  try {
+    const a = await resolveActor(req); if (!a) return res.status(401).json({ error: 'unauthorized' });
+    const c = responseShapesContract(); if (!c) return res.status(404).json({ error: 'contract_unavailable' });
+    const etag = `"${c.sha256}"`;
+    res.set('ETag', etag);
+    res.set('X-Response-Shapes-Sha', c.sha256);
+    res.set('Cache-Control', 'no-store');
+    const inm = req.headers['if-none-match'];
+    const hasInm = typeof inm === 'string' && inm.length > 0;
+    // Strip optional weak-validator prefix + surrounding quotes before comparing to the bare hex sha.
+    const matched = hasInm && inm.replace(/^W\//, '').replace(/^"|"$/g, '') === c.sha256;
+    if (!hasInm) rsNoInmHeader++;
+    if (matched) { rsServed304++; } else { rsServed200++; }
+    // Log both tallies together on every request so the 304-vs-200 ratio and the no_inm_header counter
+    // are read from one structured line (never one without the other).
+    console.log(JSON.stringify({ evt: 'response_shapes_serve', status: matched ? 304 : 200, actor: a.actor, served_200: rsServed200, served_304: rsServed304, no_inm_header: rsNoInmHeader }));
+    if (matched) return res.status(304).end();
+    res.set('Content-Type', 'application/json; charset=utf-8');
+    return res.status(200).send(c.bytes);
   } catch (e) { internalError(res, e); }
 });
 

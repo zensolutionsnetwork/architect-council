@@ -57,7 +57,9 @@ app.get('/api/health', async (_req, res) => {
   // response_shapes_sha (meeting f7f36a14, 2026-06-30): sha256hex(canon(contract/responseShapes.json)) so a
   // consumer detects response-shape drift with one probe, over canonical JSON not raw bytes. Cached + fail-soft.
   const response_shapes_sha = responseShapesSha();
-  res.json({ ok: true, service: 'architect-council', vault: vaultReady(), ts: Date.now(), deploy_sha, response_shapes_sha, ...signal });
+  // schema_version (family standard, meeting ca11cc3a 2026-07-05): an int on every health/status surface so a
+  // consumer asserts >= 1 and fails loud on an unrecognized shape. Additive; bumped only on a breaking shape change.
+  res.json({ ok: true, service: 'architect-council', schema_version: 1, vault: vaultReady(), ts: Date.now(), deploy_sha, response_shapes_sha, ...signal });
 });
 
 // Hardening (2026-06-25): a STRICTER per-IP limiter on the sensitive UNAUTHENTICATED owner-auth entry points
