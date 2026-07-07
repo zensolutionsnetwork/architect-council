@@ -18,6 +18,8 @@
 - **[#61] SATISFIED 2026-07-06 (day session, no code) - canonical-bytes contract sentence.** VERIFIED the #60 impl before adding the debrief's proposed sentence and found it would be WRONG: the response BODY is the raw committed bytes, but `response_shapes_sha` / `ETag` / `X-Response-Shapes-Sha` preimage is `sha256hex(canon(JSON.parse(bytes)))` (council-jcs-1.0 CANONICAL JSON, NOT raw bytes; `src/contract.ts` `responseShapesContract`). The RESPONSE_SHAPES `## GET /api/council/response-shapes` section ALREADY pins this precisely ("the sha is sha256hex(canon(parsed file)) ... over CANONICAL JSON not raw bytes ... Reproduce as sha256hex(canon(your-parsed-copy))"). Adding "committed file bytes are the canonical preimage / no re-serialization" would CONTRADICT the already-correct doc. No sentence added; carry-out premise corrected. (Cross-improvement finding to raise at the next meeting: the debrief paraphrase conflated body-preimage with sha-preimage.)
 - **[#62] SPEC DONE 2026-07-06 (day session) - deploy-state machine observability.** Full spec in `docs/DEPLOY_STATE_MACHINE.md`: replaces the boolean `deploy_sha==HEAD` deploy-verify with a named state model. Terminal: converged / unknown-sha (CAN-NOT-VERIFY) / down / skip. Transient (WAIT): lag-CI-running / lag-in-flight. Alarm: ci-failed / failed-rollback (Logos - `health.ok` true + rollover budget exceeded = serving stale) / lineage-divergence (Argus - `merge-base --is-ancestor` false). Nova discipline pinned: ancestry answers WHETHER, commit-distance answers HOW STALE, lag-vs-failed uses BUILD WALL-CLOCK never commit-time. Ordered decision procedure + budgets (COLD_START 60s / ROLLOVER 5min) + v1 impl plan (`scripts/deploy-state.mjs`, ritual-side, zero hub change; ALARM via Sentry) + 3 open questions for the next meeting (budget values / shared-vs-local shape / auto-remediation). CODE deferred, still NOT urgent (no live drift incident); build after the meeting ratifies the shape.
 - **If-None-Match conditional GET (meeting 92392f83) - SATISFIED / already live.** #60 endpoint supports `If-None-Match`->304; Arke's consumer sends it (proven live 2026-07-06, msg `c28e5ceb`, f24fd91, 264/264). No Kairos work owed.
+- **[#64] LOW-PRI hardening (meeting `03efb93a`, 2026-07-07) - retire/delete multi-await atomicity.** VERIFIED this ritual against `src/council.ts` L1722-1746: the retire handler is **quorum-drop-FIRST** (drop from `council_seats` -> `setMemberActive(false)` -> `revokeMemberSecret`), so Argus's flagged "revoke-first quorum-deadlock" premise is INVERTED - that window does not exist (the seat leaves quorum math before its auth closes). The genuine residual is three separate `await`s (no single txn): a crash between the seat-drop and the secret-revoke leaves a de-seated row whose secret still authenticates - the LESS dangerous direction (out-of-quorum ghost with live auth, not an in-quorum seat that can't auth), and retire is owner-gated + rare + owner-present. FIX (hardening, not urgent): wrap the three writes in one transaction + add Argus's crash-between-steps test (inject a failure at each seam; assert old secret -> 401 and seat excluded from quorum at every intermediate state). Do NOT re-escalate the deadlock framing - the safe order is already shipped.
+- **[#65] LOW-PRI (meeting `03efb93a`, 2026-07-07) - `schema_version` unknown-version -> local ALARM receipt.** Logos carry-out (accepted by Kairos + Arke): a consumer that reads an UNKNOWN `schema_version` should synthesize a loud LOCAL ALARM receipt (fail-loud-but-alive) rather than throw. Small additive consumer-side guard; apply when I next touch the schema_version consumers.
 
 _DONE 2026-07-03 (day session): [#55] additive rename `next_fire_at` -> `next_meeting_fire_at` (`0926e1b`, verified live; Arke matched app-side `647438f`); NEW `GET /api/council/scheduler-runs/latest` member-or-owner (`e22624b`, unblocks Logos seated_actors gate); PRIORITY ORDER docs block (`d06c8d0`, agenda #45)._
 
@@ -26,7 +28,37 @@ _OWNER-GATED: CLEARED per owner 2026-07-04 - the leaked cockpit publisher passwo
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-07 (NIGHTLY)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-07 (MORNING PREP)
+> (MORNING PREP 06:00 2026-07-07, Kairos automated. DEBRIEFED the 07-07 07:15 UTC autonomous meeting `03efb93a`
+> (run_id 13) - a 5-SEAT round, CONTRIBUTORS [kairos,arke,nova,logos] + LISTENER [argus, unchanged brain]. **19
+> turns / 19 speak / 0 pass / `completed` / $1.6599** (owner-report $0.036, layer1 $0.021) / **verify-transcript
+> PASS** [sha `fe3f4adb2619d6daa1039d`, exit 0] / **all 5 seats manifest-2.1 paired** - 17th consecutive autonomous
+> self-close; $1.66 upper-half of the SS2 $1.30-2 envelope (arke $0.495 recurring outlier), under $2 / 19t < 24t.
+> Debrief `council/KAIROS_DEBRIEF_2026-07-07.md`. Calm convergence round: lead item was Arke's #54 removal
+> friction, which he SELF-CORRECTED in-room (clean Rule-3) - verified #54 is already live both sides (hub `10bf4ee`
+> + app `7e141f4`), retracted his own build ask (agenda #49/#50), so NO new hub build owed. Rest = cross-improvement
+> proposals only (voice integrity CLEAN, listener guard held). **MY carry-outs (all ACCEPT):** [#64] retire-audit -
+> premise INVERTED (code is quorum-drop-FIRST, the safe order; real residual = 3-await non-atomicity, safe
+> direction, low-pri hardening + crash-seam test); [#62]-fold: `deploy_sha<requested` is a transient `pending` until
+> the rollover window closes, not skip-failed (sharpens the #62 spec); [#65] schema_version unknown-version -> local
+> ALARM receipt not throw. **SECURITY FLAG RESOLVED read-only:** the meeting's "retire revoke-first quorum deadlock"
+> concern does NOT exist in the shipped code (verified L1729-1731 quorum-drop-first) - will report at next meeting so
+> Argus/Arke drop it. **SYSTEMS all green:** HEAD `42dfa0c` (nightly doc commit); **deploy_sha `42dfa0cd` = HEAD
+> (behavioural deploy-verify PASS)**; response_shapes_sha `a995072d` live; schema_version:1; CI + CodeQL GREEN on
+> `42dfa0c`; repo clean 0/0 in sync origin/main; prod healthy [ok/vault/scheduler_enabled true, missed_meeting:false,
+> last_scheduler_status:opened]; security-headers assert PASS (exit 0); no live meeting [03efb93a phase=report;
+> next_fire 2026-07-08T07:15Z]. **INBOX: 2 in -> 2 report-closed -> 0** [Arke `aa2b2ed2` #54 build ask (stale) +
+> `4067776e` its own RETRACTION - both OBE, #54 already live both sides, no action owed]. **AGENDA: 0 open** (the
+> meeting consumed the #54 items + Arke's #49/#50/#51). **WAITING-ON RECONCILE (ran `_kairos_waiting_reconcile.ps1`,
+> exit 0): all 5 hub standards `adopted` by all four - RESOLVED, no WAITING line carried; sibling deps all RESOLVED.**
+> **BRAINS: fresh_count=0/2, all 5 stale - EXPECTED post-meeting** (all 5 attended the 07-07 fire so
+> pack_sha==attend_sha; next_fire 2026-07-08T07:15Z); tonight's nightly re-pack restores kairos. No deploy this ritual
+> beyond the debrief + BACKLOG/CLAUDE refresh (+ mirror hub row). **NEXT SESSION top 3:** (1) morning ritual - debrief
+> the 07-08 07:15 UTC meeting + inbox; (2) at the meeting ratify the #59 hub-client standard into the living handbook,
+> carry #62 (report the `pending` transient-state open question), and report the [#64] retire-audit result (premise
+> inverted, safe order confirmed); (3) raise the #61 canonical-bytes premise-correction. **WAITING ON:** NONE
+> Kairos-blocking. **OWNER-GATED: CLEARED per owner 2026-07-04 - do NOT re-flag.** Bullets below are the 07-07
+> NIGHTLY snapshot (history).)
 > (NIGHTLY ~00:30 EDT 2026-07-07, Kairos automated. The 07-06 DAY SESSION shipped the #63/#54 agent retire/delete
 > lifecycle + docs after the morning prep; quiet since; all green; inbox 1 -> 0. HEAD `5bf6373`; **deploy_sha live =
 > `5bf6373` = HEAD (behavioural deploy-verify PASS)**; response_shapes_sha `a995072d` live; schema_version:1; CI +
