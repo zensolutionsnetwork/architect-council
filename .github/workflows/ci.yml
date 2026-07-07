@@ -81,3 +81,16 @@ jobs:
         run: npm ci
       - name: Assert hierarchy rulings (clamp / group-non-acting / Logos-vow / canSee / canCrossRead)
         run: npx tsx test/hierarchy.test.ts
+
+  tx-atomicity:
+    name: transaction atomicity (#64 retire/delete)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: npm ci
+      - name: Assert withTransaction rolls back at every seam (no torn retire/delete)
+        run: npx tsx test/tx.test.ts

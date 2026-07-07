@@ -34,7 +34,7 @@ import {
   setVoiceRunning, closeStaleVoiceMeetings, usdSpentTodayUtc, vaultReady, listMeetingsForDashboard,
   createBrainUpload, getBrainUpload, putBrainChunk, brainReceived, assembleBrain,
   commitBrainV2, getBrainV2Meta, getBrainV2Content, sweepBrainUploads,
-  getSetting, setSetting, getRecentBoots, getMeetingTurnTarget, getMeetingUsdCeiling,
+  getSetting, setSetting, withTransaction, getRecentBoots, getMeetingTurnTarget, getMeetingUsdCeiling,
   getHierarchy, setHierarchy, listHierarchies, deleteHierarchy,
   createAgendaItem, listOpenAgenda, getAgendaItem, archiveAgendaItem, pinOpenAgendaToMeeting,
   getManagerDigest, listManagerDigests, listManagerFlags,
@@ -1726,9 +1726,14 @@ councilRouter.post('/council/agents/:id/retire', requireOwner, async (req, res) 
     if (MEETING_DEFAULT.includes(id)) return res.status(409).json({ error: 'founding_seat', message: 'refusing to retire a founding seat' });
     const seats = await extraSeats();
     if (!seats.find((s) => s.id === id)) return res.status(404).json({ error: 'unknown_agent' });
-    await setSetting('council_seats', JSON.stringify(seats.filter((s) => s.id !== id))); // drop from seating roster + quorum
-    await setMemberActive(id, false); // keep the row (retired, auditable), mark inactive
-    await revokeMemberSecret(id);     // revoke auth: resolveActor joins member_secrets AND m.active, so both close it
+    // #64: all three writes in ONE transaction — a crash between the seat-drop and the secret-revoke would
+    // otherwise leave a de-seated row whose secret still authenticates (ghost auth). Atomic = fully retired
+    // or fully intact, never a torn intermediate.
+    await withTransaction(async (tx) => {
+      await setSetting('council_seats', JSON.stringify(seats.filter((s) => s.id !== id)), tx); // drop from seating roster + quorum
+      await setMemberActive(id, false, tx); // keep the row (retired, auditable), mark inactive
+      await revokeMemberSecret(id, tx);     // revoke auth: resolveActor joins member_secrets AND m.active, so both close it
+    });
     res.json({ ok: true, id, status: 'retired', seats: await seatingRoster() });
   } catch (e) { internalError(res, e); }
 });
@@ -1739,8 +1744,11 @@ councilRouter.delete('/council/agents/:id', requireOwner, async (req, res) => {
     if (MEETING_DEFAULT.includes(id)) return res.status(409).json({ error: 'founding_seat', message: 'refusing to delete a founding seat' });
     const seats = await extraSeats();
     if (!seats.find((s) => s.id === id)) return res.status(404).json({ error: 'unknown_agent' });
-    await setSetting('council_seats', JSON.stringify(seats.filter((s) => s.id !== id))); // drop from seating roster + quorum
-    await deleteMember(id); // hard-delete member row; member_secrets cascades
+    // #64: seat-drop + member hard-delete in ONE transaction (member_secrets cascades on the row delete).
+    await withTransaction(async (tx) => {
+      await setSetting('council_seats', JSON.stringify(seats.filter((s) => s.id !== id)), tx); // drop from seating roster + quorum
+      await deleteMember(id, tx); // hard-delete member row; member_secrets cascades
+    });
     res.json({ ok: true, id, status: 'deleted', seats: await seatingRoster() });
   } catch (e) { internalError(res, e); }
 });

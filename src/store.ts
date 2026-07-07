@@ -13,6 +13,34 @@ export function db(): pg.Pool {
   return pool;
 }
 
+// A pool OR a checked-out client — both expose .query, so a write helper can run either on the shared
+// pool (its own connection, autocommit) or inside a caller's transaction. Default arg = db() keeps every
+// existing call-site byte-identical; passing a client threads the write into one atomic BEGIN/COMMIT.
+export type Executor = pg.Pool | pg.PoolClient;
+
+// #64 (meeting 03efb93a, 2026-07-07): run a set of writes as ONE transaction so a crash mid-way rolls the
+// whole thing back rather than leaving a torn half-state (e.g. a de-seated member row whose secret still
+// authenticates). `connect` is injectable ONLY so the CI gate can drive BEGIN/COMMIT/ROLLBACK against a
+// mock client with no live DB — production always uses the default pool client.
+export async function withTransaction<T>(
+  fn: (exec: Executor) => Promise<T>,
+  connect: () => Promise<pg.PoolClient> = () => db().connect(),
+): Promise<T> {
+  const client = await connect();
+  try {
+    await client.query('BEGIN');
+    const r = await fn(client);
+    await client.query('COMMIT');
+    return r;
+  } catch (e) {
+    // swallow-ok: rollback is best-effort; the original error is rethrown below so the caller still fails loud.
+    try { await client.query('ROLLBACK'); } catch { /* rollback best-effort */ }
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
 // ---- Vault (AES-256-GCM, key = MASTER_KEY hex -> 32 bytes) -----------------
 function key(): Buffer {
   const k = Buffer.from(process.env.MASTER_KEY || '', 'hex');
@@ -472,8 +500,8 @@ export async function getSetting(key: string): Promise<string | null> {
   const { rows } = await db().query<any>(`SELECT value FROM app_settings WHERE key=$1`, [String(key).slice(0, 120)]);
   return rows[0] ? rows[0].value : null;
 }
-export async function setSetting(key: string, value: string | null): Promise<void> {
-  await db().query(`INSERT INTO app_settings (key, value, updated_at) VALUES ($1,$2,now())
+export async function setSetting(key: string, value: string | null, exec: Executor = db()): Promise<void> {
+  await exec.query(`INSERT INTO app_settings (key, value, updated_at) VALUES ($1,$2,now())
     ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=now()`,
     [String(key).slice(0, 120), value == null ? null : String(value).slice(0, 500)]);
 }
@@ -535,8 +563,8 @@ export async function listMembers(): Promise<Member[]> {
   return rows.map((r) => ({ ...r, capabilities: Array.isArray(r.capabilities) ? r.capabilities : [] }));
 }
 /** Flip a member's active flag (owner housekeeping — e.g. retire a pre-true-name row). Returns true if a row changed. */
-export async function setMemberActive(name: string, active: boolean): Promise<boolean> {
-  const { rowCount } = await db().query(`UPDATE members SET active=$2 WHERE name=$1`, [name, active]);
+export async function setMemberActive(name: string, active: boolean, exec: Executor = db()): Promise<boolean> {
+  const { rowCount } = await exec.query(`UPDATE members SET active=$2 WHERE name=$1`, [name, active]);
   return (rowCount ?? 0) > 0;
 }
 export async function getMember(name: string): Promise<(Member & { secret: string }) | null> {
@@ -568,16 +596,16 @@ export async function setMemberProfile(name: string, displayName?: string, chart
 /** #54 lifecycle (Arke, 2026-07-06): revoke a member's secret WITHOUT dropping the member row — used by RETIRE,
  *  which keeps a retired row (auditable) but kills auth (resolveActor joins on member_secrets AND m.active).
  *  Idempotent; bumps the registry version so members re-cache the directory. Returns true if a secret was removed. */
-export async function revokeMemberSecret(name: string): Promise<boolean> {
-  const q = db();
+export async function revokeMemberSecret(name: string, exec: Executor = db()): Promise<boolean> {
+  const q = exec;
   const { rowCount } = await q.query(`DELETE FROM member_secrets WHERE member_name=$1`, [name]);
   if ((rowCount ?? 0) > 0) await q.query(`UPDATE registry_meta SET version = version + 1 WHERE id = 1`);
   return (rowCount ?? 0) > 0;
 }
 /** #54 lifecycle: hard-delete a member row — used by DELETE. member_secrets cascades (ON DELETE CASCADE), so the
  *  secret goes with it. Bumps the registry version. Returns true if a row was removed. */
-export async function deleteMember(name: string): Promise<boolean> {
-  const q = db();
+export async function deleteMember(name: string, exec: Executor = db()): Promise<boolean> {
+  const q = exec;
   const { rowCount } = await q.query(`DELETE FROM members WHERE name=$1`, [name]);
   if ((rowCount ?? 0) > 0) await q.query(`UPDATE registry_meta SET version = version + 1 WHERE id = 1`);
   return (rowCount ?? 0) > 0;
