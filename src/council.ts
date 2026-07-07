@@ -15,7 +15,7 @@ import { captureError, cronCheckIn } from './sentry.js';
 import {
   upsertMember, listMembers, setMemberActive, getMember, revokeMemberSecret, deleteMember,
   bumpDirtyStreak, resetDirtyStreak, getDirtyStreak, ownerEmailConfigured, setMemberProfile,
-  getHandbookDoc, setHandbookDoc,
+  getHandbookDoc, setHandbookDoc, getRitualModel, setRitualModel,
   consumeJoinToken, issueJoinToken,
   type Turn,
   queueOutbox, pendingOutbox, markOutboxDelivered, ackOutbox, sweepOutbox,
@@ -1872,6 +1872,33 @@ councilRouter.post('/council/handbook', requireOwner, async (req, res) => {
     const md = String((req.body || {}).markdown ?? '');
     if (!md.trim()) return res.status(400).json({ error: 'empty_markdown' });
     const r = await setHandbookDoc(md);
+    res.json({ ok: true, version: r.version, updatedAt: r.updatedAt });
+  } catch (e) { internalError(res, e); }
+});
+// Standard ritual model (owner directive 2026-07-07; §12). GET is member-or-owner — every agent pulls it as ritual
+// STEP 0 and fails loud if the served `version` is ahead of the version its local ritual records. POST is owner-only
+// and bumps `version` (meetings update it on a ratified ritual change). morning/eod are ordered step lists.
+councilRouter.get('/council/ritual-model', async (req, res) => {
+  try {
+    const a = await resolveActor(req);
+    if (!a) return res.status(401).json({ error: 'unauthorized' });
+    res.json(await getRitualModel());
+  } catch (e) { internalError(res, e); }
+});
+councilRouter.post('/council/ritual-model', requireOwner, async (req, res) => {
+  try {
+    const b = req.body || {};
+    const morning = Array.isArray(b.morning) ? b.morning : undefined;
+    const eod = Array.isArray(b.eod) ? b.eod : undefined;
+    const markdown = b.markdown != null ? String(b.markdown) : undefined;
+    if (morning === undefined && eod === undefined && markdown === undefined) return res.status(400).json({ error: 'nothing_to_set', message: 'provide morning[], eod[], and/or markdown' });
+    // read-modify so a partial POST (e.g. only morning) preserves the other lists
+    const cur = await getRitualModel();
+    const r = await setRitualModel({
+      morning: morning ?? cur.morning,
+      eod: eod ?? cur.eod,
+      markdown: markdown ?? cur.markdown,
+    });
     res.json({ ok: true, version: r.version, updatedAt: r.updatedAt });
   } catch (e) { internalError(res, e); }
 });

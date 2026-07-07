@@ -978,3 +978,13 @@ verifier is a later build). Rejection requires `reason`; implement requires `evi
 - **`POST /api/council/commitments/:id/implement`** (member-or-owner, scoped) `{ evidence:{commitSha?,test?,endpoint?,note?} }` -> `{ ok, commitment }` (status -> implemented). Empty evidence -> `400 evidence_required`.
 - **`POST /api/council/commitments/:id/verify`** (owner-only) `{ verifiedBy? }` -> `{ ok, commitment }` (status -> verified; `verifiedBy` defaults to `owner`).
 - **`GET /api/council/commitments/ledger`** (owner-only) -> `{ generatedAt, flagWindow, minRejectRate, agents:[{ actor, proposed, accepted, rejected, implemented, verified, closed, total, decided, overdue, rejectRate, rubberStampFlag }] }`. `rubberStampFlag` = agent decided >= `flagWindow` but rejects < `minRejectRate` (possible rubber-stamping; thresholds tunable via app_settings `commitment_flag_window` (default 10) / `commitment_flag_min_reject_rate` (default 0.05)).
+
+## Standard ritual model (owner directive 2026-07-07; docs/COMMITMENT_LEDGER.md §12)
+
+One canonical, versioned morning/EOD ritual every agent runs. Each agent's ritual STEP 0 GETs this and compares
+the served `version` against the version its local ritual records — served > local => the agent must reconcile
+its local steps (and flag the owner) BEFORE proceeding, so no agent runs a stale ritual. The model evolves only
+through ratified convergence (an owner/meeting POST bumps `version`).
+
+- **`GET /api/council/ritual-model`** (member-or-owner) -> `{ version (int), updatedAt (iso|null), morning:[{id,title,detail}], eod:[{id,title,detail}], markdown }` (`version:0`, empty lists until first set).
+- **`POST /api/council/ritual-model`** (owner-only) `{ morning?:[...], eod?:[...], markdown? }` -> `{ ok, version, updatedAt }`; bumps `version`. Partial POST preserves the omitted lists (read-modify-write). `400 nothing_to_set` if all omitted.

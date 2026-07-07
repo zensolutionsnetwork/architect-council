@@ -176,6 +176,15 @@ export async function initDb(): Promise<void> {
   await q.query(`CREATE TABLE IF NOT EXISTS council_handbook (
     id int PRIMARY KEY DEFAULT 1, version int NOT NULL DEFAULT 0, markdown text NOT NULL DEFAULT '',
     updated_at timestamptz)`);
+  // Standard ritual model (owner directive 2026-07-07; docs/COMMITMENT_LEDGER.md §12). ONE canonical, versioned
+  // morning/EOD ritual every agent runs. Each agent's ritual STEP 0 pulls this and compares `version` against the
+  // version its local ritual records — served > local => fail loud + reconcile before proceeding, so no agent runs
+  // a stale ritual. Evolves only through ratified convergence (owner/meeting POST bumps version). morning/eod are
+  // ordered step lists [{id,title,detail}]; markdown is an optional human-readable rendering.
+  await q.query(`CREATE TABLE IF NOT EXISTS ritual_model (
+    id int PRIMARY KEY DEFAULT 1, version int NOT NULL DEFAULT 0,
+    morning jsonb NOT NULL DEFAULT '[]', eod jsonb NOT NULL DEFAULT '[]',
+    markdown text NOT NULL DEFAULT '', updated_at timestamptz)`);
   // Boot-stamp log (P1 #8, Nova's pattern 4ef9e66b/0bdf1dd): one row per server start. deploy_sha +
   // a sha256 FINGERPRINT of a secret (never the secret). Two consecutive rows with the same deploy_sha =
   // the container cycled WITHOUT a new deploy (crash-loop / platform restart) — visibility the heartbeat
@@ -640,6 +649,28 @@ export async function setHandbookDoc(markdown: string): Promise<{ version: numbe
   const { rows } = await db().query<any>(`INSERT INTO council_handbook (id, version, markdown, updated_at) VALUES (1, 1, $1, now())
     ON CONFLICT (id) DO UPDATE SET version = council_handbook.version + 1, markdown = EXCLUDED.markdown, updated_at = now()
     RETURNING version, updated_at`, [markdown]);
+  return { version: Number(rows[0].version), updatedAt: new Date(rows[0].updated_at).toISOString() };
+}
+/** Standard ritual model (§12): read the single-row versioned morning/EOD model. {version:0, empty} if unset. */
+export async function getRitualModel(): Promise<{ version: number; updatedAt: string | null; morning: any[]; eod: any[]; markdown: string }> {
+  const { rows } = await db().query<any>(`SELECT version, morning, eod, markdown, updated_at FROM ritual_model WHERE id=1`);
+  if (!rows[0]) return { version: 0, updatedAt: null, morning: [], eod: [], markdown: '' };
+  return {
+    version: Number(rows[0].version) || 0,
+    updatedAt: rows[0].updated_at ? new Date(rows[0].updated_at).toISOString() : null,
+    morning: Array.isArray(rows[0].morning) ? rows[0].morning : [],
+    eod: Array.isArray(rows[0].eod) ? rows[0].eod : [],
+    markdown: String(rows[0].markdown || ''),
+  };
+}
+/** §12: replace the ritual model and bump the version atomically. Owner/meeting only (route-enforced). */
+export async function setRitualModel(m: { morning?: any[]; eod?: any[]; markdown?: string }): Promise<{ version: number; updatedAt: string }> {
+  const { rows } = await db().query<any>(
+    `INSERT INTO ritual_model (id, version, morning, eod, markdown, updated_at) VALUES (1, 1, $1::jsonb, $2::jsonb, $3, now())
+     ON CONFLICT (id) DO UPDATE SET version = ritual_model.version + 1, morning = EXCLUDED.morning,
+       eod = EXCLUDED.eod, markdown = EXCLUDED.markdown, updated_at = now()
+     RETURNING version, updated_at`,
+    [JSON.stringify(m.morning ?? []), JSON.stringify(m.eod ?? []), String(m.markdown ?? '')]);
   return { version: Number(rows[0].version), updatedAt: new Date(rows[0].updated_at).toISOString() };
 }
 // Owner-tunable meeting limits (owner 2026-06-23), DB-backed so Arke's app sets them with no redeploy.

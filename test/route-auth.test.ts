@@ -30,6 +30,8 @@ const PROTECTED: { method: string; path: string; body?: object }[] = [
   { method: 'POST', path: '/api/council/me/profile', body: { displayName: 'x' } },
   { method: 'GET',  path: '/api/council/handbook' },
   { method: 'POST', path: '/api/council/handbook',   body: { markdown: 'x' } },
+  { method: 'GET',  path: '/api/council/ritual-model' },
+  { method: 'POST', path: '/api/council/ritual-model', body: { markdown: 'x' } },
   { method: 'GET',  path: '/api/council/outbox/zen-ai' },
   { method: 'POST', path: '/api/council/outbox',      body: { from: 'zen-ai', to: 'biblevoice', note: 'x' } },
   { method: 'POST', path: '/api/council/outbox/zen-ai/ack', body: {} },
