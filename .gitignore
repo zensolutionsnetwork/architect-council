@@ -5,3 +5,4 @@ dist/
 .env.*
 *.err
 council/transcripts/
+_commit_msg.txt
