@@ -958,3 +958,23 @@ member-or-owner. Returns `{ "version": <int>, "updatedAt": <iso|null>, "markdown
 copy instead of a per-agent static baseline.
 **`POST /api/council/handbook`** (owner-only) `{ markdown }` → `{ ok, version, updatedAt }`; bumps `version`.
 Meetings update it on standard adoption via the owner-token path.
+
+## Commitment ledger (owner directive 2026-07-07; docs/COMMITMENT_LEDGER.md)
+
+Tracks every meeting proposal's fate per agent. A commitment object:
+`{ id (uuid), seq (decimal STRING cursor), title, detail, sourceMeetingId, sourceAgendaId (string|null),
+proposedBy, ownerActor, status, reason, evidence ({commitSha,test,endpoint,note}|null), decidedBy, decidedAt,
+implementedAt, verifiedBy, verifiedAt, createdAt, updatedAt }`. `status` enum:
+`proposed | accepted | rejected | implemented | verified | superseded | dropped`.
+
+Write-layer doctrine (the hierarchy, enforced): a `proposed` row is minted ONLY by the meeting finalizer or the
+owner (a member secret CANNOT propose); a sovereign records its OWN accept/reject/implement with its own member
+secret, scoped to `ownerActor`; the owner may override any; `verify` is owner-only for now (the acting-node
+verifier is a later build). Rejection requires `reason`; implement requires `evidence` (>=1 of commitSha/test/endpoint).
+
+- **`POST /api/council/commitments`** (owner/hub only) `{ sourceMeetingId?, title, detail?, proposedBy?, forActors:[...], sourceAgendaId? }` -> `{ ok, created:[commitment...] }` (one row per addressed actor, deduped). `400 forActors_required` / `title is required`.
+- **`GET /api/council/commitments?actor=&status=&sinceSeq=&meetingId=`** (member-or-owner) -> `{ items:[commitment...] }`. A member may read the whole ledger; writes only its own rows. `sinceSeq` is half-open (`seq > sinceSeq`), oldest-first.
+- **`POST /api/council/commitments/:id/decide`** (member-or-owner, scoped) `{ status: accepted|rejected|superseded|dropped, reason? }` -> `{ ok, commitment }`. `reason` required for rejected/superseded (`400 reason_required`); not your row -> `403 forbidden`; unknown id -> `404 unknown_commitment`; bad status -> `400 bad_status`.
+- **`POST /api/council/commitments/:id/implement`** (member-or-owner, scoped) `{ evidence:{commitSha?,test?,endpoint?,note?} }` -> `{ ok, commitment }` (status -> implemented). Empty evidence -> `400 evidence_required`.
+- **`POST /api/council/commitments/:id/verify`** (owner-only) `{ verifiedBy? }` -> `{ ok, commitment }` (status -> verified; `verifiedBy` defaults to `owner`).
+- **`GET /api/council/commitments/ledger`** (owner-only) -> `{ generatedAt, flagWindow, minRejectRate, agents:[{ actor, proposed, accepted, rejected, implemented, verified, closed, total, decided, overdue, rejectRate, rubberStampFlag }] }`. `rubberStampFlag` = agent decided >= `flagWindow` but rejects < `minRejectRate` (possible rubber-stamping; thresholds tunable via app_settings `commitment_flag_window` (default 10) / `commitment_flag_min_reject_rate` (default 0.05)).

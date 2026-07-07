@@ -1,0 +1,20 @@
+commitment ledger stage 1: table + endpoints + hierarchy-enforced writes
+
+Owner directive 2026-07-07 (docs/COMMITMENT_LEDGER.md). Build the real system now.
+
+store.ts: new `commitments` table (id uuid, seq bigserial cursor, owner_actor,
+status, reason, evidence jsonb, decided_by, timestamps) + index; CRUD
+(createCommitments minting one row per addressed actor, get/list with
+actor/status/sinceSeq/meetingId filters, decideCommitment / implementCommitment /
+verifyCommitment scoped by owner_actor, commitmentLedger rollup with a tunable
+rubber-stamp flag).
+
+council.ts: 6 endpoints under /api/council/commitments enforcing the doctrine at
+the write layer - propose = owner/hub only (a member secret cannot); decide /
+implement = the sovereign's OWN member secret, scoped to owner_actor (owner
+override); verify = owner-only; reject needs a reason, implement needs evidence.
+Rejection is first-class so sovereign evaluation of hub proposals is observable.
+
+route-auth: +6 probes (81 gated / 0 open). RESPONSE_SHAPES: full section pinned.
+Gates green: secret-scan / swallow / tx / route-auth. No response shape changed
+elsewhere; purely additive.

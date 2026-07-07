@@ -252,6 +252,22 @@ export async function initDb(): Promise<void> {
     id bigserial PRIMARY KEY, standard_slug text NOT NULL, actor text NOT NULL,
     decision text NOT NULL, note text, ratified_at timestamptz NOT NULL DEFAULT now(),
     UNIQUE (standard_slug, actor))`);
+  // Commitment ledger (owner directive 2026-07-07, docs/COMMITMENT_LEDGER.md). One row = one meeting proposal
+  // assigned to ONE responsible agent (owner_actor). Tracks the full fate: proposed -> accepted/rejected(+reason)
+  // -> implemented(+evidence) -> verified. DOCTRINE-ENFORCED AT THE WRITE LAYER (see council.ts): a `proposed`
+  // row is minted only by the meeting finalizer / owner (a member secret cannot); accepted/rejected/implemented
+  // for owner_actor=X is writable ONLY by X's own secret (or owner override); verified only by owner/acting-node.
+  // Makes each sovereign's evaluation of hub proposals observable (rejection is first-class + measured). seq is a
+  // bigserial cursor serialized as a decimal string on the wire (json-64bit standard). Rows are never deleted.
+  await q.query(`CREATE TABLE IF NOT EXISTS commitments (
+    id uuid PRIMARY KEY, seq bigserial UNIQUE,
+    title text NOT NULL, detail text NOT NULL DEFAULT '',
+    source_meeting_id text, source_agenda_id bigint, proposed_by text,
+    owner_actor text NOT NULL, status text NOT NULL DEFAULT 'proposed',
+    reason text, evidence jsonb, decided_by text, decided_at timestamptz,
+    implemented_at timestamptz, verified_by text, verified_at timestamptz,
+    created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now())`);
+  await q.query(`CREATE INDEX IF NOT EXISTS commitments_owner_status_idx ON commitments (owner_actor, status)`);
   // Owner authentication (email/password, owner directive 2026-06-25). ONE owner per hub instance, seeded from
   // OWNER_EMAIL; NO signup. owner_sessions = opaque Bearer tokens (only the sha256 hash stored). password tokens
   // = one-time, short-expiry tokens emailed to the owner inbox to set the password ("set from my inbox").
@@ -434,6 +450,114 @@ export async function pinOpenAgendaToMeeting(meetingId: string): Promise<any[]> 
      RETURNING id, actor, title, body, priority, status, meeting_id,
        to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at`, [meetingId]);
   return rows.map(mapAgenda).sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : Number(a.id) - Number(b.id)));
+}
+
+// ---- Commitment ledger (owner directive 2026-07-07; docs/COMMITMENT_LEDGER.md) --------------
+export const COMMITMENT_DECIDE_STATES = ['accepted', 'rejected', 'superseded', 'dropped'] as const;
+const COMMIT_COLS = `id, seq::text AS seq, title, detail, source_meeting_id, source_agenda_id::text AS source_agenda_id,
+  proposed_by, owner_actor, status, reason, evidence, decided_by,
+  to_char(decided_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS decided_at,
+  to_char(implemented_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS implemented_at,
+  verified_by,
+  to_char(verified_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS verified_at,
+  to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
+  to_char(updated_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS updated_at`;
+function mapCommitment(r: any) {
+  return {
+    id: r.id, seq: String(r.seq), title: r.title, detail: r.detail || '',
+    sourceMeetingId: r.source_meeting_id || null, sourceAgendaId: r.source_agenda_id || null,
+    proposedBy: r.proposed_by || null, ownerActor: r.owner_actor, status: r.status,
+    reason: r.reason || null, evidence: r.evidence || null, decidedBy: r.decided_by || null,
+    decidedAt: r.decided_at || null, implementedAt: r.implemented_at || null,
+    verifiedBy: r.verified_by || null, verifiedAt: r.verified_at || null,
+    createdAt: r.created_at, updatedAt: r.updated_at,
+  };
+}
+/** Mint one `proposed` row per addressed actor (deduped, lowercased). Meeting-finalizer/owner only (route-enforced). */
+export async function createCommitments(opts: { sourceMeetingId?: string | null; title: string; detail?: string;
+  proposedBy?: string | null; forActors: string[]; sourceAgendaId?: string | null }): Promise<any[]> {
+  const actors = Array.from(new Set((opts.forActors || []).map((a) => String(a).toLowerCase()).filter(Boolean)));
+  const out: any[] = [];
+  for (const a of actors) {
+    const { rows } = await db().query<any>(
+      `INSERT INTO commitments (id, title, detail, source_meeting_id, source_agenda_id, proposed_by, owner_actor)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING ${COMMIT_COLS}`,
+      [crypto.randomUUID(), opts.title, opts.detail || '', opts.sourceMeetingId || null,
+       opts.sourceAgendaId ? Number(opts.sourceAgendaId) : null, opts.proposedBy || null, a]);
+    out.push(mapCommitment(rows[0]));
+  }
+  return out;
+}
+export async function getCommitment(id: string): Promise<any | null> {
+  if (!/^[0-9a-fA-F-]{36}$/.test(id)) return null;
+  const { rows } = await db().query<any>(`SELECT ${COMMIT_COLS} FROM commitments WHERE id=$1`, [id]);
+  return rows[0] ? mapCommitment(rows[0]) : null;
+}
+export async function listCommitments(f: { actor?: string; status?: string; sinceSeq?: string; meetingId?: string; limit?: number }): Promise<any[]> {
+  const where: string[] = []; const params: any[] = [];
+  if (f.actor) { params.push(String(f.actor).toLowerCase()); where.push(`owner_actor=$${params.length}`); }
+  if (f.status) { params.push(String(f.status)); where.push(`status=$${params.length}`); }
+  if (f.meetingId) { params.push(String(f.meetingId)); where.push(`source_meeting_id=$${params.length}`); }
+  if (f.sinceSeq && /^[0-9]+$/.test(String(f.sinceSeq))) { params.push(String(f.sinceSeq)); where.push(`seq > $${params.length}::bigint`); }
+  const lim = Math.min(Math.max(Number(f.limit) || 500, 1), 1000);
+  const wh = where.length ? ' WHERE ' + where.join(' AND ') : '';
+  const { rows } = await db().query<any>(`SELECT ${COMMIT_COLS} FROM commitments${wh} ORDER BY seq ASC LIMIT ${lim}`, params);
+  return rows.map(mapCommitment);
+}
+/** Record a sovereign decision (accepted/rejected/superseded/dropped). Scoped to owner_actor unless owner override.
+ *  Returns the updated row, or null if the id doesn't exist / isn't owned by `actor` (route -> 404/403). */
+export async function decideCommitment(id: string, actor: string, isOwner: boolean, status: string, reason: string | null): Promise<any | null> {
+  const scope = isOwner ? '' : ' AND owner_actor=$4';
+  const { rows } = await db().query<any>(
+    `UPDATE commitments SET status=$2, reason=$3, decided_by=$4, decided_at=now(), updated_at=now()
+     WHERE id=$1${scope} RETURNING ${COMMIT_COLS}`, [id, status, reason, String(actor).toLowerCase()]);
+  return rows[0] ? mapCommitment(rows[0]) : null;
+}
+/** Mark implemented with evidence. Scoped to owner_actor unless owner override. */
+export async function implementCommitment(id: string, actor: string, isOwner: boolean, evidence: any): Promise<any | null> {
+  const scope = isOwner ? '' : ' AND owner_actor=$3';
+  const { rows } = await db().query<any>(
+    `UPDATE commitments SET status='implemented', evidence=$2::jsonb, decided_by=COALESCE(decided_by,$3),
+       implemented_at=now(), updated_at=now()
+     WHERE id=$1${scope} RETURNING ${COMMIT_COLS}`, [id, JSON.stringify(evidence ?? {}), String(actor).toLowerCase()]);
+  return rows[0] ? mapCommitment(rows[0]) : null;
+}
+/** Independent verification (owner or acting-node only — route-enforced). */
+export async function verifyCommitment(id: string, verifiedBy: string): Promise<any | null> {
+  const { rows } = await db().query<any>(
+    `UPDATE commitments SET status='verified', verified_by=$2, verified_at=now(), updated_at=now()
+     WHERE id=$1 RETURNING ${COMMIT_COLS}`, [id, String(verifiedBy).toLowerCase()]);
+  return rows[0] ? mapCommitment(rows[0]) : null;
+}
+/** Owner longitudinal report: per-agent rollup + the rubber-stamp health flag. Thresholds tunable via
+ *  app_settings (commitment_flag_window, commitment_flag_min_reject_rate). A flag = "this agent decides but
+ *  almost never rejects" = possible rubber-stamping, surfaced for the owner to investigate. */
+export async function commitmentLedger(): Promise<any> {
+  const windowN = Math.max(1, Number(await getSetting('commitment_flag_window')) || 10);
+  const raw = Number(await getSetting('commitment_flag_min_reject_rate'));
+  const minRejectRate = Number.isFinite(raw) && raw > 0 ? raw : 0.05;
+  const { rows } = await db().query<any>(`SELECT owner_actor,
+      count(*) FILTER (WHERE status='proposed')   AS proposed,
+      count(*) FILTER (WHERE status='accepted')   AS accepted,
+      count(*) FILTER (WHERE status='rejected')   AS rejected,
+      count(*) FILTER (WHERE status='implemented') AS implemented,
+      count(*) FILTER (WHERE status='verified')   AS verified,
+      count(*) FILTER (WHERE status IN ('superseded','dropped')) AS closed,
+      count(*) AS total
+    FROM commitments GROUP BY owner_actor ORDER BY owner_actor`);
+  const agents = rows.map((r: any) => {
+    const decided = Number(r.accepted) + Number(r.rejected) + Number(r.implemented) + Number(r.verified) + Number(r.closed);
+    const rejRate = decided > 0 ? Number(r.rejected) / decided : 0;
+    return {
+      actor: r.owner_actor,
+      proposed: Number(r.proposed), accepted: Number(r.accepted), rejected: Number(r.rejected),
+      implemented: Number(r.implemented), verified: Number(r.verified), closed: Number(r.closed),
+      total: Number(r.total), decided, overdue: Number(r.proposed),
+      rejectRate: Math.round(rejRate * 1000) / 1000,
+      rubberStampFlag: decided >= windowN && rejRate < minRejectRate,
+    };
+  });
+  return { generatedAt: new Date().toISOString(), flagWindow: windowN, minRejectRate, agents };
 }
 
 // ---- Layer-1 Manager (portable; Arke's Supervisor will consume/own) ---------

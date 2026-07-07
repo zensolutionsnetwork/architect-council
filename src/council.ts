@@ -37,6 +37,8 @@ import {
   getSetting, setSetting, withTransaction, getRecentBoots, getMeetingTurnTarget, getMeetingUsdCeiling,
   getHierarchy, setHierarchy, listHierarchies, deleteHierarchy,
   createAgendaItem, listOpenAgenda, getAgendaItem, archiveAgendaItem, pinOpenAgendaToMeeting,
+  createCommitments, getCommitment, listCommitments, decideCommitment, implementCommitment,
+  verifyCommitment, commitmentLedger, COMMITMENT_DECIDE_STATES,
   getManagerDigest, listManagerDigests, listManagerFlags,
   getOwner, setOwnerPasswordHash, createOwnerSession, getOwnerSession, touchOwnerSession,
   deleteOwnerSession, deleteOwnerSessionsForOwner, createPasswordToken, consumePasswordToken,
@@ -503,6 +505,86 @@ councilRouter.post('/council/agenda/:id/archive', async (req, res) => {
     if (!item) return res.status(404).json({ error: 'not_found' });
     if (!actor.admin && actor.actor !== item.actor) return res.status(403).json({ error: 'forbidden', message: 'only the owner or the item author may archive it' });
     res.json({ ok: true, archived: await archiveAgendaItem(req.params.id) });
+  } catch (e) { internalError(res, e); }
+});
+
+// ---------- Commitment ledger (owner directive 2026-07-07; docs/COMMITMENT_LEDGER.md) ----------
+// The doctrine, enforced at the WRITE layer: a `proposed` row is minted only by the meeting finalizer or the
+// owner (requireOwner) — a member secret CANNOT propose. A sovereign records its OWN accept/reject/implement
+// with its own secret (scoped to owner_actor); the owner may override any. Verify is owner-only for now (the
+// automated acting-node verifier is a later joint build). Rejection is first-class — a reason is REQUIRED —
+// so each sovereign's evaluation of hub proposals is observable and measurable.
+councilRouter.post('/council/commitments', requireOwner, async (req, res) => {
+  try {
+    const b = req.body || {};
+    const title = clip(b.title, 300);
+    if (!title) return res.status(400).json({ error: 'title is required' });
+    const forActors = Array.isArray(b.forActors) ? b.forActors : [];
+    if (!forActors.length) return res.status(400).json({ error: 'forActors_required', message: 'forActors[] must name at least one agent' });
+    const created = await createCommitments({
+      sourceMeetingId: b.sourceMeetingId ? String(b.sourceMeetingId) : null,
+      title, detail: clip(b.detail, 8000) || '',
+      proposedBy: b.proposedBy ? String(b.proposedBy).toLowerCase() : null,
+      forActors, sourceAgendaId: b.sourceAgendaId != null ? String(b.sourceAgendaId) : null,
+    });
+    res.json({ ok: true, created });
+  } catch (e) { internalError(res, e); }
+});
+// Owner longitudinal report — MUST precede the /:id routes (Express matches in order; 'ledger' is not a uuid).
+councilRouter.get('/council/commitments/ledger', requireOwner, async (_req, res) => {
+  try { res.json(await commitmentLedger()); } catch (e) { internalError(res, e); }
+});
+councilRouter.get('/council/commitments', async (req, res) => {
+  try {
+    const a = await resolveActor(req);
+    if (!a) return res.status(401).json({ error: 'unauthorized' });
+    const items = await listCommitments({
+      actor: req.query.actor ? String(req.query.actor) : undefined,
+      status: req.query.status ? String(req.query.status) : undefined,
+      sinceSeq: req.query.sinceSeq ? String(req.query.sinceSeq) : undefined,
+      meetingId: req.query.meetingId ? String(req.query.meetingId) : undefined,
+    });
+    res.json({ items });
+  } catch (e) { internalError(res, e); }
+});
+councilRouter.post('/council/commitments/:id/decide', async (req, res) => {
+  try {
+    const a = await resolveActor(req);
+    if (!a) return res.status(401).json({ error: 'unauthorized' });
+    const b = req.body || {};
+    const status = String(b.status || '');
+    if (!(COMMITMENT_DECIDE_STATES as readonly string[]).includes(status)) return res.status(400).json({ error: 'bad_status', message: 'status must be one of ' + COMMITMENT_DECIDE_STATES.join('|') });
+    const reason = clip(b.reason, 4000) || null;
+    if ((status === 'rejected' || status === 'superseded') && !reason) return res.status(400).json({ error: 'reason_required', message: 'a reason is required to ' + status });
+    const cur = await getCommitment(String(req.params.id));
+    if (!cur) return res.status(404).json({ error: 'unknown_commitment' });
+    if (!a.admin && cur.ownerActor !== a.actor) return res.status(403).json({ error: 'forbidden', message: 'you can only decide your own commitments' });
+    const row = await decideCommitment(String(req.params.id), a.actor, a.admin, status, reason);
+    res.json({ ok: true, commitment: row });
+  } catch (e) { internalError(res, e); }
+});
+councilRouter.post('/council/commitments/:id/implement', async (req, res) => {
+  try {
+    const a = await resolveActor(req);
+    if (!a) return res.status(401).json({ error: 'unauthorized' });
+    const ev = (req.body || {}).evidence || {};
+    const commitSha = clip(ev.commitSha, 80); const test = clip(ev.test, 200); const endpoint = clip(ev.endpoint, 200); const note = clip(ev.note, 2000);
+    if (!commitSha && !test && !endpoint) return res.status(400).json({ error: 'evidence_required', message: 'evidence needs at least one of commitSha / test / endpoint' });
+    const cur = await getCommitment(String(req.params.id));
+    if (!cur) return res.status(404).json({ error: 'unknown_commitment' });
+    if (!a.admin && cur.ownerActor !== a.actor) return res.status(403).json({ error: 'forbidden', message: 'you can only implement your own commitments' });
+    const evidence = { commitSha: commitSha || null, test: test || null, endpoint: endpoint || null, note: note || null };
+    const row = await implementCommitment(String(req.params.id), a.actor, a.admin, evidence);
+    res.json({ ok: true, commitment: row });
+  } catch (e) { internalError(res, e); }
+});
+councilRouter.post('/council/commitments/:id/verify', requireOwner, async (req, res) => {
+  try {
+    const cur = await getCommitment(String(req.params.id));
+    if (!cur) return res.status(404).json({ error: 'unknown_commitment' });
+    const verifiedBy = clip((req.body || {}).verifiedBy, 60) || 'owner';
+    const row = await verifyCommitment(String(req.params.id), verifiedBy);
+    res.json({ ok: true, commitment: row });
   } catch (e) { internalError(res, e); }
 });
 
