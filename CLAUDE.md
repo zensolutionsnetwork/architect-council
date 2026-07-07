@@ -53,7 +53,43 @@ Tooling (adopted 2026-07-01, owner directive via Nova): use `gh` (`C:\Program Fi
 - **Remake for quality design-system-first, in place, surface by surface** through the normal CI gates — never a big-bang rewrite of a live product.
 - **The concrete system = `docs/EFFICIENCY_PROTOCOL.md`** (the Best-Available-Method check + a decision ledger so choices aren't re-researched). Fire it whenever doing something NEW or a recurring op with a stale decision: name the method → check installed skills/plugins, on-box tools, the MCP registry, then web → use the best AVAILABLE one (surface owner-gated ones via `suggest_connectors`) → record it.
 
-## Current state (2026-07-06 NIGHTLY; prior 2026-07-05 NIGHTLY / 2026-07-04 MORNING PREP / 2026-07-04 NIGHTLY — full snapshot in the FIRST blockquote below; the remaining heading text is the prior 2026-07-01 MORNING PREP — the 07-01 03:15 ET autonomous meeting `f9d22640` RAN + DEBRIEFED [16t/$1.30/verify PASS/`completed`, all 4 seated+paired, 13th consecutive self-close]; all green; inbox 0; agenda 0. The 06-30 DAY SESSION (Mathieu present) shipped FOUR real hub deploys after the morning prep: `83f5ec4` response_shapes_sha on /api/health + contract/responseShapes.json [my meeting carry-out #2, CRITICAL PATH — Arke drift-alarm + Logos freshness consumer gate on it]; `864b803` hub-hosted model config [owner directive, via Logos]; `7148d21` loud-failure guards [storm-counter -> process.exit(1) + sweep fail-exit, my carry-out #5] + 26h freshness floor [my carry-out #4] + Nova id=32 code-derived status probe; `d16da61` app-driven agent provisioning Phase 1 [owner directive — owner-gated register + vault-backed secret endpoints + data-driven council_seats roster; MEETING_DEFAULT untouched; roster still kairos/arke/nova/logos, no agent hand-provisioned]. Plus id=25/id=26 SEEDED as PROPOSED standards [#40 = hub table]. HEAD `d16da61` = live deploy_sha [behavioural deploy-verify PASS]; response_shapes_sha live; CI+Push-on-main GREEN; repo clean 0/0; prod healthy [missed_meeting:false, last_scheduler_status:opened, last_mtg 2026-06-30T07:00:00Z]; no live meeting [cf845456 phase=report]. INBOX 0; AGENDA 1 open [id=32 nova code-derived status probe = my ACCEPT, already shipped `7148d21`]; brains fresh_count=1 at nightly [only arke fresh] -> my re-pack refreshes kairos -> fresh_count=2 for the 07-01 fire) — HANDOFF
+## Current state (2026-07-07 NIGHTLY; prior 2026-07-06 NIGHTLY / 2026-07-05 NIGHTLY — full snapshot in the FIRST blockquote below; the remaining heading text is the prior 2026-07-01 MORNING PREP — the 07-01 03:15 ET autonomous meeting `f9d22640` RAN + DEBRIEFED [16t/$1.30/verify PASS/`completed`, all 4 seated+paired, 13th consecutive self-close]; all green; inbox 0; agenda 0. The 06-30 DAY SESSION (Mathieu present) shipped FOUR real hub deploys after the morning prep: `83f5ec4` response_shapes_sha on /api/health + contract/responseShapes.json [my meeting carry-out #2, CRITICAL PATH — Arke drift-alarm + Logos freshness consumer gate on it]; `864b803` hub-hosted model config [owner directive, via Logos]; `7148d21` loud-failure guards [storm-counter -> process.exit(1) + sweep fail-exit, my carry-out #5] + 26h freshness floor [my carry-out #4] + Nova id=32 code-derived status probe; `d16da61` app-driven agent provisioning Phase 1 [owner directive — owner-gated register + vault-backed secret endpoints + data-driven council_seats roster; MEETING_DEFAULT untouched; roster still kairos/arke/nova/logos, no agent hand-provisioned]. Plus id=25/id=26 SEEDED as PROPOSED standards [#40 = hub table]. HEAD `d16da61` = live deploy_sha [behavioural deploy-verify PASS]; response_shapes_sha live; CI+Push-on-main GREEN; repo clean 0/0; prod healthy [missed_meeting:false, last_scheduler_status:opened, last_mtg 2026-06-30T07:00:00Z]; no live meeting [cf845456 phase=report]. INBOX 0; AGENDA 1 open [id=32 nova code-derived status probe = my ACCEPT, already shipped `7148d21`]; brains fresh_count=1 at nightly [only arke fresh] -> my re-pack refreshes kairos -> fresh_count=2 for the 07-01 fire) — HANDOFF
+> **NIGHTLY 2026-07-07 (Kairos, automated midnight ritual, ~00:30 EDT). The 07-06 DAY SESSION shipped the #63/#54
+> agent retire/delete lifecycle + docs after the morning prep; quiet since; all green; inbox 1 -> 0.** HEAD
+> `5bf6373`. Since the last attended meeting `92392f83` (07-06 07:15, debriefed at the 07-06 morning prep), the
+> 07-06 day session shipped, in order past the morning-prep commit `1421aa5`: `10bf4ee` **#63/#54 - agent
+> retire/delete lifecycle** (owner-gated `POST /api/council/agents/:id/retire` -> drop seat + revoke secret + keep
+> auditable member row; `DELETE /api/council/agents/:id` -> drop seat + hard-delete member row, member_secrets
+> cascades; the REVERSE of #43 register/secret and the app-side #54 unblock for Arke's remove wizard; founding
+> MEETING_DEFAULT -> 409, unknown roster id -> 404, bad id -> 400; roster-separation invariant in reverse so
+> dropping a 5th seat never flips an adopted standard to partial; route-auth 75/0; pinned in RESPONSE_SHAPES;
+> non-mutating prod-smoke PASS); `c10d631` **docs: #63 DONE + #61 satisfied**; `e3c331a` **docs: #62 deploy-state
+> machine SPEC** (`docs/DEPLOY_STATE_MACHINE.md`, no code); `5bf6373` **docs: WAITING-ON reconcile** (Logos #47
+> consumer live -> dependency cleared). Working tree clean, in sync origin/main (0/0). **Prod healthy** (`/api/health`
+> ok:true, vault:true, **deploy_sha `5bf6373` = HEAD -> behavioural deploy-verify PASS**, response_shapes_sha
+> `a995072d` live, schema_version:1, scheduler_enabled:true, missed_meeting:false, last_scheduler_status:opened,
+> last_meeting_created_at `2026-07-06T07:15:07Z`). **CI + Push-on-main + Scheduled GREEN on `5bf6373`.** **No live
+> meeting** (newest meeting `92392f83` phase=report, already debriefed at the 07-06 morning prep - safe to push).
+> **No new autonomous meeting since `92392f83`** - the scheduler fires LATER today (07-07 07:15 UTC, AFTER this
+> ritual), so nothing new to debrief; it appears for the 07-07 morning prep. **INBOX: 1 in -> report-closed -> 0**
+> (Arke `495ad57f`: MATCH - #54 is end-to-end both sides; his remove wizard checks only `r.ok` (2xx) with ZERO
+> field-name dependency on my `seats[]` shapes; founding/bad/unknown guards all match how the app degrades; he'll
+> run the #55 birth->retire->delete dry-run with Mathieu present and confirm `GET /api/council/brains` drops the id.
+> Pure FYI/ack, no Kairos action owed -> closed). **AGENDA: 0 open.** **WAITING-ON RECONCILE (ran
+> `_kairos_waiting_reconcile.ps1`): all 5 hub standards `adopted` by all four - RESOLVED; no ratification WAITING
+> line carried. Sibling deps also RESOLVED (Logos #47 consumer live, Argus paired manifest, Arke #60 auto-pull).**
+> **BRAINS at nightly: fresh_count=1/2, next_fire 2026-07-07T07:15Z** - only logos fresh; kairos/arke/nova/argus
+> stale. **REAL WORK shipped since my last attended meeting (#63/#54 hub code) NOT yet in my committed pack**
+> (pack-head `7777382` vs HEAD `5bf6373`) **-> re-pack REQUIRED** - my nightly re-pack bumps kairos to HEAD
+> `5bf6373` (carries #63/#54) -> kairos FRESH -> fresh_count=2 (kairos+logos) >= quorum 2 for the 07-07 fire
+> (siblings re-pack in their own EOD). **No deploy this ritual beyond the BACKLOG/CLAUDE refresh + brain re-pack.**
+> **NEXT SESSION top 3:** (1) morning ritual - debrief the 07-07 07:15 UTC autonomous meeting + check inbox; (2) at
+> the meeting ratify the #59 hub-client standard into the living handbook + carry #62 deploy-state machine (spec
+> done `e3c331a`, code deferred pending shape ratification - budget values / shared-vs-local / auto-remediation open
+> Qs); (3) raise the #61 canonical-bytes premise-correction finding at the meeting (the 07-06 debrief paraphrase
+> conflated body-preimage with sha-preimage; RESPONSE_SHAPES already pins it correctly). **WAITING ON:** NONE
+> Kairos-blocking (all sibling deps reconcile-resolved). **OWNER-GATED: CLEARED per owner 2026-07-04 - do NOT
+> re-flag.** Bullets below this line are the 07-06 NIGHTLY snapshot (history).
 > **NIGHTLY 2026-07-06 (Kairos, automated midnight ritual, ~00:30 EDT). The 07-05 DAY SESSION shipped #60 (the
 > response-shapes endpoint) after the morning prep; quiet since; all green; inbox 0.** HEAD `11e154f`. Since the
 > last attended meeting `ca11cc3a` (07-05 07:15, debriefed at the 07-05 morning prep), the 07-05 day session
