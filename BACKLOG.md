@@ -31,7 +31,39 @@ _OWNER-GATED: CLEARED per owner 2026-07-04 - the leaked cockpit publisher passwo
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-07 (MORNING PREP)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-08 (NIGHTLY)
+> (NIGHTLY ~00:30 EDT 2026-07-08, Kairos automated. The 07-07 DAY SESSION shipped a big real batch after the morning
+> prep - **#64 retire/delete atomicity** + the **#66 COMMITMENT LEDGER + STANDARD RITUAL-MODEL (stages 1+3)**, all
+> owner-directed; quiet since; all green; inbox 1 -> 0. **STEP 0 ritual-model: served v1 == implemented v1 (no
+> drift).** HEAD `1de9920`; **deploy_sha live = `1de9920b` = HEAD (behavioural deploy-verify PASS)**;
+> response_shapes_sha `a995072d` live; schema_version:1; CI + Push-on-main GREEN on `1de9920`; repo clean 0/0 in sync
+> origin/main; prod healthy [ok/vault/scheduler_enabled true, missed_meeting:false, last_scheduler_status:opened,
+> last_mtg 2026-07-07T07:15:12Z]. No live meeting [03efb93a phase=report; the 07-08 07:15 UTC fire is AFTER this
+> ritual -> nothing new to debrief, appears for the 07-08 morning prep]. **07-07 DAY SESSION ships (past morning-prep
+> commit `6120ad9`):** `1517cd4` **#64 - retire/delete made ATOMIC** (`withTransaction` in store.ts; retire=3 +
+> DELETE=2 writes in one BEGIN/COMMIT; ghost-auth window closed; NEW `tx-atomicity` CI gate `test/tx.test.ts`);
+> `4d53ba5` **docs** commitment-ledger + ritual-model DESIGN (draft); `bf00988` **#66 stage 1 - commitment ledger**
+> (`commitments` table + 6 endpoints; hierarchy enforced at write layer - propose=owner/hub only, decide/implement=own
+> secret, verify=owner-only, reject needs reason, implement needs evidence; rubber-stamp flag); `a79ab34` chore;
+> `ff412ba` **#66 stage 3 - versioned ritual-model** (`ritual_model` table + `GET/POST /api/council/ritual-model`; v1
+> seeded 8 morning/7 eod); `1de9920` **docs(backlog)** (#66 1+3 LIVE; #67 deferred; #68 future). route-auth 83/0;
+> RESPONSE_SHAPES pinned; deploy-verify PASS. **INBOX: 1 in -> report-closed -> 0** (Nova `02b2a9bd`: Stage-4 ack -
+> wired step-0 + EOD commitment reconcile both sides, commit `8149a84`, verified live; no action owed). **AGENDA: 1
+> open** - id=52 (kairos/high): ratify the commitment-ledger + ritual-model DESIGN (`docs/COMMITMENT_LEDGER.md`,
+> `4d53ba5`); 10 open Qs need family convergence. MINE, do NOT re-post; stages 1+3 already LIVE (build-then-ratify),
+> so id=52 = ratify the design not gate the build. **COMMITMENT-LEDGER RECONCILE (step 6b):** kairos proposed=0
+> accepted=0 - nothing to reconcile (Stage 2 auto-mint deferred #67; no manual rows). Clean. **WAITING-ON RECONCILE
+> (ran `_kairos_waiting_reconcile.ps1`, exit 0): all 5 hub standards `adopted` by all four - RESOLVED, no WAITING
+> line carried.** **BRAINS at nightly: fresh_count=0/2, all 5 stale** - EXPECTED post-meeting (all attended the 07-07
+> fire; next_fire 2026-07-08T07:15Z). **REAL WORK shipped (#64 + #66) NOT yet in my pack** (pack-head `42dfa0c` vs
+> HEAD `1de9920`) **-> re-pack REQUIRED** - my re-pack -> kairos HEAD `1de9920` FRESH; siblings re-pack their own EOD
+> -> aim >=2 fresh for the 07-08 fire. No deploy this ritual beyond BACKLOG/CLAUDE refresh + brain re-pack. **NEXT
+> SESSION top 3:** (1) morning ritual - debrief the 07-08 07:15 UTC meeting + inbox; (2) at the meeting carry agenda
+> id=52 (ratify commitment-ledger + ritual-model design; work the 10 open Qs) + ratify the #59 hub-client standard
+> into the living handbook; (3) day session - #67 finalizer auto-mint (own careful session, touches finalize.ts) when
+> Mathieu's available, or #65 schema_version unknown-version ALARM guard when I next touch those consumers. **WAITING
+> ON:** NONE Kairos-blocking. **OWNER-GATED: CLEARED per owner 2026-07-04 - do NOT re-flag.** Bullets below are the
+> 07-07 MORNING PREP snapshot (history).)
 > (MORNING PREP 06:00 2026-07-07, Kairos automated. DEBRIEFED the 07-07 07:15 UTC autonomous meeting `03efb93a`
 > (run_id 13) - a 5-SEAT round, CONTRIBUTORS [kairos,arke,nova,logos] + LISTENER [argus, unchanged brain]. **19
 > turns / 19 speak / 0 pass / `completed` / $1.6599** (owner-report $0.036, layer1 $0.021) / **verify-transcript
