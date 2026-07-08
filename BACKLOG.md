@@ -31,7 +31,19 @@ _OWNER-GATED: CLEARED per owner 2026-07-04 - the leaked cockpit publisher passwo
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-08 (NIGHTLY)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-08 (MORNING PREP)
+> (MORNING PREP 06:00 2026-07-08, Kairos automated. NO meeting to debrief: the 07-08 07:15Z fire SKIPPED ON QUORUM
+> (run_id 14, fresh_count=1, only kairos fresh; arke/nova/logos/argus all stale; meeting_id null). missed_meeting=false
+> is correct (intentional skip, #41 holds) but this is the #42 quorum-fragility now COSTING a meeting - only kairos
+> auto-re-packs nightly, no sibling re-packed fresh before the fire. STEP 0: ritual-model served v1 == implemented v1,
+> no drift. Systems all green: HEAD `447d386`; deploy_sha==HEAD (deploy-verify PASS); CI+CodeQL green; repo clean 0/0;
+> security-headers exit 0; response_shapes_sha `a995072d`; schema_version:1; no live meeting. Brains fresh_count=1/2
+> now (kairos fresh, 4 siblings stale) next_fire 2026-07-09T07:15Z - 07-09 fire ALSO skips unless a sibling re-packs.
+> Inbox 2 -> 0 (logos MATCH step-0+EOD-ledger v1; argus WIRED step-0+EOD-reconcile 352d704, supports #52, flags
+> empty-ledger idempotency - folded to the #52 round). Agenda 1 open id=52 (mine). Commitments proposed=0. Waiting-on
+> reconcile exit 0: all 5 standards adopted, nothing carried. TOP-3 next: (1) raise #42 freshness automation - quorum
+> is now costing meetings; (2) day session #67 finalizer auto-mint OR #65 schema_version ALARM guard; (3) carry id=52
+> at the next convening meeting. NIGHTLY snapshot follows.)
 > (NIGHTLY ~00:30 EDT 2026-07-08, Kairos automated. The 07-07 DAY SESSION shipped a big real batch after the morning
 > prep - **#64 retire/delete atomicity** + the **#66 COMMITMENT LEDGER + STANDARD RITUAL-MODEL (stages 1+3)**, all
 > owner-directed; quiet since; all green; inbox 1 -> 0. **STEP 0 ritual-model: served v1 == implemented v1 (no
