@@ -13,7 +13,7 @@
       "deploy_sha": "string - RAILWAY_GIT_COMMIT_SHA the container was built from, 40 hex or unknown",
       "response_shapes_sha": "string - sha256hex(canon(contract/responseShapes.json)) or unknown on read error",
       "last_meeting_created_at": "string ISO8601 Z or null",
-      "missed_meeting": "bool - false on a recent intentional scheduler skip (#41)",
+      "missed_meeting": "bool - false when scheduler_enabled is false (#69, deliberate owner pause) or on a recent intentional scheduler skip (#41); true only for a genuinely dark ENABLED loop past cadence+grace",
       "scheduler_enabled": "bool",
       "last_scheduler_status": "string enum opened|skipped_quorum|already_live|scheduler_off or null"
     },

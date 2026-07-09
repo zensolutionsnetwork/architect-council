@@ -265,16 +265,22 @@ detail is owner-gated on `/api/council/dashboard` (`lastSchedulerRun`), never he
 - `missed_meeting` is computed hub-side as `now - last_meeting_created_at > (daily cadence 24h + 2h
   grace)`; `last_meeting_created_at === null` => `missed_meeting: true`. The threshold is derived from
   the scheduler's daily cadence, **not** a magic 26h constant baked into clients.
-- `missed_meeting` is **independent of `scheduler_enabled`**: while the scheduler is intentionally off
-  the loop IS dark, so `missed_meeting` reads `true` by design. `scheduler_enabled` is what lets the
-  cockpit distinguish *intentionally dark* (grey, informational) from a *real miss* (red, alarm).
+- **#69 (2026-07-09, owner-authorized) — `missed_meeting` is SELF-CONSISTENT with `scheduler_enabled`:**
+  when `scheduler_enabled` is `false` (owner paused the scheduler) `missed_meeting` is forced `false` — a
+  deliberately disabled scheduler cannot MISS a meeting. This SUPERSEDES the prior "independent / true-by-design
+  while off" rule, which required every consumer to AND the two fields and mis-fired two ritual consumers.
+  `missed_meeting: true` therefore means a genuinely DARK loop that SHOULD be running (`scheduler_enabled: true`,
+  no real meeting within cadence+grace, no recent intentional skip). `scheduler_enabled` still supplies the grey
+  "disabled" LABEL.
 - **#41 refinement (2026-06-26):** a RECENT, INTENTIONAL scheduler decision suppresses `missed_meeting`.
   If the latest `scheduler_runs` row is `skipped_quorum` or `already_live` AND fired within the cadence+grace
   window, `missed_meeting` is forced `false` (the readiness gate did its job — render yellow, not red). The
   recency guard means a DEAD scheduler (no run in >26h) is never masked: it still reads `true`.
 - **Cockpit render (Arke/Nova):** `!scheduler_enabled` -> grey "scheduler disabled"; else
   `missed_meeting` -> red "MISSED MEETING"; else green "ok". Timestamp shown as tooltip. **Logos** logs
-  the ISO `last_meeting_created_at` lag at session start. No client computes the threshold.
+  the ISO `last_meeting_created_at` lag at session start. No client computes the threshold. (Since #69 a
+  consumer that reads `missed_meeting` alone no longer false-reds during a pause — it is already `false`
+  when disabled — so the grey-first check is for the LABEL, not to suppress a false alarm.)
 
 ## `GET /api/bridge/corpus-contract` (self-serve upload contract, #43 — 2026-07-04)
 

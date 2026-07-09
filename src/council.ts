@@ -2069,8 +2069,8 @@ async function nextFireAtUtc(): Promise<string | null> {
 // HUB-SIDE so the cockpit does ZERO threshold math — Arke/Nova render the boolean + timestamp tooltip,
 // Logos logs the ISO lag. The threshold is the daily cadence (24h) + a fixed grace, NOT a magic 26h.
 // `missed_meeting` is time-based, with one refinement (#41, 2026-06-26): a RECENT intentional scheduler
-// decision (skipped_quorum / already_live) clears it, but a scheduler that is OFF or DEAD still reads true
-// (the loop IS dark) — `scheduler_enabled` is what lets the badge say "disabled" (grey) vs "MISSED MEETING"
+// decision (skipped_quorum / already_live) clears it; a DISABLED scheduler reads missed=false (#69, owner
+// pause is deliberate), while a DEAD one (enabled but not firing) still reads true. `scheduler_enabled`
 // (alarm). Fail-soft throughout: any read error returns a safe default so /api/health never throws (Railway
 // liveness probe must always get a 200).
 const SCHED_INTERVAL_MS = 24 * 60 * 60 * 1000; // hub scheduler fires once per Toronto day
@@ -2094,12 +2094,20 @@ export async function healthMeetingSignal(): Promise<{ last_meeting_created_at: 
   // gate deliberately held the meeting (`skipped_quorum`) or one was already live (`already_live`), the loop
   // did its job — clear the alarm so the badge reads yellow, not red. Gated on RECENCY: only a run within the
   // daily cadence + grace can suppress, so a DEAD scheduler (no run in >26h) still reads missed=true and is
-  // never masked. Scheduler-OFF states (no_voice_loop / scheduler off) keep missed=true (loop is genuinely
-  // dark); `scheduler_enabled` flips the badge to "disabled" (grey) vs "MISSED MEETING" (alarm).
+  // never masked. A DISABLED scheduler is handled below (#69: missed=false, deliberate owner pause); this
+  // recency guard only suppresses ENABLED-but-skipped runs. `scheduler_enabled` flips the badge grey vs alarm.
   if (missed_meeting && last_scheduler_at && (last_scheduler_status === 'skipped_quorum' || last_scheduler_status === 'already_live')) {
     const runAgeMs = Date.now() - Date.parse(last_scheduler_at);
     if (runAgeMs <= (SCHED_INTERVAL_MS + SCHED_GRACE_MS)) missed_meeting = false;
   }
+  // #69 (2026-07-09, owner-authorized): a DELIBERATELY DISABLED scheduler cannot MISS a meeting - the owner
+  // turned it off, so there is nothing it "should have" fired. missed_meeting is the alarm "the loop is
+  // dark/DEAD"; that only applies when the scheduler is ENABLED. Force missed_meeting=false when off so the
+  // boolean is SELF-CONSISTENT (render-the-boolean, zero consumer math - the #35 goal; the prior
+  // "independent, AND-it-with-scheduler_enabled yourself" contract mis-fired two consumers). Compatible with
+  // the documented render rule (consumers greyed on !scheduler_enabled FIRST, so none relied on missed=true
+  // while off). A DEAD scheduler (enabled=true but not firing) is untouched and still reads missed=true.
+  if (!scheduler_enabled) missed_meeting = false;
   return { last_meeting_created_at, missed_meeting, scheduler_enabled, last_scheduler_status };
 }
 // #36 readiness gate (owner 2026-06-24). A seat is FRESH if it has a committed pack whose sha differs from
