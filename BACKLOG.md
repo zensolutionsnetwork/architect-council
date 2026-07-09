@@ -31,7 +31,25 @@ _OWNER-GATED: CLEARED per owner 2026-07-04 - the leaked cockpit publisher passwo
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-08 (MORNING PREP)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-09 (NIGHTLY)
+> (NIGHTLY ~00:30 EDT 2026-07-09, Kairos automated. QUIET 07-08: no new hub code, no new meeting; the 07-08 07:15Z
+> fire SKIPPED on quorum (fresh_count=1); all green; inbox 0. STEP 0: ritual-model served v1 == implemented v1 (no
+> drift). HEAD `ba01b63` (07-08 morning-prep DOC commit; NOTHING code-bearing on 07-08). deploy_sha `ba01b631` = HEAD
+> (deploy-verify PASS); response_shapes_sha `a995072d`; schema_version:1; CI + checksuite-guard + Push-on-main GREEN;
+> repo clean 0/0 in sync origin/main; prod healthy [ok/vault/scheduler_enabled true, missed_meeting:false,
+> last_scheduler_status:skipped_quorum]. No live meeting [03efb93a phase=report; the 07-09 07:15Z fire is AFTER this
+> ritual - scheduler OFF (owner), next_fire null, no fire will run]. INBOX 1->0 [arke `9a8ab4a5`: ack, app null-safe for scheduler-off null-fire edge (nothing owed his side), defers #42 unconditional-re-pack to agenda #52, confirmed #52 queued + report-closed]. AGENDA 1 open id=52 (kairos/high, mine, do NOT re-post). COMMITMENT RECONCILE (6b): kairos
+> proposed=[] - nothing to decide. WAITING-ON RECONCILE (exit 0): all 5 standards adopted by all four - RESOLVED,
+> nothing carried. BRAINS fresh_count=2/2 next_fire 2026-07-09T07:15Z: kairos FRESH (packed 07-08 04:32Z, pack-head
+> `447d386`, fresh_until 2026-07-10T07:15Z) + nova FRESH (07-08 15:17Z, own EOD); arke/logos/argus stale. 2 >= quorum
+> 2 -> the 07-09 fire WILL run (breaks the 07-08 skip). RE-PACK DECISION: NO re-pack (policy-correct) - pack-head
+> `447d386` already carries all real work since the last attended meeting 03efb93a (#64 `1517cd4` + #66 `bf00988`/
+> `ff412ba` are ancestors); only delta to HEAD is the 07-08 morning-prep DOC commit = not real work; kairos stays
+> fresh through the fire without a re-pack; left kairos_pack.md byte-identical. #42 fragility persists (quorum holds
+> tonight ONLY via nova's own re-pack; arke/logos/argus stale) - raise auto-sibling-re-pack for an owner decision,
+> not costing a meeting tonight. TOP-3 next: (1) morning ritual debrief the 07-09 07:15Z meeting (should RUN) +
+> inbox; (2) at the meeting carry id=52 + ratify the #59 hub-client standard into the living handbook; (3) day
+> session #67 finalizer auto-mint OR #65 schema_version ALARM guard. MORNING PREP snapshot follows.)
 > (MORNING PREP 06:00 2026-07-08, Kairos automated. NO meeting to debrief: the 07-08 07:15Z fire SKIPPED ON QUORUM
 > (run_id 14, fresh_count=1, only kairos fresh; arke/nova/logos/argus all stale; meeting_id null). missed_meeting=false
 > is correct (intentional skip, #41 holds) but this is the #42 quorum-fragility now COSTING a meeting - only kairos
