@@ -23,6 +23,7 @@
 - **[#66] COMMITMENT LEDGER + STANDARD RITUAL MODEL - stages 1 + 3 DONE + LIVE 2026-07-07 (owner directive; design `docs/COMMITMENT_LEDGER.md`).** Owner mandated the full build (plan-first, then implement; "implemented whether any agent likes it or not"). SHIPPED: (Stage 1, commit `bf00988`/`a79ab34`) `commitments` table + 6 endpoints under `/api/council/commitments` with the hierarchy enforced at the WRITE layer - propose = owner/hub only (member secret 401s), decide/implement = the sovereign's OWN secret scoped to `owner_actor` (owner override), verify = owner-only, reject needs a reason, implement needs evidence; `commitmentLedger` rollup with a tunable rubber-stamp flag (all-accept -> flagged). Rejection is first-class so each Cowork sovereign's EVALUATION of hub proposals is observable (the concern that agents rubber-stamp the room). LIVE end-to-end smoke PASS incl. negative tests (member-propose 401, reject-no-reason 400). (Stage 3, commit `ff412ba`) versioned `ritual_model` table + `GET/POST /api/council/ritual-model`; v1 SEEDED (version=1, 8 morning / 7 eod steps) - every agent's ritual step 0 pulls it and fails loud if its local ritual is behind. route-auth 83/0; RESPONSE_SHAPES pinned; deploy-verify PASS on both. Stage 4: OWNER DIRECTIVE sent to arke/nova/logos/argus to wire their step-0 freshness check + EOD ledger reconcile.
 - **[#67] Stage 2 - finalizer auto-mints proposals at meeting close (DEFERRED to its own session).** At close, extend the existing owner-report synthesis call to emit a structured `perAgentCommitments[]` and mint `proposed` rows per addressed agent (reuses the close-time model call, no new spend). Touches the sensitive meeting-close path (`finalize.ts` + synthesis prompt/parse) so it gets a dedicated careful session, not a rushed tail. Until then the ledger is populated by owner/manual mint.
 - **[#68] Acting-node verifier (FUTURE, joint w/ Arke; #29).** Automated reviewer reads each agent's committed corpus and flips `implemented -> verified` (or raises a mismatch) for evidence that is a real commit/test. v1 uses owner-MANUAL verify; this is the later automated layer. NOT meeting-gated - a separate build needing Arke's app-side + the cross-read design.
+- **[#69] LOW-PRI (live-observed 2026-07-09 morning prep) - `missed_meeting:true` while `scheduler_enabled:false` (deliberate owner disable).** `/api/health` now returns `missed_meeting:true` with `scheduler_enabled:false` and `last_scheduler_status:skipped_quorum` (the stale 07-08 run). The #41 recency guard reverts `missed_meeting` to true once the last real scheduler run ages out beyond cadence+grace - correct for a genuinely DEAD scheduler, but WRONG when the owner deliberately disabled it (2026-07-09, meetings off a few days): no new run writes a `scheduler_off` status, so the guard sees an old `skipped_quorum` that has aged out. Net: the health/badge signal reads RED "missed" when the true state is "scheduler intentionally off." FIX (back-end, mine): when `scheduler_enabled==false`, derive `missed_meeting=false` unconditionally (a disabled scheduler cannot miss a meeting), independent of last-run recency. Small additive change in the health derivation; touches a health field siblings consume (Arke badge, Logos freshness gate) so pin/announce the shape before shipping - day session, CI-gated, no live meeting. Verified live this ritual (deploy_sha `2dad139`==HEAD).
 
 _DONE 2026-07-03 (day session): [#55] additive rename `next_fire_at` -> `next_meeting_fire_at` (`0926e1b`, verified live; Arke matched app-side `647438f`); NEW `GET /api/council/scheduler-runs/latest` member-or-owner (`e22624b`, unblocks Logos seated_actors gate); PRIORITY ORDER docs block (`d06c8d0`, agenda #45)._
 
@@ -31,7 +32,24 @@ _OWNER-GATED: CLEARED per owner 2026-07-04 - the leaked cockpit publisher passwo
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-09 (NIGHTLY)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-09 (MORNING PREP)
+> (MORNING PREP 06:00 2026-07-09, Kairos automated. NO meeting to debrief - scheduler DISABLED by owner (deliberate,
+> meetings off a few days); no fire ran; newest meeting `03efb93a` (07-07) already debriefed. STEP 0: ritual-model
+> served v1 == implemented v1, no drift. Systems: HEAD `2dad139` (07-09 NIGHTLY doc commit) == deploy_sha
+> (deploy-verify PASS); CI + Push-on-main + checksuite-guard GREEN on `2dad139`; repo clean 0/0 in sync origin/main;
+> security-headers exit 0; response_shapes_sha `a995072d`; schema_version:1; no live meeting. ONE LIVE ANOMALY ->
+> [#69]: `/api/health` now `missed_meeting:true` while `scheduler_enabled:false` - flipped false->true since the
+> nightly as the 07-08 skipped_quorum run aged out of the #41 recency window; a deliberately-disabled scheduler
+> should read missed_meeting:false. Low severity (owner knows meetings are off) but the badge signal is misleading;
+> fix queued as [#69], flagged to owner. INBOX 1 -> 0 (argus `00d9f8f0`: pure ack - wired verify-after-mutate +
+> null-fire edge + nightly-pre-position re-pack, supports #52 nightly-always; report-closed, folded to #52). AGENDA
+> 1 open id=52 (kairos/high, mine, meeting-gated, do NOT re-post). COMMITMENTS (kairos, proposed): 0 - nothing to
+> decide. WAITING-ON RECONCILE (exit 0): all 5 standards adopted by all four - RESOLVED, nothing carried. BRAINS
+> fresh_count=3/2 (nova/logos/argus fresh; kairos+arke stale - expected, EOD re-packs; scheduler off so no fire
+> gated). No deploy this ritual beyond backlog/CLAUDE refresh + hub-row mirror. TOP-3 next: (1) day session - ship
+> [#69] missed_meeting-on-scheduler-off fix (announce shape to Arke/Logos first) OR [#67] finalizer auto-mint OR
+> [#65] schema_version ALARM guard; (2) at the next meeting that convenes carry agenda id=52 + ratify #59 hub-client
+> standard into the living handbook; (3) EOD re-pack kairos to HEAD to restore freshness. NIGHTLY snapshot follows.)
 > (NIGHTLY ~00:30 EDT 2026-07-09, Kairos automated. QUIET 07-08: no new hub code, no new meeting; the 07-08 07:15Z
 > fire SKIPPED on quorum (fresh_count=1); all green; inbox 0. STEP 0: ritual-model served v1 == implemented v1 (no
 > drift). HEAD `ba01b63` (07-08 morning-prep DOC commit; NOTHING code-bearing on 07-08). deploy_sha `ba01b631` = HEAD
