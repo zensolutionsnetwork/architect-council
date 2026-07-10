@@ -157,8 +157,37 @@ export async function reviewProposal(p: { from?: string; title?: string; summary
 /** Owner report at meeting close (ROADMAP Layer 0; Fable review 2.2; seed of the Layer-1 Manager).
  *  One bounded Sonnet call — the cheap synthesis turn, never the meeting's voice model. */
 export const OWNER_REPORT_MODEL = 'claude-sonnet-4-6';
-export async function synthesizeOwnerReport(agenda: string, turns: { actor: string; text: string }[]): Promise<{ report: string; usage: any }> {
-  if (!CHAT_API_KEY() || !turns.length) return { report: '', usage: {} };
+/** Commitment shape parsed out of the owner-report synthesis (#67 stage 2). */
+export interface ProposedCommitment { actor: string; title: string; detail: string; }
+const COMMIT_ACTORS = new Set(['kairos', 'arke', 'nova', 'logos', 'argus']);
+/** Split the model output into (a) the human 4-section owner report and (b) the machine `perAgentCommitments`
+ *  JSON block appended after it (#67). The JSON block is ALWAYS stripped from the returned report — even when
+ *  it fails to parse — so the stored owner report never shows raw JSON. Validation: actor must be a known
+ *  lowercase seat, title required, lengths clamped, capped at 12. Pure + exported for the CI gate. */
+export function extractCommitments(raw: string): { report: string; commitments: ProposedCommitment[] } {
+  const s = String(raw ?? '');
+  // Prefer a properly-fenced ```json ... ``` block; fall back to an unterminated one (model truncated).
+  let m = s.match(/```json\s*([\s\S]*?)```/i);
+  if (!m) m = s.match(/```json\s*([\s\S]*)$/i);
+  if (!m || m.index === undefined) return { report: s.trim(), commitments: [] };
+  const report = s.slice(0, m.index).trim();
+  let commitments: ProposedCommitment[] = [];
+  try {
+    const parsed: any = JSON.parse(String(m[1]).trim());
+    const arr: any[] = Array.isArray(parsed?.perAgentCommitments) ? parsed.perAgentCommitments : [];
+    commitments = arr
+      .map((c: any): ProposedCommitment => ({
+        actor: String(c?.actor ?? '').toLowerCase().trim(),
+        title: String(c?.title ?? '').trim().slice(0, 80),
+        detail: String(c?.detail ?? '').trim().slice(0, 280),
+      }))
+      .filter((c: ProposedCommitment) => COMMIT_ACTORS.has(c.actor) && !!c.title)
+      .slice(0, 12);
+  } catch { /* swallow-ok: malformed block -> no commitments; report already stripped above */ }
+  return { report, commitments };
+}
+export async function synthesizeOwnerReport(agenda: string, turns: { actor: string; text: string }[]): Promise<{ report: string; usage: any; commitments: ProposedCommitment[] }> {
+  if (!CHAT_API_KEY() || !turns.length) return { report: '', usage: {}, commitments: [] };
   const sys = 'You write the OWNER REPORT of a daily Architects Council meeting for Mathieu, the human owner. '
     + 'Exactly four sections, tight markdown, no preamble: '
     + '"## 1. Code review" — what was improved, incl. cross-suggestions made/adopted between agents; '
@@ -166,11 +195,17 @@ export async function synthesizeOwnerReport(agenda: string, turns: { actor: stri
     + '"## 3. Friction" — friction encountered + how it was resolved, and which fixes the other agents should adopt; '
     + '"## 4. Flags" — anything else worth the owner’s attention (cost, security, ethics, risks, opportunities). '
     + 'CRITICAL faithfulness rule: a council meeting produces PROPOSALS, not executed work — the voices advise the owner and their projects; they do NOT commit code, write files, or deploy. Never state that anything was "committed", "built", "shipped", "merged", or written to a named file (e.g. a docs/*.md) unless the transcript explicitly says that work already happened OUTSIDE this meeting. Describe in-meeting agreements as proposed/recommended, and treat an "adopted" standard as binding only once each project ratifies it from its own session. When in doubt, write "proposed", never "done". '
-    + 'Be concrete and faithful to the transcript; if a section has nothing, say "Nothing to report." Keep the whole report under 400 words.';
+    + 'Be concrete and faithful to the transcript; if a section has nothing, say "Nothing to report." Keep the whole report under 400 words. '
+    + 'AFTER the four sections, append EXACTLY ONE fenced code block ```json containing {"perAgentCommitments":[{"actor":"<lowercase seat>","title":"<=80 chars","detail":"<=280 chars"}]} — one entry per CONCRETE follow-up action a specific agent PROPOSED to take (or was asked to take) next: a commitment, not a claim of finished work. actor must be one of kairos, arke, nova, logos, argus. Use an empty array if none. This block is machine-parsed: emit valid JSON only, no comments, and do not reference it in the prose.';
   const convo = `Agenda: ${agenda || '(none)'}\n\n` + turns.map((t) => `[${t.actor}] ${t.text}`).join('\n').slice(-24000);
-  // Charge this synthesis call to the meeting ledger (caller folds usage). One bounded Sonnet call.
-  try { const out = await callClaudeUsage([{ type: 'text', text: sys }], [{ role: 'user', content: convo }], 1200, OWNER_REPORT_MODEL); return { report: out.text || '', usage: out.usage || {} }; }
-  catch (e) { return { report: `(owner-report error: ${(e as Error).message})`, usage: {} }; }
+  // Charge this synthesis call to the meeting ledger (caller folds usage). One bounded Sonnet call. max_tokens
+  // bumped 1200->1500 to fit the appended commitments JSON block (#67) — still ONE call, no extra spend budget line.
+  try {
+    const out = await callClaudeUsage([{ type: 'text', text: sys }], [{ role: 'user', content: convo }], 1500, OWNER_REPORT_MODEL);
+    const { report, commitments } = extractCommitments(out.text || '');
+    return { report, usage: out.usage || {}, commitments };
+  }
+  catch (e) { return { report: `(owner-report error: ${(e as Error).message})`, usage: {}, commitments: [] }; }
 }
 
 /** Layer-1 Manager narrative (owner 2026-06-18). ONE bounded Sonnet call over the since-last-meeting

@@ -18,7 +18,7 @@
  * The owner /close route (council.ts) and the autonomous voice loop BOTH call finalizeMeetingClose
  * (converged 2026-06-15) — single close path, no twin to keep in step.
  */
-import { updateMeeting, setMeetingOwnerReport, setMeetingLedger, queueEnvTask, getSetting, createAgendaItem } from './store.js';
+import { updateMeeting, setMeetingOwnerReport, setMeetingLedger, queueEnvTask, getSetting, createAgendaItem, createCommitments } from './store.js';
 import { synthesizeOwnerReport, OWNER_REPORT_MODEL } from './architect.js';
 import { sendOwnerReportEmail } from './mailer.js';
 import { emptyTotals, addUsage } from './cost.js';
@@ -109,7 +109,7 @@ export async function finalizeMeetingClose(m: any, opts: { report?: string; ende
     }
     if (spoken.length) {
       try {
-        const { report, usage } = await synthesizeOwnerReport(m.agenda || '', spoken);
+        const { report, usage, commitments } = await synthesizeOwnerReport(m.agenda || '', spoken);
         if (report && !report.startsWith('(owner-report error')) {
           const passLine = Object.keys(passCounts).length ? `\n\n---\nAuto-passes this meeting: ${Object.entries(passCounts).map(([r, n]) => `${r}=${n}`).join(', ')}` : '';
           // Brain-manifest 2.1 (Logos rider): any non-paired seat MUST be surfaced in the owner report
@@ -118,6 +118,15 @@ export async function finalizeMeetingClose(m: any, opts: { report?: string; ende
           const full = clip(report + passLine + manifestLine + alertLine, 16000);
           await setMeetingOwnerReport(m.id, full);
           base.ownerReport = true;
+          // #67 Stage 2 (commitment ledger): auto-mint one `proposed` row per addressed agent from the SAME
+          // synthesis call (no new model spend). proposedBy='hub' = finalizer-minted (vs owner/manual). Runs
+          // ONLY on the first real close (finalize is idempotent on closed_at) so a re-close never double-mints;
+          // dry-run rooms never reach here. Best-effort: a mint failure is logged and NEVER fails the close.
+          try {
+            for (const c of (commitments || [])) {
+              await createCommitments({ sourceMeetingId: m.id, title: c.title, detail: c.detail, proposedBy: 'hub', forActors: [c.actor] });
+            }
+          } catch (e) { console.warn('[finalize] #67 commitment auto-mint failed (non-fatal): ' + (e as Error).message); }
           try {
             const to = await getSetting('owner_notify_email');
             if (to) emailResult = await sendOwnerReportEmail(to, `Architects Council — meeting report (${new Date().toISOString().slice(0, 10)})`, full);

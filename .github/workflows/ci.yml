@@ -94,3 +94,16 @@ jobs:
         run: npm ci
       - name: Assert withTransaction rolls back at every seam (no torn retire/delete)
         run: npx tsx test/tx.test.ts
+
+  commitments:
+    name: commitment ledger stage 2 (#67 owner-report parse)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: npm ci
+      - name: Assert extractCommitments splits/validates the perAgentCommitments block
+        run: npx tsx test/commitments.test.ts
