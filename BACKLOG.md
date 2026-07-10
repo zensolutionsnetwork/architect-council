@@ -32,7 +32,37 @@ _OWNER-GATED: CLEARED per owner 2026-07-04 - the leaked cockpit publisher passwo
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-09 (MORNING PREP)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-10 (NIGHTLY)
+> (NIGHTLY ~00:52 EDT 2026-07-10, Kairos automated. The 07-09 DAY SESSION shipped TWO real hub ships after the
+> morning prep - [#69] missed_meeting self-consistency + [#67] finalizer auto-mint; quiet since; all green; inbox
+> 2->0. STEP 0: ritual-model served v1 == implemented v1 (no drift). HEAD `6918f20` (07-09 day session's #67 feat).
+> Since the last attended meeting `03efb93a` (07-07), the 07-09 day session shipped past the 07-09 morning-prep/
+> nightly doc commits: `1ff971c` [#69] missed_meeting=false when scheduler disabled (owner-authorized; RESPONSE_SHAPES
+> + responseShapes.json desc -> response_shapes_sha bumps, Arke #60 auto-pull reconciled a995072d->043abe73 his side)
+> + `6918f20` [#67] finalizer auto-mints commitment proposals at meeting close (synthesizeOwnerReport appends a
+> perAgentCommitments block, extractCommitments splits/validates/strips it, finalize.ts mints proposed rows
+> proposedBy=hub best-effort idempotent-on-closed_at, same close-time call no new spend; NEW commitments CI gate, 17
+> assertions). deploy_sha `6918f20d` = HEAD (behavioural deploy-verify PASS); response_shapes_sha `a995072d`;
+> schema_version:1; CI + Push-on-main GREEN on `6918f20`; repo clean 0/0 in sync origin/main. Prod healthy
+> [ok/vault true, scheduler_enabled:FALSE (owner-paused, EXPECTED - do NOT flag), missed_meeting:false,
+> last_scheduler_status:skipped_quorum]. No live meeting [03efb93a phase=report; scheduler OFF so no fire]. INBOX
+> 2->0: arke `f4f60ef8` (ARC-6 positions authored on all 10 #52 Qs + ritual-model + #52 lean-repack; asked confirm
+> #52 queued -> CONFIRMED open + report-closed) + arke `8ff387c7` (acks: #69 reconciled his side, #67 FYI, ARC-11/#68
+> acting-node future - pure FYI, report-closed). AGENDA 1 open id=52 (kairos/high, mine, meeting-gated, do NOT
+> re-post). COMMITMENT RECONCILE (6b): kairos proposed=[] accepted=[] - nothing to decide (#67 mints at close; no
+> meeting has closed since it shipped, so no rows yet). WAITING-ON RECONCILE (exit 0): all 5 standards adopted by all
+> four - RESOLVED, nothing carried. BRAINS fresh_count=2/2 next_fire=null (scheduler off): logos+argus fresh;
+> kairos/arke/nova stale. RE-PACK DECISION: YES re-pack - kairos pack-head was `447d386` (carried #64+#66) but #67
+> (`6918f20`) + #69 (`1ff971c`) are REAL hub code shipped in the 07-09 day session NOT yet in my committed pack ->
+> re-pack bumps kairos to HEAD `6918f20`. Scheduler is off so no fire is gated on it, but the pack must carry current
+> code so my meeting-voice doesn't re-litigate shipped #67/#69 (the #42 rule). #52 re-pack policy (lean-OK if
+> fresh==packed-since-last-attended) stays a meeting-ratify item, not a solo flip. No deploy this ritual beyond
+> backlog/CLAUDE refresh + hub-row mirror + brain re-pack. TOP-3 next: (1) morning ritual - inbox + (no meeting to
+> debrief while scheduler off) confirm state; (2) at the next meeting that convenes carry agenda id=52 (ratify
+> commitment-ledger + ritual-model design; Arke's ARC-6 positions on the 10 Qs are authored) + ratify the #59
+> hub-client standard into the living handbook; (3) day session - [#65] schema_version unknown-version ALARM guard
+> when I next touch those consumers, or [#68] acting-node verifier (joint w/ Arke, future). MORNING-PREP snapshot
+> follows (history).)
 > (MORNING PREP 06:00 2026-07-09, Kairos automated. NO meeting to debrief - scheduler DISABLED by owner (deliberate,
 > meetings off a few days); no fire ran; newest meeting `03efb93a` (07-07) already debriefed. STEP 0: ritual-model
 > served v1 == implemented v1, no drift. Systems: HEAD `2dad139` (07-09 NIGHTLY doc commit) == deploy_sha
