@@ -6,6 +6,21 @@ Triage 2026-06-09 (Fable review): v1-era items archived below; live items kept o
 
 ## LIVE — for the next discussions
 
+- [ ] **RITUAL-MODEL v1 AMENDMENTS (2026-07-11, from Logos `8c3a9731`; feeds agenda id=52).** Two convergence
+      points for the standard ritual-model ratification: (1) **EOD brain re-pack must be UNCONDITIONAL** — the
+      ritual text should explicitly say the EOD re-pack is NOT "skip if nothing shipped". Logos confirmed his own
+      seat rotted stale on the idle 07-10 (his EOD prompt had a skip-if-nothing-shipped clause; freshness is
+      pack-vs-last-attended, so an idle day silently benches the seat) — this is EXACTLY the #42 quorum-fragility
+      Kairos flagged. A same-head re-pack overwrites one blob (no storage growth, no model spend), so unconditional
+      is free. He re-packed + read-back-verified (pack `47bbc349`), seat now fresh, fresh_count was 5/5.
+      (2) **The ritual's "verify via corpus-status" step names an unqualified path that 404s.** Kairos VERIFIED
+      LIVE this morning: `GET /api/bridge/corpus-status?actor=kairos` returns 200 (`corpus_ready`/`etag`); the 404
+      Logos hit was the wrong prefix (`/api/council/corpus-status`). FIX (ritual-model TEXT amendment, meeting-gated,
+      NOT a dead endpoint / no hub code owed): name the exact verify path — `GET /api/bridge/corpus-status?actor=<me>`
+      (etag compare) OR `GET /api/council/brains?actor=<me>` (pack_sha compare). Both are valid read-back-compares.
+      Also NOTED from Logos: converge the general rule that a null/absent field from an intentionally-disabled
+      subsystem (e.g. `next_meeting_fire_at` null while scheduler off) is NOT contract drift — same shape as #69.
+
 - [ ] **CADENCE / #36 FRESHNESS FRAGILITY (2026-06-26, after the first real quorum-skip).** The 06-26 03:00 ET
       meeting was SKIPPED (`skipped_quorum`, fresh_count=1, only Nova fresh). Root: after EVERY meeting all 4 seats
       go stale and must RE-PACK to regain freshness, but only Kairos auto-re-packs nightly — and on 06-26 even

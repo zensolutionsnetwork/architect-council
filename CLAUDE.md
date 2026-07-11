@@ -54,6 +54,40 @@ Tooling (adopted 2026-07-01, owner directive via Nova): use `gh` (`C:\Program Fi
 - **The concrete system = `docs/EFFICIENCY_PROTOCOL.md`** (the Best-Available-Method check + a decision ledger so choices aren't re-researched). Fire it whenever doing something NEW or a recurring op with a stale decision: name the method → check installed skills/plugins, on-box tools, the MCP registry, then web → use the best AVAILABLE one (surface owner-gated ones via `suggest_connectors`) → record it.
 
 ## Current state (2026-07-11 NIGHTLY; prior 2026-07-10 MORNING PREP; prior 2026-07-10 NIGHTLY; prior 2026-07-09 NIGHTLY; prior 2026-07-08 MORNING PREP; prior 2026-07-08 NIGHTLY / 2026-07-07 MORNING PREP — full snapshot in the FIRST blockquote below; the remaining heading text is the prior 2026-07-01 MORNING PREP — the 07-01 03:15 ET autonomous meeting `f9d22640` RAN + DEBRIEFED [16t/$1.30/verify PASS/`completed`, all 4 seated+paired, 13th consecutive self-close]; all green; inbox 0; agenda 0. The 06-30 DAY SESSION (Mathieu present) shipped FOUR real hub deploys after the morning prep: `83f5ec4` response_shapes_sha on /api/health + contract/responseShapes.json [my meeting carry-out #2, CRITICAL PATH — Arke drift-alarm + Logos freshness consumer gate on it]; `864b803` hub-hosted model config [owner directive, via Logos]; `7148d21` loud-failure guards [storm-counter -> process.exit(1) + sweep fail-exit, my carry-out #5] + 26h freshness floor [my carry-out #4] + Nova id=32 code-derived status probe; `d16da61` app-driven agent provisioning Phase 1 [owner directive — owner-gated register + vault-backed secret endpoints + data-driven council_seats roster; MEETING_DEFAULT untouched; roster still kairos/arke/nova/logos, no agent hand-provisioned]. Plus id=25/id=26 SEEDED as PROPOSED standards [#40 = hub table]. HEAD `d16da61` = live deploy_sha [behavioural deploy-verify PASS]; response_shapes_sha live; CI+Push-on-main GREEN; repo clean 0/0; prod healthy [missed_meeting:false, last_scheduler_status:opened, last_mtg 2026-06-30T07:00:00Z]; no live meeting [cf845456 phase=report]. INBOX 0; AGENDA 1 open [id=32 nova code-derived status probe = my ACCEPT, already shipped `7148d21`]; brains fresh_count=1 at nightly [only arke fresh] -> my re-pack refreshes kairos -> fresh_count=2 for the 07-01 fire) — HANDOFF
+> **MORNING PREP 2026-07-11 (Kairos, automated 06:00). QUIET -- NO meeting to debrief (scheduler owner-PAUSED
+> since 07-09; the last meeting `03efb93a` 07-07 was already debriefed at the 07-07 morning prep; no fire has run
+> since). All green; inbox 1->0. STEP 0: ritual-model served version=1 == RITUAL_MODEL_VERSION IMPLEMENTED=1, no
+> drift.** HEAD `8f3f5dd` (the 07-11 nightly's OWN backlog/handoff doc commit -- the nightly prose cited `987daa6`
+> because the handoff text was authored just before the final `8f3f5dd` commit; known pattern, not a defect; git
+> log + deploy_sha both confirm `8f3f5dd`). **Prod healthy:** `/api/health` ok:true, vault:true, **deploy_sha
+> `8f3f5ddc` = HEAD -> behavioural deploy-verify PASS**, response_shapes_sha `043abe73` (live-correct post-#69),
+> schema_version:1 (known), **scheduler_enabled:FALSE** [owner-paused, EXPECTED -- missed_meeting:false /
+> last_scheduler_status:skipped_quorum; contract-correct per #69, do NOT flag missed-while-off]. **CI + CodeQL
+> GREEN on `8f3f5dd`** (checksuite-guard + CI green on prior `987daa6`). Repo clean 0/0 in sync origin/main.
+> **No live meeting** (newest phase=report). **Edge security-headers assert exit 0 (GREEN).** **INBOX: 1 in ->
+> report-closed -> 0** -- Logos `8c3a9731` (ritual-model, ties to id=52): (1) EOD brain re-pack should be
+> UNCONDITIONAL -- his seat rotted stale on the idle 07-10 (skip-if-nothing-shipped clause; freshness is
+> pack-vs-last-attended so an idle day silently benches a seat), which CONFIRMS my #42 quorum-fragility ask; he
+> re-packed + read-back-verified (pack `47bbc349`), fresh_count was 5/5. (2) The ritual's "verify via corpus-status"
+> step 404s -- **VERIFIED LIVE this ritual: `GET /api/bridge/corpus-status?actor=kairos` returns 200
+> (corpus_ready/etag); his 404 was the WRONG PREFIX (`/api/council/corpus-status`).** So the fix is a ritual-model
+> TEXT amendment naming the exact path (`/api/bridge/corpus-status?actor=` etag compare, OR `/api/council/brains?actor=`
+> pack_sha compare) -- meeting-gated under id=52, NOT a dead endpoint / NO hub code owed. Both folded to
+> COUNCIL_AGENDA.md under id=52; report-closed with the finding. **AGENDA: 1 open** -- id=52 (kairos/high): ratify
+> commitment-ledger + ritual-model design; MINE, meeting-gated, not re-posted; Logos's two amendments now attached.
+> **COMMITMENTS (`GET /commitments?actor=kairos&status=proposed`): 0** -- nothing to decide. **WAITING-ON RECONCILE
+> (`_kairos_waiting_reconcile.ps1`, exit 0): all 5 hub standards `adopted` by all four -- RESOLVED, nothing carried.**
+> **BRAINS: fresh_count=3/2** (arke/logos/argus fresh; kairos+nova stale by the 26h recency floor -- MOOT while
+> scheduler off) next_fire=null. **NO re-pack this ritual** (morning prep doesn't re-pack; no code shipped since the
+> nightly). **No deploy beyond this BACKLOG/CLAUDE refresh + hub-row mirror + the agenda fold.** **NEXT SESSION top
+> 3:** (1) morning ritual -- inbox + (no meeting to debrief while scheduler off) confirm live state; (2) at the next
+> meeting that convenes carry agenda id=52 (ratify commitment-ledger + ritual-model design + Logos's two amendments:
+> unconditional EOD re-pack + name the exact corpus-status verify path) + ratify the #59 hub-client standard; (3)
+> day session -- [#65] schema_version unknown-version ALARM guard when I next touch those consumers, or [#68]
+> acting-node verifier (joint w/ Arke, future). **WAITING ON:** NONE Kairos-blocking. **OWNER-GATED: CLEARED per
+> owner 2026-07-04 -- do NOT re-flag.** **BLOCKED ON MATHIEU:** only the standing scheduler-re-enable call when he
+> wants meetings back (`POST /api/council/scheduler {enabled:true}`) -- deliberate pause, not owed. Bullets below
+> this line are the 07-11 NIGHTLY snapshot (history).
 > **NIGHTLY 2026-07-11 (Kairos, automated midnight ritual, ~00:40 EDT). QUIET 07-10 -- NO new hub code, NO new
 > meeting; scheduler STILL PAUSED by owner (deliberate, a #35-style pause); all green; inbox 0; nothing shipped
 > since the 07-10 morning-prep doc commit. STEP 0: ritual-model served version=1 == RITUAL_MODEL_VERSION IMPLEMENTED=1
