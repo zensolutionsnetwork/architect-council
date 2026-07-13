@@ -32,7 +32,30 @@ _OWNER-GATED: CLEARED per owner 2026-07-04 - the leaked cockpit publisher passwo
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-12 (NIGHTLY)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-13 (NIGHTLY)
+> (NIGHTLY ~00:5x EDT 2026-07-13, Kairos automated. QUIET 07-12 - no new hub code, no new meeting; scheduler STILL
+> owner-PAUSED (a #35-style deliberate pause); all green; inbox 0; NO re-pack (policy-correct). STEP 0: ritual-model
+> served version=1 == RITUAL_MODEL_VERSION IMPLEMENTED=1, no drift. HEAD `275fc5d` (the 07-12 morning-prep DOC commit;
+> nothing code-bearing shipped 07-12 - only doc commit `275fc5d` landed since the 07-12 nightly `cd5db8a`; no Kairos
+> day session per list_sessions). deploy_sha `275fc5d3`==HEAD -> deploy-verify PASS; response_shapes_sha `043abe73`
+> live-correct; schema_version:1 (known); scheduler_enabled:false + missed_meeting:false + last_scheduler_status:skipped_quorum
+> [owner-paused, EXPECTED - contract-correct per #69, do NOT flag]. CI+CodeQL+checksuite-guard GREEN on `275fc5d`.
+> Repo clean 0/0 in sync origin/main. No live meeting (newest `03efb93a` phase=report; scheduler off so no fire - safe
+> to push). INBOX 0. AGENDA 3 open: id=52 (kairos/high, meeting-gated, do NOT re-post; Logos's two amendments attached),
+> id=53 (logos/high, deploy-pipeline work-tree-over-checkout revert -> gate with merge-base --is-ancestor), id=54
+> (nova/normal, hold-loud-on-unknown-enum necessary-not-sufficient -> validate at WRITE side; sharpens my #65). All
+> folded already; do NOT re-post. COMMITMENTS proposed=0 accepted=0 - nothing to decide. WAITING-ON reconcile (exit 0):
+> all 5 hub standards adopted by all four - RESOLVED, nothing carried. BRAINS fresh_count=3/2 (nova/logos/argus fresh;
+> kairos+arke stale) next_fire=null. RE-PACK DECISION: NO re-pack - pack-head `62a2687` already carries all real work
+> since last attended meeting `03efb93a` (#67/#69 are ancestors); the only delta to HEAD `275fc5d` is ritual doc commits
+> (cd5db8a/275fc5d), NOT real work; left kairos_pack.md byte-identical (scheduler off so freshness is moot anyway). No
+> deploy beyond this BACKLOG/CLAUDE refresh + hub-row mirror. NEXT top 3: (1) morning ritual - inbox + confirm live state
+> (no meeting to debrief while scheduler off); (2) at the next meeting that convenes carry id=52 (ratify commitment-ledger
+> + ritual-model design + Logos's two amendments) + fold id=53/id=54 + ratify the #59 hub-client standard; (3) day session
+> - [#65] schema_version unknown-version ALARM guard (reinforced by nova id=54: pair read-side receipt with write-side
+> validation) when I next touch those consumers, or [#68] acting-node verifier (joint w/ Arke, future). WAITING ON: NONE
+> Kairos-blocking. OWNER-GATED: CLEARED per owner 2026-07-04. BLOCKED ON MATHIEU: only the standing scheduler-re-enable
+> call when he wants meetings back (`POST /api/council/scheduler {enabled:true}`) - deliberate pause, not owed. Prior snapshot below.)
 > (NIGHTLY ~00:52 EDT 2026-07-12, Kairos automated. QUIET 07-11 - no new hub code, no new meeting; scheduler STILL
 > owner-PAUSED (a #35-style deliberate pause); all green; inbox 1->0; NO re-pack (policy-correct). STEP 0: ritual-model
 > served version=1 == RITUAL_MODEL_VERSION IMPLEMENTED=1, no drift. HEAD `6ab2c94` (the 07-11 morning-prep DOC commit;
