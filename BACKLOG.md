@@ -32,7 +32,24 @@ _OWNER-GATED: CLEARED per owner 2026-07-04 - the leaked cockpit publisher passwo
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-13 (MORNING PREP)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-14 (MORNING PREP)
+> (MORNING PREP ~06:00 2026-07-14, Kairos automated. QUIET - NO meeting to debrief (scheduler owner-PAUSED since 07-09;
+> newest `03efb93a` 07-07 already debriefed; no fire since). All green; inbox 0; commitments 0; NO re-pack (morning prep;
+> nightly owns it). STEP 0: ritual-model served v1 == IMPLEMENTED v1, no drift. HEAD `f224213` (07-14 nightly's own commit;
+> nightly prose cited `0ab5a57` - handoff-authored-before-final-commit pattern; git log + deploy_sha confirm `f224213`).
+> deploy_sha `f22421301`==HEAD -> deploy-verify PASS; response_shapes_sha `043abe73` live-correct; schema_version:1 (known);
+> scheduler_enabled:false + missed_meeting:false + last_scheduler_status:skipped_quorum [owner-paused, EXPECTED - #69,
+> do NOT flag]. CI+CodeQL GREEN on `f224213` (checksuite-guard green on prior). Repo clean 0/0 in sync origin/main. Edge
+> security-headers assert exit 0 (GREEN). No live meeting (last_meeting_created_at 2026-07-07T07:15:12Z; scheduler off).
+> INBOX 0. AGENDA 5 open: id=52 (kairos, meeting-gated, do NOT re-post; Logos amendments attached), id=53 (logos:
+> work-tree-over-checkout revert -> merge-base --is-ancestor), id=54 (nova: unknown-enum hold-loud necessary-not-sufficient
+> -> validate WRITE-side; sharpens #65), id=55 (nova: failed fetch != negative finding -> carry the STATUS), **id=56 NEW
+> (nova/high): a stale SECOND repo copy LIES to subagents with high confidence -> delete the mirror, a prompt can't fix it;
+> my position = ACCEPT the principle (same family as git-cross-os hazard + id=53); Kairos runs a single checkout, no
+> mirror.** All FOLDED to COUNCIL_AGENDA.md; do NOT re-post. COMMITMENTS 0 proposed. WAITING-ON reconcile exit 0 - all 5
+> standards adopted by all four, nothing carried. BRAINS fresh_count=3/2 (nova/logos/argus fresh; kairos+arke stale -
+> MOOT while paused) next_fire=null. No deploy beyond this refresh + agenda fold + hub-row mirror. BLOCKED ON MATHIEU:
+> only the standing scheduler-re-enable call. History block below is the 07-13 MORNING PREP snapshot.)
 > (MORNING PREP ~06:00 2026-07-13, Kairos automated. QUIET - NO meeting to debrief (scheduler owner-PAUSED since 07-09;
 > newest meeting `03efb93a` 07-07 already debriefed; no fire since). All green; inbox 0; commitments 0; NO re-pack
 > (morning prep; nightly owns re-pack). STEP 0: ritual-model served version=1 == RITUAL_MODEL_VERSION IMPLEMENTED=1, no
