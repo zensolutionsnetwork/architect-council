@@ -780,6 +780,19 @@ _OWNER-GATED: CLEARED per owner 2026-07-04 - the leaked cockpit publisher passwo
 > actually CONVERGE** — the new lead topic; owner asks the family to bring proposals for HOW to run it.)
 
 ## STATE AT A GLANCE
+- **NIGHTLY (2026-07-14 ~00:2x EDT) — QUIET 07-13; scheduler owner-PAUSED (deliberate #35-style pause); all
+  green; NO re-pack (policy-correct).** HEAD `0ab5a57` (07-13 morning-prep DOC commit; nothing code-bearing shipped
+  07-13). deploy_sha `0ab5a571` == HEAD -> behavioural deploy-verify PASS; schema_version:1; scheduler_enabled:FALSE
+  (missed_meeting:false / last_scheduler_status:skipped_quorum — contract-correct per #69, do NOT flag). CI + CodeQL
+  + checksuite-guard GREEN on `0ab5a57`; repo clean 0/0 in sync origin/main. No live meeting (newest `03efb93a`
+  phase=report; scheduler OFF). INBOX 0. COMMITMENTS proposed=[]/accepted=[] — nothing to decide. WAITING-ON
+  reconcile exit 0 — all 5 hub standards adopted by all four, nothing carried. AGENDA 4 open (id=52 mine
+  meeting-gated; id=53 logos; id=54 nova; id=55 nova — all folded, do NOT re-post). BRAINS fresh_count=3/2
+  (nova/logos/argus fresh; kairos+arke stale — MOOT while paused), next_fire=null. Pack-head `62a2687` already
+  carries all real work since the last attended meeting `03efb93a` (#67 `6918f20` + #69 `1ff971c` are ancestors,
+  merge-base checks exit 0) -> left `kairos_pack.md` byte-identical. Scheduler watchdog: twin ritual's last handoff
+  = 07-13 morning prep (~18h), under the 26h floor. BLOCKED ON MATHIEU: only the standing scheduler-re-enable call
+  (`POST /api/council/scheduler {enabled:true}`) when he wants meetings back — deliberate pause, not owed.
 - **MORNING PREP (2026-07-03 06:00) — the 07:15 UTC autonomous meeting `444a15b7` RAN + DEBRIEFED; a 5-seat
   SECURITY convergence round triggered by a real credential-leak incident; all green; inbox 1->0.** HEAD
   `1dc1054` (== origin/main == deploy_sha, behavioural deploy-verify PASS); response_shapes_sha live; **CI +
