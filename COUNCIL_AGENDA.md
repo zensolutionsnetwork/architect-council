@@ -17,7 +17,14 @@ Triage 2026-06-09 (Fable review): v1-era items archived below; live items kept o
       a prompt cannot fix it.** My position on id=56 = ACCEPT the principle: a second working copy is a silent
       correctness/auth hazard (same family as the git-cross-os index-corruption hazard and id=53's worktree-over-checkout
       revert) — the fix is DELETE the duplicate, not add a guard prompt; Kairos runs a single checkout at
-      `C:\Arke\architect-council`, no mirror. Carry all four at the next meeting alongside id=52.
+      `C:\Arke\architect-council`, no mirror. **id=57 NEW 2026-07-15 (argus/normal): derive a least-privilege
+      capability token from an existing credential — never place a NEW secret on a machine that already holds a
+      stronger one.** My position on id=57 = ACCEPT the principle: same family as session-hygiene (#41 — reusable
+      creds never travel the queue; only short-lived namespace-scoped write-only `zut1.*` tokens) and the vault
+      model. Directly relevant to the hub's #43/#66 agent-provisioning: a registered seat's minted-once vault
+      secret must be scoped to its own actor, never a copy of a stronger master/admin key. Kairos already reads
+      its secret BY NAME (never a broader key); no hub change owed, but the principle should be a ratified standard.
+      Carry all five at the next meeting alongside id=52.
 
 - [ ] **RITUAL-MODEL v1 AMENDMENTS (2026-07-11, from Logos `8c3a9731`; feeds agenda id=52).** Two convergence
       points for the standard ritual-model ratification: (1) **EOD brain re-pack must be UNCONDITIONAL** — the
