@@ -32,7 +32,25 @@ _OWNER-GATED: CLEARED per owner 2026-07-04 - the leaked cockpit publisher passwo
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-17 (NIGHTLY)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-17 (MORNING PREP)
+> (MORNING PREP 06:00 2026-07-17, Kairos automated. QUIET - NO meeting to debrief (scheduler owner-PAUSED since 07-09;
+> newest meeting `03efb93a` 07-07 already debriefed; no fire since). All green; inbox 0; commitments 0; NO re-pack
+> (morning prep; the nightly owns re-pack). STEP 0: ritual-model served v1 == IMPLEMENTED v1, no drift. HEAD `84e88bf`
+> (the 07-17 nightly's OWN final commit; nightly prose cited `28ff6dc` because handoff authored before the final commit
+> - known pattern; git log + deploy_sha confirm `84e88bf`; only delta since `28ff6dc` is that doc snapshot). deploy_sha
+> `84e88bf`==HEAD -> deploy-verify PASS; response_shapes_sha `043abe73` live-correct; schema_version:1 (known, no #65
+> alarm); scheduler_enabled:FALSE + missed_meeting:false + last_scheduler_status:skipped_quorum [owner-paused, EXPECTED,
+> do NOT flag]. CI + CodeQL GREEN on `84e88bf` (checksuite-guard green on prior `28ff6dc`). Repo clean 0/0 in sync
+> origin/main. No live meeting (24 meetings phase=report; newest `03efb93a`; ANY_ROUNDS=0). Edge security-headers assert
+> exit 0 (GREEN). INBOX 0. AGENDA 6 open (id=52-57, all folded, do NOT re-post). COMMITMENTS (kairos, proposed): 0 -
+> nothing to decide. WAITING-ON reconcile (exit 0): all 5 hub standards adopted by all four - RESOLVED, nothing carried.
+> BRAINS fresh_count=2/2 (nova+argus fresh; kairos/arke/logos stale - MOOT while paused) next_fire=null; all 5 seats
+> report valid fresh/stale status (none no_brain/unpaired). SCHEDULER WATCHDOG - CONFIRMED + RECOVERED: the 07-16 06:00
+> kairos-morning-prep task DID NOT run (no 07-16 morning-prep commit); TODAY (07-17) the task DID fire (this session,
+> 06:07 EDT), so the miss was a one-off on 07-16 - a LOCAL Cowork scheduled-task cadence miss, NOT a hub defect; flag for
+> Mathieu to confirm the task cadence. No deploy beyond this BACKLOG/CLAUDE refresh + hub-row mirror. BLOCKED ON MATHIEU:
+> (1) standing scheduler-re-enable (`POST /api/council/scheduler {enabled:true}`) - deliberate pause, not owed; (2)
+> confirm the 07-16 morning-prep miss. History block below is the 07-17 NIGHTLY snapshot.)
 > (NIGHTLY ~00:xx 2026-07-17, Kairos automated. QUIET 07-16 - NO new hub code, NO new meeting; scheduler STILL
 > owner-PAUSED (deliberate #35-style pause); all green; inbox 0; NO re-pack (policy-correct). STEP 0: ritual-model
 > served v1 == RITUAL_MODEL_VERSION IMPLEMENTED v1, no drift. HEAD `28ff6dc` (the 07-16 NIGHTLY's own commit).
