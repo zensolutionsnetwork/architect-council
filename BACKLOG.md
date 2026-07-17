@@ -32,7 +32,34 @@ _OWNER-GATED: CLEARED per owner 2026-07-04 - the leaked cockpit publisher passwo
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-16 (NIGHTLY)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-17 (NIGHTLY)
+> (NIGHTLY ~00:xx 2026-07-17, Kairos automated. QUIET 07-16 - NO new hub code, NO new meeting; scheduler STILL
+> owner-PAUSED (deliberate #35-style pause); all green; inbox 0; NO re-pack (policy-correct). STEP 0: ritual-model
+> served v1 == RITUAL_MODEL_VERSION IMPLEMENTED v1, no drift. HEAD `28ff6dc` (the 07-16 NIGHTLY's own commit).
+> Since the last nightly (`28ff6dc`) there are ZERO new commits - 07-16 shipped nothing AND the 07-16 06:00 MORNING
+> PREP did not land a commit (see SCHEDULER WATCHDOG below). Repo clean 0/0 in sync origin/main. deploy_sha
+> `28ff6dc0`==HEAD -> behavioural deploy-verify PASS; response_shapes_sha `043abe73` live-correct; schema_version:1
+> (known); scheduler_enabled:FALSE + missed_meeting:false + last_scheduler_status:skipped_quorum [owner-paused,
+> EXPECTED - contract-correct per #69, do NOT flag]. CI + CodeQL + checksuite-guard GREEN on `28ff6dc`. No live
+> meeting (newest `03efb93a` phase=report; last_meeting_created_at 2026-07-07T07:15:12Z; scheduler off so no fire).
+> INBOX 0. AGENDA 6 open (all folded, do NOT re-post): id=52 (kairos/high, meeting-gated; Logos amendments
+> attached), id=53 (logos: work-tree-over-checkout revert -> gate merge-base --is-ancestor), id=54 (nova:
+> unknown-enum hold-loud necessary-not-sufficient -> validate WRITE-side; sharpens #65), id=55 (nova: failed fetch
+> != negative finding -> carry the STATUS), id=56 (nova: a stale SECOND repo copy LIES to subagents -> delete the
+> mirror), id=57 (argus/normal: derive a least-privilege capability token from an existing credential - never place
+> a NEW secret on a machine that already holds a stronger one; my position = ACCEPT). COMMITMENT RECONCILE (step
+> 6b): proposed=0, accepted=0 - nothing to decide. WAITING-ON reconcile (exit 0): all 5 hub standards adopted by all
+> four - RESOLVED, nothing carried. BRAINS fresh_count=2/2 (nova + argus fresh; kairos/arke/logos stale - MOOT while
+> paused) next_fire=null. RE-PACK DECISION: NO re-pack (policy-correct) - kairos pack-head `62a2687` already carries
+> all real work since the last attended meeting `03efb93a` (#67 `6918f20` + #69 `1ff971c` ancestors of it, both
+> merge-base checks exit 0); the ONLY delta to HEAD `28ff6dc` is doc commits = not real work; left `kairos_pack.md`
+> byte-identical. SCHEDULER WATCHDOG - FLAG: the 07-16 06:00 morning prep did NOT land a commit (git log jumps
+> 07-15 morning prep `f822a71` -> 07-16 nightly `28ff6dc`; CLAUDE.md header still reads "2026-07-16 NIGHTLY"). The
+> morning-prep twin ritual's last handoff `f822a71` (07-15 06:10) is ~42h old, over the 26h floor -> one missed
+> LOCAL kairos-morning-prep run on 07-16. NOT a hub defect - a local scheduled-task cadence miss; flag for Mathieu
+> to confirm the kairos-morning-prep task fired. No deploy beyond this BACKLOG/CLAUDE refresh + hub-row mirror.
+> BLOCKED ON MATHIEU: (1) standing scheduler-re-enable (`POST /api/council/scheduler {enabled:true}`) - deliberate
+> pause, not owed; (2) check the 07-16 morning-prep miss. History block below is the 07-16 NIGHTLY snapshot.)
 > (NIGHTLY ~00:xx 2026-07-16, Kairos automated. QUIET 07-15 - NO new hub code, NO new meeting; scheduler STILL
 > owner-PAUSED (deliberate #35-style pause); all green; inbox 0; NO re-pack (policy-correct). STEP 0: ritual-model
 > served v1 == RITUAL_MODEL_VERSION IMPLEMENTED v1, no drift. HEAD `f822a71` (the 07-15 MORNING PREP doc commit;
