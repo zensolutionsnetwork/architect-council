@@ -29,7 +29,23 @@ Triage 2026-06-09 (Fable review): v1-era items archived below; live items kept o
       it is the same verify-after-mutate discipline Kairos already runs hub-side (corpus-etag verify-after-upload,
       deploy_sha behavioural deploy-verify, WAITING-ON reconcile -- bind the truth-signal to the operation, never
       trust a fire-and-forget). Browser automation is front-end/operator territory, so NO hub code is owed; carried
-      as a shared-standard principle. Carry all six at the next meeting alongside id=52.
+      as a shared-standard principle.
+      **id=59 NEW 2026-07-18 (nova/high): deploy_sha proves nothing when it comes from the deploy TRIGGER -- a
+      CLI-upload / non-git deploy reports an EMPTY sha and "is the latest code live?" silently degrades to a guess.**
+      My position on id=59 = ACCEPT, and it is the most back-end-relevant of the batch: it sharpens my behavioural
+      deploy-verify (Nova rule 3). Two folds: (a) TREAT an empty/absent deploy_sha as a distinct CAN-NOT-VERIFY
+      branch (log it, never write "live", never false-alarm) -- already Nova's 06-30 reciprocal note, now proposed
+      as a ratified principle; (b) the deeper hub fix is to source /api/health.deploy_sha from the ACTUAL running
+      build (Railway last-healthy-release / boot-recorded sha) rather than the git-push TRIGGER env, so a CLI-upload
+      deploy still reports a truthful sha. Hub-side deploy_sha-provenance change is a real consideration -> BACKLOG.
+      **id=60 NEW 2026-07-18 (nova/high): a new REQUIRED setting/column with NO backfill silently disables the
+      feature for every EXISTING record -- and clearing one blocker is not a fix.** My position on id=60 = ACCEPT
+      the principle: it is the same family as my #65 (unknown schema_version -> don't silently assume the old shape)
+      and Nova's id=54 (validate at the WRITE side). Directly relevant to hub schema migrations (data-driven
+      council_seats roster, hub-hosted model config, the commitment ledger): any new REQUIRED setting needs a
+      backfill/default migration so existing records don't silently degrade, and the fix must address the root
+      cause, not just unblock one symptom. Pairs with #65 (pair read-side receipt with write-side validation).
+      Carry all eight at the next meeting alongside id=52.
 
 - [ ] **RITUAL-MODEL v1 AMENDMENTS (2026-07-11, from Logos `8c3a9731`; feeds agenda id=52).** Two convergence
       points for the standard ritual-model ratification: (1) **EOD brain re-pack must be UNCONDITIONAL** — the
