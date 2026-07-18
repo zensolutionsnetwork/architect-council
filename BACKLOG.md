@@ -32,7 +32,36 @@ _OWNER-GATED: CLEARED per owner 2026-07-04 - the leaked cockpit publisher passwo
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-17 (MORNING PREP)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-18 (NIGHTLY)
+> (NIGHTLY ~00:xx 2026-07-18, Kairos automated. QUIET 07-17 - NO new hub code, NO new meeting; scheduler STILL
+> owner-PAUSED (deliberate #35-style pause); all green; inbox 0; NO re-pack (policy-correct). STEP 0: ritual-model
+> served v1 == RITUAL_MODEL_VERSION IMPLEMENTED v1, no drift. HEAD `539fe4b` (the 07-17 MORNING PREP doc commit;
+> nothing code-bearing shipped 07-17). Since the last nightly (`84e88bf`) the ONLY commit is `539fe4b` = the 07-17
+> morning-prep snapshot, NOT real work. Repo clean 0/0 in sync origin/main. deploy_sha `539fe4b`==HEAD -> behavioural
+> deploy-verify PASS; response_shapes_sha `043abe73` live-correct; schema_version:1 (known, no #65 alarm);
+> scheduler_enabled:FALSE + missed_meeting:false + last_scheduler_status:skipped_quorum [owner-paused, EXPECTED -
+> contract-correct per #69, do NOT flag]; last_meeting_created_at 2026-07-07T07:15:12Z. CI + CodeQL + checksuite-guard
+> GREEN on `539fe4b`. No live meeting (20 meetings, newest `03efb93a` phase=report, rounds_count=0; scheduler off so
+> no fire). INBOX 0. AGENDA 7 open (all folded, do NOT re-post): id=52 (kairos/high, meeting-gated; Logos amendments
+> attached), id=53 (logos: work-tree-over-checkout revert -> gate merge-base --is-ancestor), id=54 (nova:
+> unknown-enum hold-loud necessary-not-sufficient -> validate WRITE-side; sharpens #65), id=55 (nova: failed fetch !=
+> negative finding -> carry the STATUS), id=56 (nova: a stale SECOND repo copy LIES to subagents -> delete the
+> mirror), id=57 (argus/normal: derive a least-privilege capability token from an existing credential - never place a
+> NEW secret on a machine that already holds a stronger one; ACCEPT), id=58 NEW this ritual (nova/normal):
+> browser-automation `type` silently drops chars in long strings -> set values via JS + input event and VERIFY the
+> DOM before submit; my position = ACCEPT the principle (same verify-after-mutate family as my hub-side
+> corpus-etag/deploy_sha/WAITING-ON reconcile discipline), browser automation is front-end/operator territory, NO hub
+> code owed. FOLDED to COUNCIL_AGENDA.md; do NOT re-post. COMMITMENT RECONCILE (step 6b): proposed=0, accepted=0 -
+> nothing to decide. WAITING-ON reconcile (exit 0): all 5 hub standards adopted by all four - RESOLVED, nothing
+> carried. BRAINS fresh_count=2/2 (nova + argus fresh; kairos/arke/logos stale - MOOT while paused) next_fire=null;
+> all 5 seats report valid fresh/stale (none no_brain/unpaired). RE-PACK DECISION: NO re-pack (policy-correct) -
+> kairos pack-head `62a2687` already carries all real work since the last attended meeting `03efb93a` (#67 `6918f20`
+> + #69 `1ff971c` ancestors of it, both merge-base checks exit 0); the 14-commit delta to HEAD `539fe4b` is doc-only
+> (BACKLOG/CLAUDE/COUNCIL_AGENDA) = not real work; left `kairos_pack.md` byte-identical. SCHEDULER WATCHDOG: twin
+> morning-prep last fired 07-17 (`539fe4b`, ~18h ago), under the 26h floor, cadence healthy; the 07-16 miss was a
+> one-off (07-17 recovered). No deploy beyond this BACKLOG/CLAUDE refresh + COUNCIL_AGENDA id=58 fold + hub-row
+> mirror. BLOCKED ON MATHIEU: only the standing scheduler-re-enable call (`POST /api/council/scheduler
+> {enabled:true}`) - deliberate pause, not owed. History block below is the 07-17 MORNING PREP snapshot.)
 > (MORNING PREP 06:00 2026-07-17, Kairos automated. QUIET - NO meeting to debrief (scheduler owner-PAUSED since 07-09;
 > newest meeting `03efb93a` 07-07 already debriefed; no fire since). All green; inbox 0; commitments 0; NO re-pack
 > (morning prep; the nightly owns re-pack). STEP 0: ritual-model served v1 == IMPLEMENTED v1, no drift. HEAD `84e88bf`

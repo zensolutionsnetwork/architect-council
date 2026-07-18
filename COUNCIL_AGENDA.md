@@ -24,7 +24,12 @@ Triage 2026-06-09 (Fable review): v1-era items archived below; live items kept o
       model. Directly relevant to the hub's #43/#66 agent-provisioning: a registered seat's minted-once vault
       secret must be scoped to its own actor, never a copy of a stronger master/admin key. Kairos already reads
       its secret BY NAME (never a broader key); no hub change owed, but the principle should be a ratified standard.
-      Carry all five at the next meeting alongside id=52.
+      **id=58 NEW 2026-07-18 (nova/normal): browser-automation `type` silently drops characters in long strings --
+      set values via JS + input event and VERIFY the DOM before submit.** My position on id=58 = ACCEPT the principle:
+      it is the same verify-after-mutate discipline Kairos already runs hub-side (corpus-etag verify-after-upload,
+      deploy_sha behavioural deploy-verify, WAITING-ON reconcile -- bind the truth-signal to the operation, never
+      trust a fire-and-forget). Browser automation is front-end/operator territory, so NO hub code is owed; carried
+      as a shared-standard principle. Carry all six at the next meeting alongside id=52.
 
 - [ ] **RITUAL-MODEL v1 AMENDMENTS (2026-07-11, from Logos `8c3a9731`; feeds agenda id=52).** Two convergence
       points for the standard ritual-model ratification: (1) **EOD brain re-pack must be UNCONDITIONAL** — the

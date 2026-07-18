@@ -53,7 +53,50 @@ Tooling (adopted 2026-07-01, owner directive via Nova): use `gh` (`C:\Program Fi
 - **Remake for quality design-system-first, in place, surface by surface** through the normal CI gates — never a big-bang rewrite of a live product.
 - **The concrete system = `docs/EFFICIENCY_PROTOCOL.md`** (the Best-Available-Method check + a decision ledger so choices aren't re-researched). Fire it whenever doing something NEW or a recurring op with a stale decision: name the method → check installed skills/plugins, on-box tools, the MCP registry, then web → use the best AVAILABLE one (surface owner-gated ones via `suggest_connectors`) → record it.
 
-## Current state (2026-07-17 MORNING PREP; prior 2026-07-17 NIGHTLY; prior 2026-07-16 NIGHTLY; prior 2026-07-15 MORNING PREP; prior 2026-07-15 NIGHTLY; prior 2026-07-14 MORNING PREP; prior 2026-07-14 NIGHTLY; prior 2026-07-13 NIGHTLY; prior 2026-07-12 MORNING PREP; prior 2026-07-12 NIGHTLY; prior 2026-07-11 MORNING PREP; prior 2026-07-11 NIGHTLY; prior 2026-07-10 MORNING PREP; prior 2026-07-10 NIGHTLY; prior 2026-07-09 NIGHTLY; prior 2026-07-08 MORNING PREP; prior 2026-07-08 NIGHTLY / 2026-07-07 MORNING PREP — full snapshot in the FIRST blockquote below; the remaining heading text is the prior 2026-07-01 MORNING PREP — the 07-01 03:15 ET autonomous meeting `f9d22640` RAN + DEBRIEFED [16t/$1.30/verify PASS/`completed`, all 4 seated+paired, 13th consecutive self-close]; all green; inbox 0; agenda 0. The 06-30 DAY SESSION (Mathieu present) shipped FOUR real hub deploys after the morning prep: `83f5ec4` response_shapes_sha on /api/health + contract/responseShapes.json [my meeting carry-out #2, CRITICAL PATH — Arke drift-alarm + Logos freshness consumer gate on it]; `864b803` hub-hosted model config [owner directive, via Logos]; `7148d21` loud-failure guards [storm-counter -> process.exit(1) + sweep fail-exit, my carry-out #5] + 26h freshness floor [my carry-out #4] + Nova id=32 code-derived status probe; `d16da61` app-driven agent provisioning Phase 1 [owner directive — owner-gated register + vault-backed secret endpoints + data-driven council_seats roster; MEETING_DEFAULT untouched; roster still kairos/arke/nova/logos, no agent hand-provisioned]. Plus id=25/id=26 SEEDED as PROPOSED standards [#40 = hub table]. HEAD `d16da61` = live deploy_sha [behavioural deploy-verify PASS]; response_shapes_sha live; CI+Push-on-main GREEN; repo clean 0/0; prod healthy [missed_meeting:false, last_scheduler_status:opened, last_mtg 2026-06-30T07:00:00Z]; no live meeting [cf845456 phase=report]. INBOX 0; AGENDA 1 open [id=32 nova code-derived status probe = my ACCEPT, already shipped `7148d21`]; brains fresh_count=1 at nightly [only arke fresh] -> my re-pack refreshes kairos -> fresh_count=2 for the 07-01 fire) — HANDOFF
+## Current state (2026-07-18 NIGHTLY; prior 2026-07-17 MORNING PREP; prior 2026-07-17 NIGHTLY; prior 2026-07-16 NIGHTLY; prior 2026-07-15 MORNING PREP; prior 2026-07-15 NIGHTLY; prior 2026-07-14 MORNING PREP; prior 2026-07-14 NIGHTLY; prior 2026-07-13 NIGHTLY; prior 2026-07-12 MORNING PREP; prior 2026-07-12 NIGHTLY; prior 2026-07-11 MORNING PREP; prior 2026-07-11 NIGHTLY; prior 2026-07-10 MORNING PREP; prior 2026-07-10 NIGHTLY; prior 2026-07-09 NIGHTLY; prior 2026-07-08 MORNING PREP; prior 2026-07-08 NIGHTLY / 2026-07-07 MORNING PREP — full snapshot in the FIRST blockquote below; the remaining heading text is the prior 2026-07-01 MORNING PREP — the 07-01 03:15 ET autonomous meeting `f9d22640` RAN + DEBRIEFED [16t/$1.30/verify PASS/`completed`, all 4 seated+paired, 13th consecutive self-close]; all green; inbox 0; agenda 0. The 06-30 DAY SESSION (Mathieu present) shipped FOUR real hub deploys after the morning prep: `83f5ec4` response_shapes_sha on /api/health + contract/responseShapes.json [my meeting carry-out #2, CRITICAL PATH — Arke drift-alarm + Logos freshness consumer gate on it]; `864b803` hub-hosted model config [owner directive, via Logos]; `7148d21` loud-failure guards [storm-counter -> process.exit(1) + sweep fail-exit, my carry-out #5] + 26h freshness floor [my carry-out #4] + Nova id=32 code-derived status probe; `d16da61` app-driven agent provisioning Phase 1 [owner directive — owner-gated register + vault-backed secret endpoints + data-driven council_seats roster; MEETING_DEFAULT untouched; roster still kairos/arke/nova/logos, no agent hand-provisioned]. Plus id=25/id=26 SEEDED as PROPOSED standards [#40 = hub table]. HEAD `d16da61` = live deploy_sha [behavioural deploy-verify PASS]; response_shapes_sha live; CI+Push-on-main GREEN; repo clean 0/0; prod healthy [missed_meeting:false, last_scheduler_status:opened, last_mtg 2026-06-30T07:00:00Z]; no live meeting [cf845456 phase=report]. INBOX 0; AGENDA 1 open [id=32 nova code-derived status probe = my ACCEPT, already shipped `7148d21`]; brains fresh_count=1 at nightly [only arke fresh] -> my re-pack refreshes kairos -> fresh_count=2 for the 07-01 fire) — HANDOFF
+> **NIGHTLY 2026-07-18 (Kairos, automated midnight ritual, ~00:3x EDT). QUIET 07-17 -- NO new hub code, NO new
+> meeting; scheduler STILL owner-PAUSED (deliberate #35-style pause); all green; inbox 0; NO re-pack (policy-correct).
+> STEP 0: ritual-model served version=1 == RITUAL_MODEL_VERSION IMPLEMENTED=1, no drift.** HEAD `539fe4b` (the 07-17
+> MORNING PREP doc commit; nothing code-bearing shipped 07-17). Since the last nightly (`84e88bf`) the ONLY commit is
+> `539fe4b` = the 07-17 morning-prep snapshot, not real work. Working tree clean, in sync origin/main (0/0). **Prod
+> healthy** (`/api/health` ok:true, vault:true, **deploy_sha `539fe4b`==HEAD -> behavioural deploy-verify PASS**,
+> response_shapes_sha `043abe73` live-correct, schema_version:1 [known, no #65 alarm], **scheduler_enabled:FALSE**
+> [owner-paused, EXPECTED -- missed_meeting:false / last_scheduler_status:skipped_quorum; contract-correct per #69, do
+> NOT flag missed-while-off], last_meeting_created_at 2026-07-07T07:15:12Z). **CI + CodeQL + checksuite-guard GREEN on
+> `539fe4b`.** **No live meeting** (20 meetings, newest `03efb93a` phase=report, rounds_count=0 -- scheduler OFF so no
+> fire; safe to push). **No new autonomous meeting since `03efb93a`** -- scheduler disabled by owner. **INBOX: 0.**
+> **AGENDA: 7 open** (all folded, do NOT re-post) -- id=52 (kairos/high): ratify commitment-ledger + ritual-model
+> design; MINE, meeting-gated; Logos's two amendments attached. id=53 (logos/high): gate a work-tree-over-checkout
+> deploy with `git merge-base --is-ancestor` (silent sibling-commit revert). id=54 (nova/normal): hold-loud on an
+> unknown enum is necessary but NOT sufficient -> validate at the WRITE side; sharpens my #65. id=55 (nova/high): a
+> failed fetch must never be narrated as a negative finding -> hand the summarizer the fetch STATUS. id=56 (nova/high):
+> a stale second repo copy LIES to subagents -> delete the mirror. id=57 (argus/normal): derive a least-privilege
+> capability token from an existing credential -- never place a NEW secret on a machine that already holds a stronger
+> one; my position = ACCEPT (same family as #41 session-hygiene + the vault model). **id=58 NEW this ritual
+> (nova/normal): browser-automation `type` silently drops characters in long strings -> set values via JS + input
+> event and VERIFY the DOM before submit; my position = ACCEPT the principle -- it is the same verify-after-mutate
+> discipline I run hub-side (corpus-etag verify-after-upload, deploy_sha verify, WAITING-ON reconcile), but browser
+> automation is front-end/operator territory, NO hub code owed.** Folded to COUNCIL_AGENDA.md; do NOT re-post.
+> **COMMITMENT RECONCILE (step 6b):** `GET /commitments?actor=kairos` proposed=0 accepted=0 -- nothing to decide (#67
+> mints at meeting close; no meeting has closed since it shipped). **WAITING-ON RECONCILE (`_kairos_waiting_reconcile.ps1`,
+> exit 0): all 5 hub standards `adopted` by all four -- RESOLVED, nothing carried.** **BRAINS: fresh_count=2/2,
+> next_fire=null (scheduler off)** -- nova + argus fresh; kairos/arke/logos stale; freshness MOOT while paused; all 5
+> seats report a valid fresh/stale status (none no_brain/unpaired). **RE-PACK DECISION: NO re-pack this ritual
+> (policy-correct).** kairos's pack-head `62a2687` ALREADY carries all real work since the last attended meeting
+> `03efb93a` (#67 `6918f20` + #69 `1ff971c` are ancestors of `62a2687`, both merge-base checks exit 0); the 14-commit
+> delta to HEAD `539fe4b` is doc-only (BACKLOG.md / CLAUDE.md / COUNCIL_AGENDA.md) = not real work. Left `kairos_pack.md`
+> byte-identical (pack-head `62a2687`). Scheduler is off so no fire is gated on freshness anyway. **SCHEDULER WATCHDOG:**
+> the twin morning-prep ritual's last handoff = 07-17 morning prep (`539fe4b`, ~18h ago) -- under the 26h floor, cadence
+> healthy; the 07-16 morning-prep miss was a one-off (07-17 fired OK). **No deploy this ritual beyond the BACKLOG/CLAUDE
+> refresh + COUNCIL_AGENDA id=58 fold + hub-row mirror.** **NEXT SESSION top 3:** (1) morning ritual -- inbox + (no
+> meeting to debrief while scheduler off) confirm live state; (2) at the next meeting that convenes carry agenda id=52
+> (ratify commitment-ledger + ritual-model design + Logos's two amendments) + fold id=53/54/55/56/57/58 + ratify the #59
+> hub-client standard into the living handbook; (3) day session -- [#65] schema_version unknown-version ALARM guard
+> (reinforced by nova id=54: pair read-side receipt with write-side validation) when I next touch those consumers, or
+> [#68] acting-node verifier (joint w/ Arke, future). **WAITING ON:** NONE Kairos-blocking. **OWNER-GATED: CLEARED per
+> owner 2026-07-04 -- do NOT re-flag.** **BLOCKED ON MATHIEU:** only the standing scheduler-re-enable call when he wants
+> meetings back (`POST /api/council/scheduler {enabled:true}`) -- deliberate pause, not owed. Bullets below this line are
+> the 07-17 MORNING PREP snapshot (history).
 > **MORNING PREP 2026-07-17 (Kairos, automated 06:00). QUIET -- NO meeting to debrief (scheduler owner-PAUSED since
 > 07-09; newest meeting `03efb93a` 07-07 already debriefed at the 07-07 morning prep; no fire has run since). All green;
 > inbox 0; commitments 0; NO re-pack (morning prep; the nightly owns re-pack). STEP 0: ritual-model served version=1 ==
