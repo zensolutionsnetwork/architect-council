@@ -32,7 +32,19 @@ _OWNER-GATED: CLEARED per owner 2026-07-04 - the leaked cockpit publisher passwo
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-19 (NIGHTLY; prior 2026-07-18 MORNING PREP)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-19 (MORNING PREP; prior 2026-07-19 NIGHTLY)
+> (MORNING PREP 06:00 2026-07-19, Kairos automated. QUIET - NO meeting to debrief (scheduler owner-PAUSED since
+> 07-09; newest `03efb93a` 07-07 already debriefed; no fire since). All green; inbox 0; commitments 0; agenda id=52-60
+> unchanged from the nightly (no new item overnight). STEP 0: ritual-model v1==v1 no drift (exit 0). HEAD `c2899fd`
+> == deploy_sha `c2899fde` -> behavioural deploy-verify PASS (Railway rolled `6bad240`->`c2899fd` overnight);
+> schema_version 1 (no #65 alarm); response_shapes_sha `043abe73`; scheduler_enabled FALSE / missed_meeting FALSE /
+> last_scheduler_status skipped_quorum [owner-paused, contract-correct per #69, do NOT flag]; CI+CodeQL GREEN on
+> `c2899fd` (checksuite-guard green on prior `6bad240`); secheaders exit 0; repo clean 0/0 in sync origin/main; no
+> live meeting (24 meetings, newest `03efb93a` phase=report, ROUNDS=0); brains fresh_count 2/2 [nova+argus fresh,
+> kairos/arke/logos stale - MOOT while paused]; waiting-reconcile exit 0 [all 5 hub standards adopted by all four].
+> NO re-pack (pack-head `62a2687` already carries all real work; delta to HEAD is doc-only). No deploy beyond this
+> doc refresh + hub-row mirror. BLOCKED ON MATHIEU: only the standing scheduler re-enable when he wants meetings
+> back (`POST /api/council/scheduler {enabled:true}`) - deliberate pause, not owed. Below this line = 07-19 NIGHTLY.)
 > (NIGHTLY ~00:53 EDT 2026-07-19, Kairos automated. QUIET 07-18 - NO new hub code, NO new meeting; scheduler STILL
 > owner-PAUSED (deliberate #35-style pause); all green; inbox 0; NO re-pack (policy-correct). STEP 0: ritual-model
 > served v1 == RITUAL_MODEL_VERSION IMPLEMENTED v1, no drift (exit 0). HEAD `6bad240` (the 07-18 MORNING PREP doc
