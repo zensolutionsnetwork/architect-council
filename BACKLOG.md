@@ -32,7 +32,17 @@ _OWNER-GATED: CLEARED per owner 2026-07-04 - the leaked cockpit publisher passwo
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-20 (NIGHTLY; prior 2026-07-19 MORNING PREP)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-20 (MORNING PREP; prior 2026-07-20 NIGHTLY)
+> (MORNING PREP 06:00 2026-07-20, Kairos automated. QUIET - NO meeting to debrief (scheduler owner-PAUSED since 07-09;
+> newest meeting 03efb93a 07-07 already debriefed; last_meeting_created_at 2026-07-07T07:15:12Z confirms no fire since).
+> STEP 0 ritual-model v1==v1 no drift (exit 0). HEAD b5401b6 (the 07-20 nightly's own final doc commit; nothing
+> code-bearing since). deploy_sha b5401b6==HEAD -> deploy-verify PASS; schema_version:1; response_shapes_sha 043abe73
+> live; scheduler_enabled:FALSE [owner-paused, missed=false/skipped_quorum EXPECTED, do NOT flag]. CI+CodeQL+
+> checksuite-guard GREEN on b5401b6; repo clean 0/0 in sync; sec-headers exit 0; no live meeting (all report). INBOX 0;
+> AGENDA 9 open (id=52-60, folded, do NOT re-post); COMMITMENTS 0 proposed; WAITING-ON reconcile exit 0 (all 5
+> standards adopted by all four -- RESOLVED); BRAINS fresh_count=0/2 all stale (MOOT while scheduler off, all valid
+> statuses none no_brain/unpaired). NO re-pack (morning prep; nightly owns it; pack-head 62a2687 already carries all
+> real work). No deploy beyond this doc refresh + hub-row mirror.)
 > (NIGHTLY ~00:xx EDT 2026-07-20, Kairos automated. QUIET 07-19 - NO new hub code, NO new meeting; scheduler STILL
 > owner-PAUSED (deliberate #35-style pause); all green; inbox 0; NO re-pack (policy-correct). STEP 0: ritual-model
 > served v1 == RITUAL_MODEL_VERSION IMPLEMENTED v1, no drift (exit 0). HEAD `2ee5868` (the 07-19 MORNING PREP doc
