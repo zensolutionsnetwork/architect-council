@@ -32,7 +32,26 @@ _OWNER-GATED: CLEARED per owner 2026-07-04 - the leaked cockpit publisher passwo
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-19 (MORNING PREP; prior 2026-07-19 NIGHTLY)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-20 (NIGHTLY; prior 2026-07-19 MORNING PREP)
+> (NIGHTLY ~00:xx EDT 2026-07-20, Kairos automated. QUIET 07-19 - NO new hub code, NO new meeting; scheduler STILL
+> owner-PAUSED (deliberate #35-style pause); all green; inbox 0; NO re-pack (policy-correct). STEP 0: ritual-model
+> served v1 == RITUAL_MODEL_VERSION IMPLEMENTED v1, no drift (exit 0). HEAD `2ee5868` (the 07-19 MORNING PREP doc
+> commit; the ONLY commit since the last nightly `c2899fd` = the morning-prep snapshot, NOT real work). Repo clean
+> 0/0 in sync origin/main. deploy_sha `2ee5868f`==HEAD -> behavioural deploy-verify PASS (Railway rolled to it);
+> response_shapes_sha `043abe73` live-correct; schema_version:1 (known, no #65 alarm); scheduler_enabled:FALSE +
+> missed_meeting:false + last_scheduler_status:skipped_quorum [owner-paused, EXPECTED - contract-correct per #69, do
+> NOT flag]; last_meeting_created_at 2026-07-07T07:15:12Z. CI + checksuite-guard + Push-on-main GREEN on `2ee5868`.
+> No live meeting (20 meetings, newest `03efb93a` phase=report, LIVE=0; scheduler off so no fire). INBOX 0. AGENDA
+> 9 open (id=52-60, all folded, do NOT re-post) - NO new items since the 07-19 morning prep. COMMITMENT RECONCILE
+> (step 6b): proposed=0, accepted=0 - nothing to decide. WAITING-ON reconcile (exit 0): all 5 hub standards adopted
+> by all four - RESOLVED, nothing carried. BRAINS fresh_count=2/2 (nova+argus fresh; kairos/arke/logos stale - MOOT
+> while scheduler off), next_fire=null. RE-PACK DECISION: NO re-pack (policy-correct) - pack-head `62a2687` ALREADY
+> carries all real work since the last attended meeting `03efb93a` (#67 `6918f20` + #69 `1ff971c` both ancestors of
+> `62a2687`); the delta to HEAD `2ee5868` is doc-only; left `kairos_pack.md` byte-identical. SCHEDULER WATCHDOG:
+> twin morning-prep ritual last handoff = 07-19 morning prep (~18h ago) - under the 26h floor, cadence healthy. No
+> deploy this ritual beyond the BACKLOG/CLAUDE refresh + hub-row mirror. BLOCKED ON MATHIEU: only the standing
+> scheduler re-enable when he wants meetings back (`POST /api/council/scheduler {enabled:true}`) - deliberate pause,
+> not owed. Below this line = 07-19 MORNING PREP.)
 > (MORNING PREP 06:00 2026-07-19, Kairos automated. QUIET - NO meeting to debrief (scheduler owner-PAUSED since
 > 07-09; newest `03efb93a` 07-07 already debriefed; no fire since). All green; inbox 0; commitments 0; agenda id=52-60
 > unchanged from the nightly (no new item overnight). STEP 0: ritual-model v1==v1 no drift (exit 0). HEAD `c2899fd`
