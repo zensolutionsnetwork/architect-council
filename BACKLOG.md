@@ -1001,21 +1001,22 @@ _OWNER-GATED: CLEARED per owner 2026-07-04 - the leaked cockpit publisher passwo
 > actually CONVERGE** — the new lead topic; owner asks the family to bring proposals for HOW to run it.)
 
 ## STATE AT A GLANCE
-- **MORNING PREP (2026-07-21 06:00) — QUIET; NO meeting to debrief (scheduler owner-PAUSED since 07-09; newest
-  `03efb93a` 07-07 already debriefed); all green; inbox 0; commitments 0; NO re-pack (morning prep).** HEAD
-  `7e7c182` (07-21 NIGHTLY's own final commit; nightly prose cited `0d64bbe` — authored pre-final-commit, known
-  pattern; git log + deploy_sha confirm `7e7c182`; only delta since `0d64bbe` is the nightly doc snapshot, no real
-  work). deploy_sha `7e7c182e` == HEAD -> behavioural deploy-verify PASS (Railway rolled overnight); schema_version:1
-  (no #65 alarm); response_shapes_sha `043abe73` live-correct; scheduler_enabled:FALSE (missed_meeting:false /
-  last_scheduler_status:skipped_quorum — contract-correct per #69, do NOT flag missed-while-off). CI + CodeQL GREEN
-  on `7e7c182` (checksuite-guard green on prior `0d64bbe`); repo clean 0/0 in sync origin/main; sec-headers assert
-  exit 0 (GREEN). No live meeting (all phase=report; none stuck in rounds; scheduler OFF). INBOX 0. COMMITMENTS
-  proposed=0 — nothing to decide. WAITING-ON reconcile exit 0 — all 5 hub standards adopted by all four, nothing
-  carried. AGENDA 9 open (id=52-60, all folded, do NOT re-post; NO new item overnight). BRAINS fresh_count=2/2
-  (nova+argus fresh; kairos/arke/logos stale — MOOT while paused), next_fire=null. Pack-head `62a2687` already
-  carries all real work since the last attended meeting `03efb93a` (#67 `6918f20` + #69 `1ff971c` ancestors) ->
-  no re-pack (morning prep; nightly owns it). Scheduler watchdog: twin nightly ritual's last handoff = `7e7c182`
-  (~6h), under the 26h floor. BLOCKED ON MATHIEU: only the standing scheduler-re-enable call (`POST
+- **MORNING PREP (2026-07-22 06:00) — QUIET; NO meeting to debrief (scheduler owner-PAUSED since 07-09; newest
+  `03efb93a` 07-07 already debriefed; no fire since — last_meeting_created_at 2026-07-07T07:15:12Z); all green;
+  inbox 0; commitments 0; NO re-pack (morning prep).** HEAD `d1a7534` (07-22 NIGHTLY's own final commit; nightly
+  prose cited `c444764` — authored pre-final-commit, known pattern; git log + deploy_sha confirm `d1a7534`; only
+  delta since `c444764` is the nightly doc snapshot, no real work). deploy_sha `d1a7534c` == HEAD -> behavioural
+  deploy-verify PASS (Railway rolled overnight); schema_version:1 (no #65 alarm); response_shapes_sha `043abe73`
+  live-correct; scheduler_enabled:FALSE (missed_meeting:false / last_scheduler_status:skipped_quorum —
+  contract-correct per #69, do NOT flag missed-while-off). CI + CodeQL GREEN on `d1a7534` (checksuite-guard green on
+  prior); repo clean 0/0 in sync origin/main; sec-headers assert exit 0 (GREEN). No live meeting (newest `03efb93a`
+  phase=report; none stuck in rounds; scheduler OFF). INBOX 0. COMMITMENTS proposed=0 (items:[]) — nothing to decide.
+  WAITING-ON reconcile exit 0 — all 5 hub standards adopted by all four, nothing carried. AGENDA 9 open (id=52-60,
+  all folded, do NOT re-post; NO new item overnight). BRAINS fresh_count=1/2 (argus fresh; kairos/arke/nova/logos
+  stale — MOOT while paused; all 5 seats report a valid status, none no_brain/unpaired), next_fire=null. Pack-head
+  `62a2687` already carries all real work since the last attended meeting `03efb93a` (#67 `6918f20` + #69 `1ff971c`
+  ancestors) -> no re-pack (morning prep; nightly owns it). Scheduler watchdog: twin nightly ritual's last handoff =
+  `d1a7534` (~6h), under the 26h floor. BLOCKED ON MATHIEU: only the standing scheduler-re-enable call (`POST
   /api/council/scheduler {enabled:true}`) when he wants meetings back — deliberate pause, not owed.
 - **NIGHTLY (2026-07-14 ~00:2x EDT) — QUIET 07-13; scheduler owner-PAUSED (deliberate #35-style pause); all
   green; NO re-pack (policy-correct).** HEAD `0ab5a57` (07-13 morning-prep DOC commit; nothing code-bearing shipped
