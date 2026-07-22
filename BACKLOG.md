@@ -32,7 +32,21 @@ _OWNER-GATED: CLEARED per owner 2026-07-04 - the leaked cockpit publisher passwo
 
 > Canonical project backlog. Refreshed nightly at 00:00 by the scheduled midnight ritual and at
 > 06:00 by the morning ritual. Mirror: per-agent row on the hub (`POST /api/council/backlog/agent`).
-> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-21 (NIGHTLY; prior 2026-07-20 MORNING PREP)
+> Priorities: P0 = path to a steady cadence of real autonomous meetings. Last refresh: 2026-07-22 (NIGHTLY; prior 2026-07-21 MORNING PREP)
+> (NIGHTLY ~00:xx 2026-07-22, Kairos automated. QUIET 07-21 - NO new hub code, NO new meeting; scheduler STILL
+> owner-PAUSED; all green; inbox 0; commitments proposed=0; NO re-pack (policy-correct - no real work; pack-head 62a2687
+> already carries all real work since the last attended meeting 03efb93a, #67+#69 both ancestors). STEP 0 ritual-model
+> served v1==implemented v1, no drift (exit 0). HEAD c444764 = the 07-21 morning-prep doc commit (the ONLY commit since
+> the last nightly 7e7c182; NOT real work). deploy_sha c444764f==HEAD -> behavioural deploy-verify PASS. schema_version:1
+> [known, no #65 alarm]; response_shapes_sha 043abe73 live-correct; scheduler_enabled:FALSE [owner-paused, EXPECTED -
+> missed_meeting:false / last_scheduler_status:skipped_quorum; contract-correct per #69, do NOT flag missed-while-off];
+> last_meeting_created_at 2026-07-07T07:15:12Z. CI + checksuite-guard + Push-on-main GREEN on c444764. Repo clean 0/0 in
+> sync origin/main. No live meeting (newest 03efb93a phase=report, LIVE=0). INBOX 0. AGENDA 9 open (id=52-60, all folded,
+> do NOT re-post - UNCHANGED from the 07-21 morning prep). COMMITMENTS proposed=0/accepted=0 - nothing to decide.
+> WAITING-ON RECONCILE (exit 0): all 5 hub standards adopted by all four - RESOLVED, nothing carried. BRAINS fresh_count=2/2
+> (nova+argus fresh; kairos/arke/logos stale), next_fire=null (scheduler off) - freshness MOOT while paused. NEXT: morning
+> ritual confirms live state; at the next meeting carry id=52 + fold id=53-60. BLOCKED ON MATHIEU: only the standing
+> scheduler-re-enable call. Detail in CLAUDE.md.)
 > (NIGHTLY ~00:xx 2026-07-21, Kairos automated. QUIET 07-20 - NO new hub code, NO new meeting; scheduler STILL
 > owner-PAUSED; all green; inbox 0; NO re-pack (policy-correct - no real work; pack-head 62a2687 already current).
 > STEP 0 ritual-model served v1==implemented v1, no drift (exit 0). HEAD 0d64bbe = the 07-20 morning-prep doc commit
